@@ -1,8 +1,19 @@
-# Vue-Nuxt-Supabase Starter Project
+# adulting.diy Task Management System
 
-This is an opinionated starter project that to quickly spin up Nuxt based web projects with Google OAuth, Supabase backend, and client side state management with Pinia.
+This project is a multi-tenant task management system built with Vue.js, Nuxt 3, and Vercel Postgres. It's designed to help organizations manage recurring and non-recurring tasks efficiently.
 
 ## Features
+
+Multi-tenant architecture supporting multiple organizations
+Recurring and non-recurring task management
+Custom categorization system for tasks
+Task dependencies for non-recurring tasks
+Flexible notification system for upcoming and overdue tasks
+Soft deletion for exception handling in recurring tasks
+Google Sign-In authentication
+Persistent authentication state across page reloads and server-side rendering
+
+## Tech
 
 - Vue.js (latest version) / Nuxt 3
 - [Supabase](https://supabase.com/) for data persistences (PaaS)
@@ -18,18 +29,8 @@ This is an opinionated starter project that to quickly spin up Nuxt based web pr
 
 ## Getting Started
 
-Clone the repository:
-
-```
-git clone [your-repo-url]
-cd vue-nuxt-supabase-starter
-```
-
-Install dependencies:
-
-```
-npm install
-```
+1. Clone the repository:
+2. Install dependencies using `npm install`
 
 ### Setting up Google Sign-In
 
