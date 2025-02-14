@@ -18,3 +18,24 @@ export interface GoogleUser {
   family_name: string;
   locale: string;
 }
+
+export interface Organization {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  created_by: string;
+}
+
+export interface OrganizationMember {
+  id: string;
+  organization_id: string;
+  user_id: string;
+  role: "admin" | "member" | "viewer";
+  joined_at: string;
+}
+
+export interface CreateOrganizationDTO {
+  name: string;
+  description?: string;
+}

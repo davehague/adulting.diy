@@ -7,7 +7,7 @@
         <footer class="bg-gray-800 text-white py-4">
             <div class="container mx-auto px-6">
                 <div class="text-center">
-                    &copy; {{ new Date().getFullYear() }} Vue-Nuxt-Supabase Starter
+                    &copy; {{ new Date().getFullYear() }} Adulting.DIY
                 </div>
             </div>
         </footer>
