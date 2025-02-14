@@ -1,4 +1,8 @@
-import type { Organization, CreateOrganizationDTO } from "@/types/interfaces";
+import type {
+  Organization,
+  CreateOrganizationDTO,
+  OrganizationMember,
+} from "@/types/interfaces";
 import { serverSupabase } from "@/server/utils/supabaseServerClient";
 
 export class OrganizationService {
@@ -100,6 +104,34 @@ export class OrganizationService {
       return !!data;
     } catch (error) {
       console.error(`[OrganizationService] Error in verifyAdminAccess:`, error);
+      throw error;
+    }
+  }
+
+  async getOrganizationMembers(
+    organizationId: string
+  ): Promise<OrganizationMember[]> {
+    try {
+      const { data, error } = await serverSupabase
+        .from("organization_members")
+        .select(
+          `
+          *,
+          user:users (
+            id,
+            name,
+            email,
+            picture
+          )
+        `
+        )
+        .eq("organization_id", organizationId);
+
+      if (error) throw error;
+
+      return data as OrganizationMember[];
+    } catch (error) {
+      console.error("[OrganizationService] Error fetching members:", error);
       throw error;
     }
   }
