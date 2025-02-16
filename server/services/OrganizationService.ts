@@ -90,7 +90,7 @@ export class OrganizationService {
         .select(
           `
           id,
-          ...users!inner()
+          users!inner (*)
         `
         )
         .eq("organization_id", orgId)
@@ -115,7 +115,7 @@ export class OrganizationService {
         .select(
           `
           role,
-          ...users!inner()
+          users!inner (*)
         `
         )
         .eq("organization_id", orgId)
@@ -136,18 +136,8 @@ export class OrganizationService {
   ): Promise<OrganizationMember[]> {
     try {
       const { data, error } = await serverSupabase
-        .from("organization_members")
-        .select(
-          `
-          *,
-          user:users (
-            id,
-            name,
-            email,
-            picture
-          )
-        `
-        )
+        .from("users")
+        .select()
         .eq("organization_id", organizationId);
 
       if (error) throw error;

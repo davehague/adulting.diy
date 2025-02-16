@@ -25,7 +25,7 @@ export const useOrganizationStore = defineStore(
     // Getters
     const isAdmin = computed(() => userRole.value === "admin");
     const isMember = computed(() => !!userRole.value);
-    const memberCount = computed(() => members.value.length);
+    const memberCount = computed(() => members.value?.length ?? 0);
     const inviteCount = computed(() => pendingInvites.value.length);
 
     // Actions
@@ -61,27 +61,39 @@ export const useOrganizationStore = defineStore(
       error.value = null;
 
       try {
-        const response = await api.get<{
-          organization: Organization;
-          role: OrganizationMember["role"];
-          members: OrganizationMember[];
-        }>("/api/organization/current");
+        const orgResponse = await api.get<Organization>(
+          "/api/organization/current"
+        );
+        console.log("currentOrganization.value", orgResponse);
 
-        console.log("[OrganizationStore] Fetched organization:", response);
-
-        if (!response) {
-          throw new Error("No response received from API");
+        if (!orgResponse || !orgResponse.id) {
+          throw new Error("Invalid organization data received");
         }
 
-        currentOrganization.value = response.organization;
-        userRole.value = response.role;
-        members.value = response.members;
-        return response;
+        // Update organization first
+        currentOrganization.value = orgResponse;
+
+        // Then fetch members for this org
+        const membersResponse = await api.get<OrganizationMember[]>(
+          `/api/organization/${orgResponse.id}/members`
+        );
+
+        if (membersResponse) {
+          members.value = membersResponse || [];
+          // TODO: set the role?
+          userRole.value = "admin"; //membersResponse.role || null;
+        }
+
+        return {
+          organization: currentOrganization.value,
+          members: members.value,
+          role: userRole.value,
+        };
       } catch (e) {
         console.error("[OrganizationStore] Error fetching organization:", e);
         error.value =
           e instanceof Error ? e.message : "Failed to fetch organization";
-        // Don't clear values on error to prevent UI flashing
+        // Clear loading but don't clear other values to prevent UI flashing
         throw error.value;
       } finally {
         loading.value = false;
@@ -89,14 +101,17 @@ export const useOrganizationStore = defineStore(
     };
 
     const fetchMembers = async () => {
-      if (!currentOrganization.value) return;
+      if (!currentOrganization.value?.id) {
+        console.error("[OrganizationStore] No organization ID available");
+        return;
+      }
 
       loading.value = true;
       try {
         const response = await api.get<{ members: OrganizationMember[] }>(
           `/api/organization/${currentOrganization.value.id}/members`
         );
-        members.value = response.members;
+        members.value = response.members || [];
       } catch (e) {
         error.value =
           e instanceof Error ? e.message : "Failed to fetch members";
@@ -147,7 +162,10 @@ export const useOrganizationStore = defineStore(
       memberId: string,
       role: OrganizationMember["role"]
     ) => {
-      if (!currentOrganization.value) return;
+      if (!currentOrganization.value?.id) {
+        console.error("[OrganizationStore] No organization ID available");
+        return;
+      }
 
       loading.value = true;
       try {
@@ -170,7 +188,10 @@ export const useOrganizationStore = defineStore(
     };
 
     const removeMember = async (memberId: string) => {
-      if (!currentOrganization.value) return;
+      if (!currentOrganization.value?.id) {
+        console.error("[OrganizationStore] No organization ID available");
+        return;
+      }
 
       loading.value = true;
       try {

@@ -10,13 +10,10 @@ export default defineProtectedEventHandler(async (event, authenticatedUser) => {
     );
 
     if (!result) {
-      return {
-        organization: null,
-        role: null,
-      };
+      return null;
     }
 
-    return result;
+    return result.organization;
   } catch (error: any) {
     console.error(`[API] Error in /organization/current:`, error);
     throw createError({
