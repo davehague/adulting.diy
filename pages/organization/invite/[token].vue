@@ -8,10 +8,12 @@
 
         <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
             <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+                <!-- Loading State -->
                 <div v-if="loading" class="text-center">
                     <p class="text-gray-500">Verifying invitation...</p>
                 </div>
 
+                <!-- Error State -->
                 <div v-else-if="error" class="text-center">
                     <p class="text-red-600">{{ error }}</p>
                     <button @click="router.push('/home')"
@@ -20,17 +22,23 @@
                     </button>
                 </div>
 
-                <template v-else>
+                <!-- Invite Details -->
+                <template v-else-if="inviteData">
                     <div class="text-center">
-                        <h3 class="text-lg font-medium text-gray-900">Join {{ inviteData?.organization?.name }}</h3>
+                        <h3 class="text-lg font-medium text-gray-900">
+                            Join {{ inviteData.organization.name }}
+                        </h3>
                         <p class="mt-2 text-sm text-gray-500">
-                            You've been invited to join as a {{ inviteData?.role }}
+                            You've been invited to join as a {{ inviteData.role }}
+                        </p>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Invitation sent to: {{ inviteData.email }}
                         </p>
                     </div>
 
                     <div class="mt-6">
                         <button @click="acceptInvite" :disabled="accepting"
-                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
                             {{ accepting ? 'Accepting...' : 'Accept Invitation' }}
                         </button>
                     </div>
@@ -44,26 +52,32 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useOrganizationStore } from '@/stores/organization'
+import { useApi } from '@/utils/api'
+import type { Organization, OrganizationRole } from '@/types/organization'
+
+interface InviteData {
+    organization: Organization
+    role: OrganizationRole
+    email: string
+}
 
 const router = useRouter()
 const route = useRoute()
+const api = useApi()
 const organizationStore = useOrganizationStore()
 
 const loading = ref(true)
 const accepting = ref(false)
 const error = ref<string | null>(null)
-const inviteData = ref<any>(null)
+const inviteData = ref<InviteData | null>(null)
 
 onMounted(async () => {
     try {
         const token = route.params.token as string
-        const { data } = await useFetch(`/api/organization/invite/verify`, {
-            query: { token }
+        const data = await api.get<InviteData>('/api/organization/invite/verify', {
+            params: { token }
         })
-
-        if (data.value) {
-            inviteData.value = data.value
-        }
+        inviteData.value = data
     } catch (e) {
         error.value = e instanceof Error ? e.message : 'Failed to verify invitation'
     } finally {
@@ -74,11 +88,8 @@ onMounted(async () => {
 const acceptInvite = async () => {
     accepting.value = true
     try {
-        await useFetch('/api/organization/invite/accept', {
-            method: 'POST',
-            body: {
-                token: route.params.token
-            }
+        await api.post('/api/organization/invite/accept', {
+            token: route.params.token
         })
 
         // Refresh organization data

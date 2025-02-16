@@ -1,5 +1,6 @@
 // utils/api.ts
 import { useAuthStore } from "@/stores/auth";
+import { useRuntimeConfig } from "#app";
 
 interface FetchOptions extends RequestInit {
   params?: Record<string, string>;
@@ -7,29 +8,35 @@ interface FetchOptions extends RequestInit {
 
 export const useApi = () => {
   const authStore = useAuthStore();
+  const config = useRuntimeConfig();
 
   const apiFetch = async <T>(
     endpoint: string,
     options: FetchOptions = {}
   ): Promise<T> => {
-    // Construct the full URL with query parameters if they exist
-    const url = new URL(endpoint, window.location.origin);
-    if (options.params) {
-      Object.entries(options.params).forEach(([key, value]) => {
-        url.searchParams.append(key, value);
-      });
-    }
-
-    // Prepare headers with authentication
-    const headers = new Headers(options.headers);
-    headers.set("Content-Type", "application/json");
-
-    // Add authorization header if we have a token
-    if (authStore.accessToken) {
-      headers.set("Authorization", `Bearer ${authStore.accessToken}`);
-    }
-
     try {
+      if (!process.client) {
+        console.warn("[API] Attempting API call during SSR, deferring...");
+        return Promise.resolve({} as T);
+      }
+
+      // Construct the full URL with query parameters if they exist
+      const url = new URL(endpoint, window.location.origin);
+      if (options.params) {
+        Object.entries(options.params).forEach(([key, value]) => {
+          url.searchParams.append(key, value);
+        });
+      }
+
+      // Prepare headers with authentication
+      const headers = new Headers(options.headers);
+      headers.set("Content-Type", "application/json");
+
+      // Add authorization header if we have a token
+      if (authStore.accessToken) {
+        headers.set("Authorization", `Bearer ${authStore.accessToken}`);
+      }
+
       const response = await fetch(url.toString(), {
         ...options,
         headers,

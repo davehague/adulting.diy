@@ -19,6 +19,8 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import CreateOrgForm from '~/components/organization/CreateOrgForm.vue';
+
 definePageMeta({
     layout: 'landing'
 })

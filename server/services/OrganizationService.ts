@@ -44,8 +44,17 @@ export class OrganizationService {
         .select(
           `
           role,
-          organizations (*),
-          users!inner (email)
+          organizations!inner (
+            id,
+            name,
+            description,
+            created_at,
+            updated_at,
+            created_by
+          ),
+          users!inner (
+            email
+          )
         `
         )
         .eq("users.email", email)
@@ -61,8 +70,11 @@ export class OrganizationService {
 
       if (!data) return null;
 
+      const organization = data.organizations as any as Organization;
+      if (!organization) return null;
+
       return {
-        organization: data.organizations[0] as Organization,
+        organization,
         role: data.role,
       };
     } catch (error) {
@@ -75,10 +87,15 @@ export class OrganizationService {
     try {
       const { data, error } = await serverSupabase
         .from("organization_members")
-        .select("id")
+        .select(
+          `
+          id,
+          ...users!inner()
+        `
+        )
         .eq("organization_id", orgId)
         .eq("users.email", userEmail)
-        .single();
+        .limit(1);
 
       if (error && error.code !== "PGRST116") throw error;
       return !!data;
@@ -95,11 +112,16 @@ export class OrganizationService {
     try {
       const { data, error } = await serverSupabase
         .from("organization_members")
-        .select("role")
+        .select(
+          `
+          role,
+          ...users!inner()
+        `
+        )
         .eq("organization_id", orgId)
         .eq("users.email", userEmail)
         .eq("role", "admin")
-        .single();
+        .limit(1);
 
       if (error && error.code !== "PGRST116") throw error;
       return !!data;
