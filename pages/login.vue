@@ -13,7 +13,7 @@
 import { GoogleSignInButton, type CredentialResponse } from "vue3-google-signin";
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'vue-router';
-import type { User } from "~/types/interfaces";
+import type { User } from "~/types";
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -33,14 +33,15 @@ const handleLoginSuccess = async (response: CredentialResponse) => {
         authStore.setAccessToken(credential);
 
         try {
-            const userData = await api.get<User>('/api/database/users', {
+            const userData = await api.get<User>('/api/user/profile', {
                 params: { email: payload.email }
             });
             authStore.setUser(userData);
         } catch (error) {
             if (error instanceof Error && error.message.includes('404')) {
                 // Create new user
-                const userData = await api.post<User>('/api/database/users', {
+                const userData = await api.post<User>('/api/user/register', {
+
                     email: payload.email,
                     email_verified: payload.email_verified,
                     name: payload.name,

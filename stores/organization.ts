@@ -3,7 +3,7 @@ import {
   type CreateOrganizationDTO,
   type Organization,
   type OrganizationMember,
-} from "@/types/interfaces";
+} from "~/types";
 
 export const useOrganizationStore = defineStore("organization", () => {
   const currentOrganization = ref<Organization | null>(null);

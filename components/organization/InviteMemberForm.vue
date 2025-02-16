@@ -40,7 +40,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { OrganizationMember } from '@/types/interfaces'
+import type { OrganizationMember } from '~/types'
 
 interface InviteFormData {
     email: string
@@ -73,7 +73,7 @@ const handleSubmit = async () => {
     error.value = null
 
     try {
-        const response = await useFetch('/api/database/invites', {
+        const response = await useFetch(`/api/organization/${props.organizationId}/invite`, {
             method: 'POST',
             body: {
                 email: formData.value.email,

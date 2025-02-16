@@ -1,4 +1,4 @@
-import type { User, GoogleUser } from "@/types/interfaces";
+import type { User, GoogleUser } from "~/types";
 import { serverSupabase } from "@/server/utils/supabaseServerClient";
 
 export class UserService {

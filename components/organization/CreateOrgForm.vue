@@ -34,7 +34,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { CreateOrganizationDTO } from '@/types/interfaces'
+import type { CreateOrganizationDTO } from '~/types'
 import { useOrganizationStore } from '@/stores/organization'
 
 const organizationStore = useOrganizationStore()

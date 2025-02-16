@@ -1,23 +1,6 @@
-export interface User {
-  id: string;
-  organization_id: number;
-  name: string;
-  email: string;
-  picture?: string;
-  created_at: Date;
-  updated_at: Date;
-  last_login: Date;
-}
+import type { User } from "./user";
 
-export interface GoogleUser {
-  email: string;
-  email_verified: boolean;
-  name: string;
-  picture?: string;
-  given_name: string;
-  family_name: string;
-  locale: string;
-}
+export type OrganizationRole = "admin" | "member" | "viewer";
 
 export interface Organization {
   id: string;
@@ -27,12 +10,11 @@ export interface Organization {
   created_by: string;
 }
 
-// Update OrganizationMember to include user details
 export interface OrganizationMember {
   id: string;
   organization_id: string;
   user_id: string;
-  role: "admin" | "member" | "viewer";
+  role: OrganizationRole;
   joined_at: string;
   user: User;
 }
@@ -41,7 +23,7 @@ export interface OrganizationInvite {
   id: string;
   organization_id: string;
   email: string;
-  role: "admin" | "member" | "viewer";
+  role: OrganizationRole;
   invited_by: string;
   token: string;
   expires_at: string;
@@ -49,7 +31,13 @@ export interface OrganizationInvite {
   created_at: string;
 }
 
+// DTOs
 export interface CreateOrganizationDTO {
   name: string;
   description?: string;
+}
+
+export interface CreateInviteDTO {
+  email: string;
+  role: OrganizationRole;
 }

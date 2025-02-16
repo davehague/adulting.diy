@@ -152,7 +152,7 @@
 import { ref, onMounted } from 'vue'
 import { useOrganizationStore } from '@/stores/organization'
 import { useAuthStore } from '@/stores/auth'
-import type { OrganizationMember, OrganizationInvite } from '@/types/interfaces'
+import type { OrganizationMember, OrganizationInvite } from '~/types'
 
 const organizationStore = useOrganizationStore()
 const authStore = useAuthStore()
@@ -170,7 +170,7 @@ const selectedRole = ref<OrganizationMember['role']>('member')
 
 const fetchMembers = async () => {
     const { data } = await useFetch<OrganizationMember[]>(
-        `/api/database/organizations/${organizationId.value}/members`
+        `/api/organization/${organizationId.value}/members`
     )
     if (data.value) {
         members.value = data.value
@@ -179,7 +179,7 @@ const fetchMembers = async () => {
 
 const fetchPendingInvites = async () => {
     const { data } = await useFetch<OrganizationInvite[]>(
-        `/api/database/organizations/${organizationId.value}/invites?status=pending`
+        `/api/organization/${organizationId.value}/invites?status=pending`
     )
     if (data.value) {
         pendingInvites.value = data.value
@@ -192,7 +192,7 @@ const handleInvited = () => {
 }
 
 const cancelInvite = async (inviteId: string) => {
-    await useFetch(`/api/database/invites/${inviteId}`, {
+    await useFetch(`/api/organization/invite/${inviteId}`, {
         method: 'DELETE'
     })
     await fetchPendingInvites()
@@ -207,7 +207,7 @@ const openChangeRoleModal = (member: OrganizationMember) => {
 const updateMemberRole = async () => {
     if (!selectedMember.value) return
 
-    await useFetch(`/api/database/organizations/${organizationId.value}/members/${selectedMember.value.id}`, {
+    await useFetch(`/api/organization/${organizationId.value}/members/${selectedMember.value.id}`, {
         method: 'PATCH',
         body: {
             role: selectedRole.value
