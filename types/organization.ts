@@ -17,7 +17,12 @@ export interface OrganizationMember {
   user_id: string;
   role: OrganizationRole;
   joined_at: string;
-  user: User;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    picture?: string;
+  };
 }
 
 export interface OrganizationInvite {

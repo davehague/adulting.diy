@@ -1,91 +1,5 @@
-// pages/home.vue
-<script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { useOrganizationStore } from '@/stores/organization'
-import { type Organization } from '@/types/organization'
-import CreateOrgForm from '@/components/organization/CreateOrgForm.vue'
-import InviteMemberForm from '@/components/organization/InviteMemberForm.vue'
-import MembersList from '@/components/organization/MembersList.vue'
-
-const router = useRouter()
-const authStore = useAuthStore()
-const organizationStore = useOrganizationStore()
-
-const pageLoading = ref(true)
-const pageError = ref<string | null>(null)
-
-const handleLogout = async () => {
-  try {
-    await authStore.logout()
-    router.push('/')
-  } catch (error) {
-    pageError.value = 'Failed to logout. Please try again.'
-  }
-}
-
-const handleOrgCreated = async () => {
-  try {
-    pageLoading.value = true
-    await organizationStore.fetchUserOrganization()
-  } catch (error) {
-    pageError.value = 'Failed to refresh organization data.'
-  } finally {
-    pageLoading.value = false
-  }
-}
-
-const navigateToSettings = () => {
-  if (!organizationStore.currentOrganization?.id) return
-  router.push(`/organization/${organizationStore.currentOrganization.id}/settings`)
-}
-
-const navigateToMembers = () => {
-  router.push('/organization/members')
-}
-
-onMounted(async () => {
-  try {
-    await organizationStore.fetchUserOrganization()
-  } catch (error) {
-    pageError.value = 'Failed to load organization data.'
-  } finally {
-    pageLoading.value = false
-  }
-})
-</script>
-
 <template>
   <div class="min-h-screen bg-gray-100">
-    <!-- Header Section -->
-    <header class="bg-white shadow">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div class="flex justify-between items-center">
-          <div class="flex items-center space-x-4">
-            <img v-if="authStore.user?.picture" :src="authStore.user.picture"
-              :alt="authStore.user?.name ?? 'User avatar'" class="w-10 h-10 rounded-full object-cover">
-            <div v-else
-              class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-              {{ authStore.user?.name?.charAt(0)?.toUpperCase() ?? '?' }}
-            </div>
-            <div>
-              <h1 class="text-xl font-semibold">
-                Welcome{{ authStore.user?.name ? `, ${authStore.user.name}` : '' }}!
-              </h1>
-              <p v-if="authStore.user?.email" class="text-sm text-gray-600">
-                {{ authStore.user.email }}
-              </p>
-            </div>
-          </div>
-          <button @click="handleLogout"
-            class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md">
-            Logout
-          </button>
-        </div>
-      </div>
-    </header>
-
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Page Loading State -->
@@ -181,3 +95,59 @@ onMounted(async () => {
     </main>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useOrganizationStore } from '@/stores/organization'
+import CreateOrgForm from '@/components/organization/CreateOrgForm.vue'
+import InviteMemberForm from '@/components/organization/InviteMemberForm.vue'
+import MembersList from '@/components/organization/MembersList.vue'
+
+const router = useRouter()
+const authStore = useAuthStore()
+const organizationStore = useOrganizationStore()
+
+const pageLoading = ref(true)
+const pageError = ref<string | null>(null)
+
+const handleLogout = async () => {
+  try {
+    await authStore.logout()
+    router.push('/')
+  } catch (error) {
+    pageError.value = 'Failed to logout. Please try again.'
+  }
+}
+
+const handleOrgCreated = async () => {
+  try {
+    pageLoading.value = true
+    await organizationStore.fetchUserOrganization()
+  } catch (error) {
+    pageError.value = 'Failed to refresh organization data.'
+  } finally {
+    pageLoading.value = false
+  }
+}
+
+const navigateToSettings = () => {
+  if (!organizationStore.currentOrganization?.id) return
+  router.push(`/organization/${organizationStore.currentOrganization.id}/settings`)
+}
+
+const navigateToMembers = () => {
+  router.push('/organization/members')
+}
+
+onMounted(async () => {
+  try {
+    await organizationStore.fetchUserOrganization()
+  } catch (error) {
+    pageError.value = 'Failed to load organization data.'
+  } finally {
+    pageLoading.value = false
+  }
+})
+</script>

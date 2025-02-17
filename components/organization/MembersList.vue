@@ -1,89 +1,3 @@
-// components/organization/MembersList.vue
-<script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useOrganizationStore } from '@/stores/organization'
-import { type OrganizationMember, type OrganizationRole } from '@/types/organization'
-
-const organizationStore = useOrganizationStore()
-
-interface EditState {
-    memberId: string | null
-    role: OrganizationRole | null
-}
-
-const editState = ref<EditState>({
-    memberId: null,
-    role: null
-})
-
-const removalState = ref<string | null>(null)
-
-// Ensure members are loaded
-onMounted(async () => {
-    if (!organizationStore.members || organizationStore.members.length === 0) {
-        await organizationStore.fetchMembers()
-    }
-})
-
-const startEditRole = (member: OrganizationMember) => {
-    if (!member?.id || !member?.role) return
-
-    editState.value = {
-        memberId: member.id,
-        role: member.role
-    }
-}
-
-const cancelEditRole = () => {
-    editState.value = {
-        memberId: null,
-        role: null
-    }
-}
-
-const updateRole = async (memberId: string) => {
-    if (!editState.value.role || !memberId) return
-
-    try {
-        await organizationStore.updateMemberRole(memberId, editState.value.role)
-        cancelEditRole()
-    } catch (error) {
-        // Error is handled by the store
-        cancelEditRole()
-    }
-}
-
-const startRemoveMember = (memberId: string) => {
-    if (!memberId) return
-    removalState.value = memberId
-}
-
-const cancelRemoveMember = () => {
-    removalState.value = null
-}
-
-const confirmRemoveMember = async (memberId: string) => {
-    if (!memberId) return
-
-    try {
-        await organizationStore.removeMember(memberId)
-        cancelRemoveMember()
-    } catch (error) {
-        // Error is handled by the store
-        cancelRemoveMember()
-    }
-}
-
-const getRoleStyles = (role: OrganizationRole): string => {
-    const styles = {
-        admin: 'bg-blue-100 text-blue-800',
-        member: 'bg-green-100 text-green-800',
-        viewer: 'bg-gray-100 text-gray-800'
-    }
-    return styles[role] || styles.viewer
-}
-</script>
-
 <template>
     <div class="space-y-4">
         <!-- Header -->
@@ -176,3 +90,90 @@ const getRoleStyles = (role: OrganizationRole): string => {
         </template>
     </div>
 </template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useOrganizationStore } from '@/stores/organization'
+import { type OrganizationMember, type OrganizationRole } from '@/types/organization'
+
+const organizationStore = useOrganizationStore()
+
+interface EditState {
+    memberId: string | null
+    role: OrganizationRole | null
+}
+
+const editState = ref<EditState>({
+    memberId: null,
+    role: null
+})
+
+const removalState = ref<string | null>(null)
+
+// Ensure members are loaded
+onMounted(async () => {
+    if (!organizationStore.members || organizationStore.members.length === 0) {
+        await organizationStore.fetchMembers()
+    }
+
+    console.log(organizationStore.members)
+})
+
+const startEditRole = (member: OrganizationMember) => {
+    if (!member?.id || !member?.role) return
+
+    editState.value = {
+        memberId: member.id,
+        role: member.role
+    }
+}
+
+const cancelEditRole = () => {
+    editState.value = {
+        memberId: null,
+        role: null
+    }
+}
+
+const updateRole = async (memberId: string) => {
+    if (!editState.value.role || !memberId) return
+
+    try {
+        await organizationStore.updateMemberRole(memberId, editState.value.role)
+        cancelEditRole()
+    } catch (error) {
+        // Error is handled by the store
+        cancelEditRole()
+    }
+}
+
+const startRemoveMember = (memberId: string) => {
+    if (!memberId) return
+    removalState.value = memberId
+}
+
+const cancelRemoveMember = () => {
+    removalState.value = null
+}
+
+const confirmRemoveMember = async (memberId: string) => {
+    if (!memberId) return
+
+    try {
+        await organizationStore.removeMember(memberId)
+        cancelRemoveMember()
+    } catch (error) {
+        // Error is handled by the store
+        cancelRemoveMember()
+    }
+}
+
+const getRoleStyles = (role: OrganizationRole): string => {
+    const styles = {
+        admin: 'bg-blue-100 text-blue-800',
+        member: 'bg-green-100 text-green-800',
+        viewer: 'bg-gray-100 text-gray-800'
+    }
+    return styles[role] || styles.viewer
+}
+</script>

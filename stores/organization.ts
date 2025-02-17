@@ -80,14 +80,11 @@ export const useOrganizationStore = defineStore(
 
         if (membersResponse) {
           members.value = membersResponse || [];
-          // TODO: set the role?
-          userRole.value = "admin"; //membersResponse.role || null;
         }
 
         return {
           organization: currentOrganization.value,
           members: members.value,
-          role: userRole.value,
         };
       } catch (e) {
         console.error("[OrganizationStore] Error fetching organization:", e);

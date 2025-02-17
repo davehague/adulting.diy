@@ -3,6 +3,7 @@ import type {
   CreateOrganizationDTO,
   OrganizationMember,
   OrganizationInvite,
+  User,
 } from "~/types";
 import { serverSupabase } from "@/server/utils/supabaseServerClient";
 
@@ -136,15 +137,42 @@ export class OrganizationService {
   ): Promise<OrganizationMember[]> {
     try {
       const { data, error } = await serverSupabase
-        .from("users")
-        .select()
+        .from("organization_members")
+        .select(
+          `
+          id,
+          organization_id,
+          user_id,
+          role,
+          joined_at,
+          user:users!inner (
+            id,
+            name,
+            email,
+            picture
+          )
+        `
+        )
         .eq("organization_id", organizationId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("[OrganizationService] Error fetching members:", error);
+        throw error;
+      }
 
-      return data as OrganizationMember[];
+      // Transform the data to ensure user is a single object, not an array
+      const members =
+        data?.map((member) => ({
+          ...member,
+          user: Array.isArray(member.user) ? member.user[0] : member.user,
+        })) ?? [];
+
+      return members as OrganizationMember[];
     } catch (error) {
-      console.error("[OrganizationService] Error fetching members:", error);
+      console.error(
+        "[OrganizationService] Error in getOrganizationMembers:",
+        error
+      );
       throw error;
     }
   }
