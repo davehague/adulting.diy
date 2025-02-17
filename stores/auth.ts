@@ -5,6 +5,8 @@ import type { User } from "~/types";
 export const useAuthStore = defineStore(
   "auth",
   () => {
+    const currentUser = computed(() => user.value);
+
     const user = ref<User | null>(null);
     const accessToken = ref<string | null>(null);
 
@@ -27,6 +29,7 @@ export const useAuthStore = defineStore(
       user,
       accessToken,
       isAuthenticated,
+      currentUser,
       setUser,
       setAccessToken,
       logout,

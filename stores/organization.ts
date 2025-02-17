@@ -227,6 +227,54 @@ export const useOrganizationStore = defineStore(
       }
     };
 
+    const updateOrganization = async (
+      updateData: Partial<Organization> & { id: number }
+    ) => {
+      if (!currentOrganization.value?.id) {
+        console.error("[OrganizationStore] No organization ID available");
+        return;
+      }
+
+      loading.value = true;
+      try {
+        const response = await api.patch<{ organization: Organization }>(
+          `/api/organization/${updateData.id}`,
+          {
+            name: updateData.name,
+            description: updateData.description,
+          }
+        );
+
+        currentOrganization.value = response.organization;
+        return response.organization;
+      } catch (e) {
+        error.value =
+          e instanceof Error ? e.message : "Failed to update organization";
+        throw error.value;
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const deleteOrganization = async (organizationId: number) => {
+      loading.value = true;
+      try {
+        await api.delete(`/api/organization/${organizationId}`);
+
+        // Clear organization state
+        currentOrganization.value = null;
+        userRole.value = null;
+        members.value = [];
+        pendingInvites.value = [];
+      } catch (e) {
+        error.value =
+          e instanceof Error ? e.message : "Failed to delete organization";
+        throw error.value;
+      } finally {
+        loading.value = false;
+      }
+    };
+
     return {
       // State
       currentOrganization,
@@ -251,6 +299,8 @@ export const useOrganizationStore = defineStore(
       updateMemberRole,
       removeMember,
       cancelInvite,
+      updateOrganization,
+      deleteOrganization,
     };
   },
   {
