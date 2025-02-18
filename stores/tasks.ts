@@ -52,13 +52,23 @@ export const useTaskStore = defineStore(
       }
     };
 
-    const createTask = async (taskData: Partial<Task>): Promise<Task> => {
+    const createTask = async (
+      taskData: Partial<Task>,
+      occurrenceData: Partial<TaskOccurrence>
+    ): Promise<{ task: Task; occurrence: TaskOccurrence }> => {
       loading.value = true;
       error.value = null;
 
       try {
-        const response = await api.post<Task>("/api/tasks", taskData);
-        tasks.value.push(response);
+        const response = await api.post<{
+          task: Task;
+          occurrence: TaskOccurrence;
+        }>("/api/tasks", { task: taskData, occurrence: occurrenceData });
+        tasks.value.push(response.task);
+        pendingOccurrences.value.push({
+          ...response.occurrence,
+          task: response.task,
+        });
         return response;
       } catch (e) {
         error.value = e instanceof Error ? e.message : "Failed to create task";

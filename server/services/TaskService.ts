@@ -7,6 +7,7 @@ import {
   type TaskOccurrenceNotification,
 } from "@/types/tasks";
 import { serverSupabase } from "@/server/utils/supabaseServerClient";
+import { addDays, addWeeks, addMonths, addYears } from "date-fns";
 
 export class TaskService {
   // Core Task Methods
@@ -33,6 +34,101 @@ export class TaskService {
       throw error;
     }
   }
+
+  createTaskWithOccurrence = async (
+    taskData: Partial<Task>,
+    occurrenceData: Partial<TaskOccurrence>
+  ) => {
+    const { data: task, error: taskError } = await serverSupabase
+      .from("tasks")
+      .insert(taskData)
+      .select()
+      .single();
+
+    if (taskError) throw taskError;
+
+    // Create initial occurrence
+    const { data: occurrence, error: occurrenceError } = await serverSupabase
+      .from("task_occurrences")
+      .insert({
+        task_id: task.id,
+        due_date: occurrenceData.due_date,
+        status: "pending",
+        assigned_to: occurrenceData.assigned_to || [],
+      })
+      .select()
+      .single();
+
+    if (occurrenceError) throw occurrenceError;
+
+    // If task is recurring, calculate and create future occurrences
+    if (task.recurring && task.recurrence_pattern_id) {
+      await this.createFutureOccurrences(task, occurrence.due_date);
+    }
+
+    return { task, occurrence };
+  };
+
+  createFutureOccurrences = async (
+    task: Task,
+    initialDueDate: string
+  ): Promise<void> => {
+    if (!task.recurrence_pattern_id) return;
+
+    // Fetch the recurrence pattern
+    const { data: pattern, error: patternError } = await serverSupabase
+      .from("recurrence_patterns")
+      .select()
+      .eq("id", task.recurrence_pattern_id)
+      .single();
+
+    if (patternError) throw patternError;
+
+    const occurrences: Partial<TaskOccurrence>[] = [];
+    let currentDate = new Date(initialDueDate);
+    const endDate = pattern.end_date ? new Date(pattern.end_date) : null;
+    let occurrenceCount = 0;
+
+    while (
+      (!endDate || currentDate <= endDate) &&
+      (!pattern.end_after_occurrences ||
+        occurrenceCount < pattern.end_after_occurrences)
+    ) {
+      // Calculate next occurrence based on pattern type
+      switch (pattern.type) {
+        case "daily":
+          currentDate = addDays(currentDate, pattern.interval);
+          break;
+        case "weekly":
+          currentDate = addWeeks(currentDate, pattern.interval);
+          break;
+        case "monthly":
+        case "monthly_by_weekday":
+          currentDate = addMonths(currentDate, pattern.interval);
+          break;
+        case "yearly":
+          currentDate = addYears(currentDate, pattern.interval);
+          break;
+      }
+
+      occurrences.push({
+        task_id: task.id,
+        due_date: currentDate.toISOString(),
+        status: "pending",
+        assigned_to: [], // You might want to copy from initial occurrence
+      });
+
+      occurrenceCount++;
+    }
+
+    if (occurrences.length > 0) {
+      const { error: insertError } = await serverSupabase
+        .from("task_occurrences")
+        .insert(occurrences);
+
+      if (insertError) throw insertError;
+    }
+  };
 
   async updateTask(id: string, taskData: Partial<Task>): Promise<Task> {
     console.log("[TaskService] Updating task:", id);

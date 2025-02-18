@@ -23,13 +23,23 @@ export default defineProtectedEventHandler(async (event, authenticatedUser) => {
   if (event.method === "POST") {
     try {
       const body = await readBody(event);
+      const { task: taskInput, occurrence: occurrenceInput } = body;
+
       const taskData = {
-        ...body,
+        ...taskInput,
         organization_id: authenticatedUser.organizationId,
-        created_by: authenticatedUser.userId, // Now using the correct ID
+        created_by: authenticatedUser.userId,
       };
 
-      const task = await taskService.createTask(taskData);
+      const occurrenceData = {
+        ...occurrenceInput,
+        // Add any additional occurrence fields you need
+      };
+
+      const task = await taskService.createTaskWithOccurrence(
+        taskData,
+        occurrenceData
+      );
       return task;
     } catch (error) {
       throw createError({

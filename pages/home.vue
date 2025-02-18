@@ -1,4 +1,3 @@
-// pages/home.vue
 <template>
   <div class="min-h-screen bg-gray-100">
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -63,7 +62,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationStore } from '@/stores/organization'
 import { useTasks, useTaskActions } from '@/composables/useTasks'
-import { type Task } from '@/types/tasks'
+import { type Task, type TaskOccurrence } from '@/types/tasks'
 import TaskList from '@/components/task/TaskList.vue'
 import TaskForm from '@/components/task/TaskForm.vue'
 
@@ -97,14 +96,11 @@ const closeTaskForm = () => {
   editingTask.value = null
 }
 
-const handleSaveTask = async (taskData: Partial<Task>) => {
+const handleSaveTask = async (taskData: Partial<Task>, occurrenceData: Partial<TaskOccurrence>) => {
   if (editingTask.value) {
     await updateTask(editingTask.value.id, taskData)
   } else {
-    await saveTask({
-      ...taskData,
-      organization_id: organizationStore.currentOrganization?.id
-    })
+    await saveTask(taskData, occurrenceData)
   }
   closeTaskForm()
 }

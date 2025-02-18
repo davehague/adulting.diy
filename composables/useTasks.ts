@@ -40,8 +40,11 @@ export const useTaskActions = () => {
     return await store.createRecurrencePattern(pattern);
   };
 
-  const saveTask = async (task: Partial<Task>): Promise<Task> => {
-    return await store.createTask(task);
+  const saveTask = async (
+    task: Partial<Task>,
+    occurrence: Partial<TaskOccurrence>
+  ): Promise<{ task: Task; occurrence: TaskOccurrence }> => {
+    return await store.createTask(task, occurrence);
   };
 
   const updateTask = async (id: string, task: Partial<Task>): Promise<Task> => {
