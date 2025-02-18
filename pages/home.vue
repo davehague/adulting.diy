@@ -91,7 +91,7 @@ onMounted(async () => {
     await organizationStore.fetchUserOrganization()
 
     if (!organizationStore.currentOrganization) {
-      router.push('/organization/create')
+      console.log('No organization found!')
       return
     }
 

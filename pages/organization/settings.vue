@@ -1,8 +1,15 @@
-// pages/organization/settings.vue
 <template>
     <div class="min-h-screen bg-gray-100">
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div class="space-y-6">
+            <!-- Non-admin users only see members list -->
+            <div v-if="!organizationStore.isAdmin" class="bg-white shadow rounded-lg">
+                <div class="p-6">
+                    <MembersList />
+                </div>
+            </div>
+
+            <!-- Admin-only sections -->
+            <div v-else class="space-y-6">
                 <!-- Organization Settings -->
                 <div class="bg-white shadow rounded-lg">
                     <div class="p-6">
@@ -16,8 +23,7 @@
                     <div class="p-6">
                         <div class="flex justify-between items-center mb-6">
                             <h2 class="text-lg font-medium text-gray-900">Members</h2>
-                            <button v-if="organizationStore.isAdmin" @click="showInviteForm = true"
-                                class="text-sm text-blue-600 hover:text-blue-900">
+                            <button @click="showInviteForm = true" class="text-sm text-blue-600 hover:text-blue-900">
                                 Invite Member
                             </button>
                         </div>
@@ -34,8 +40,8 @@
                 </div>
             </div>
 
-            <!-- Invite Modal -->
-            <InviteMemberModal v-if="showInviteForm" @close="showInviteForm = false" />
+            <!-- Invite Modal (admin only) -->
+            <InviteMemberModal v-if="showInviteForm && organizationStore.isAdmin" @close="showInviteForm = false" />
         </main>
     </div>
 </template>

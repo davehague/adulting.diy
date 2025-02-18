@@ -39,45 +39,44 @@
                         </div>
                     </div>
 
-                    <!-- Role Management -->
+                    <!-- Role Display (all users can see roles) -->
                     <div class="flex items-center space-x-4">
-                        <!-- Role Display/Edit -->
-                        <div v-if="editState.memberId === member?.id" class="flex items-center space-x-2">
-                            <select v-model="editState.role" class="rounded border-gray-300 text-sm">
-                                <option value="admin">Admin</option>
-                                <option value="member">Member</option>
-                                <option value="viewer">Viewer</option>
-                            </select>
-                            <button @click="updateRole(member.id)"
-                                class="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
-                                Save
-                            </button>
-                            <button @click="cancelEditRole"
-                                class="text-sm px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
-                                Cancel
-                            </button>
-                        </div>
-                        <div v-else-if="member?.role">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                :class="getRoleStyles(member.role)">
-                                {{ member.role }}
-                            </span>
-                        </div>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                            :class="getRoleStyles(member?.role)">
+                            {{ member?.role }}
+                        </span>
 
-                        <!-- Actions -->
-                        <div v-if="organizationStore.isAdmin && editState.memberId !== member?.id"
-                            class="flex items-center space-x-2">
-                            <button @click="startEditRole(member)" class="text-sm text-gray-600 hover:text-gray-900">
-                                Edit Role
-                            </button>
-                            <button v-if="removalState === member?.id" @click="confirmRemoveMember(member.id)"
-                                class="text-sm text-red-600 hover:text-red-900">
-                                Confirm Remove
-                            </button>
-                            <button v-else @click="startRemoveMember(member.id)"
-                                class="text-sm text-red-600 hover:text-red-900">
-                                Remove
-                            </button>
+                        <!-- Admin-only Actions -->
+                        <div v-if="organizationStore.isAdmin" class="flex items-center space-x-2">
+                            <div v-if="editState.memberId === member?.id" class="flex items-center space-x-2">
+                                <select v-model="editState.role" class="rounded border-gray-300 text-sm">
+                                    <option value="admin">Admin</option>
+                                    <option value="member">Member</option>
+                                    <option value="viewer">Viewer</option>
+                                </select>
+                                <button @click="updateRole(member.id)"
+                                    class="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                    Save
+                                </button>
+                                <button @click="cancelEditRole"
+                                    class="text-sm px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                                    Cancel
+                                </button>
+                            </div>
+                            <template v-else>
+                                <button @click="startEditRole(member)"
+                                    class="text-sm text-gray-600 hover:text-gray-900">
+                                    Edit Role
+                                </button>
+                                <button v-if="removalState === member?.id" @click="confirmRemoveMember(member.id)"
+                                    class="text-sm text-red-600 hover:text-red-900">
+                                    Confirm Remove
+                                </button>
+                                <button v-else @click="startRemoveMember(member.id)"
+                                    class="text-sm text-red-600 hover:text-red-900">
+                                    Remove
+                                </button>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -110,13 +109,10 @@ const editState = ref<EditState>({
 
 const removalState = ref<string | null>(null)
 
-// Ensure members are loaded
 onMounted(async () => {
     if (!organizationStore.members || organizationStore.members.length === 0) {
         await organizationStore.fetchMembers()
     }
-
-    console.log(organizationStore.members)
 })
 
 const startEditRole = (member: OrganizationMember) => {
@@ -142,7 +138,6 @@ const updateRole = async (memberId: string) => {
         await organizationStore.updateMemberRole(memberId, editState.value.role)
         cancelEditRole()
     } catch (error) {
-        // Error is handled by the store
         cancelEditRole()
     }
 }
@@ -163,17 +158,16 @@ const confirmRemoveMember = async (memberId: string) => {
         await organizationStore.removeMember(memberId)
         cancelRemoveMember()
     } catch (error) {
-        // Error is handled by the store
         cancelRemoveMember()
     }
 }
 
-const getRoleStyles = (role: OrganizationRole): string => {
+const getRoleStyles = (role?: OrganizationRole): string => {
     const styles = {
         admin: 'bg-blue-100 text-blue-800',
         member: 'bg-green-100 text-green-800',
         viewer: 'bg-gray-100 text-gray-800'
     }
-    return styles[role] || styles.viewer
+    return role ? styles[role] : styles.viewer
 }
 </script>
