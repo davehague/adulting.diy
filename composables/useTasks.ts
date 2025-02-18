@@ -16,6 +16,7 @@ export const useTasks = () => {
     error,
     sortedTasks,
     sortedPendingOccurrences,
+    tasksWithCurrentOccurrence,
   } = storeToRefs(store);
 
   return {
@@ -28,6 +29,7 @@ export const useTasks = () => {
     // Computed
     sortedTasks,
     sortedPendingOccurrences,
+    tasksWithCurrentOccurrence,
   };
 };
 
@@ -74,6 +76,12 @@ export const useTaskActions = () => {
     return await store.fetchTaskOccurrences(taskId);
   };
 
+  const loadRecurrencePattern = async (
+    patternId: string
+  ): Promise<RecurrencePattern> => {
+    return await store.fetchRecurrencePattern(patternId);
+  };
+
   return {
     saveRecurrencePattern,
     saveTask,
@@ -82,5 +90,6 @@ export const useTaskActions = () => {
     loadPendingOccurrences,
     updateOccurrence,
     fetchTaskOccurrences,
+    loadRecurrencePattern,
   };
 };

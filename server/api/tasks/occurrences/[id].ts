@@ -18,19 +18,6 @@ export default defineProtectedEventHandler(async (event, authenticatedUser) => {
   if (event.method === "PATCH") {
     try {
       const body = await readBody(event);
-
-      // If this is a status update, use the specific method
-      if ("status" in body) {
-        const occurrence = await taskService.updateTaskOccurrenceStatus(
-          id,
-          body.status,
-          authenticatedUser.userId,
-          body.execution_notes
-        );
-        return occurrence;
-      }
-
-      // Otherwise, use the general update method
       const occurrence = await taskService.updateTaskOccurrence(id, body);
       return occurrence;
     } catch (error) {

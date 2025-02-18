@@ -83,7 +83,10 @@
             </label>
 
             <div v-if="formData.task.recurring" class="pl-6">
-                <div v-if="selectedPattern" class="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                <div v-if="isLoadingPattern" class="p-3 bg-gray-50 rounded-md">
+                    <span class="text-sm text-gray-500">Loading pattern...</span>
+                </div>
+                <div v-else-if="selectedPattern" class="flex items-center justify-between p-3 bg-gray-50 rounded-md">
                     <span class="text-sm text-gray-600">{{ formatRecurrencePattern(selectedPattern) }}</span>
                     <button type="button" @click="showRecurrenceModal = true"
                         class="text-blue-600 hover:text-blue-700 text-sm font-medium">
@@ -126,12 +129,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { type Task, type RecurrencePattern, type TaskOccurrence } from '@/types/tasks'
 import { formatRecurrencePattern } from '@/utils/formatters'
 import { useTaskActions } from '@/composables/useTasks'
+import { useTaskStore } from '@/stores/tasks'
+
 import { useOrganizationStore } from '@/stores/organization'
 import RecurrencePatternModal from '@/components/task/RecurrencePatternModal.vue'
+
+const taskStore = useTaskStore()
 
 const props = defineProps<{
     task?: Task | null
@@ -152,6 +159,8 @@ const selectedPattern = ref<RecurrencePattern | null>(null)
 const assigneeSearch = ref('')
 const showAssigneeDropdown = ref(false)
 
+const isLoadingPattern = ref(false)
+
 // Initialize form with default values
 const formData = ref<{
     task: Partial<Task>
@@ -167,12 +176,20 @@ const formData = ref<{
         overdue_reminder: 1,
         recurring: false,
         is_active: true,
-        ...props.task // Spread existing task data if editing
+        ...props.task, // This stays the same
+        // Add organization_id if creating new task
+        organization_id: props.task?.organization_id || organizationStore.currentOrganization?.id
     },
     occurrence: {
-        due_date: props.currentOccurrence?.due_date || new Date().toISOString().split('T')[0],
+        due_date: props.currentOccurrence?.due_date
+            ? new Date(props.currentOccurrence.due_date).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0],
         assigned_to: props.currentOccurrence?.assigned_to || [],
-        status: (props.currentOccurrence?.status || 'pending') as TaskOccurrence['status']
+        status: (props.currentOccurrence?.status || 'pending') as TaskOccurrence['status'],
+        // Add task_id if editing
+        task_id: props.task?.id,
+        // Add id if editing occurrence
+        ...(props.currentOccurrence?.id ? { id: props.currentOccurrence.id } : {})
     }
 })
 
@@ -193,8 +210,26 @@ const handleRecurringChange = (event: Event) => {
     if (!isRecurring) {
         selectedPattern.value = null
         formData.value.task.recurrence_pattern_id = undefined
+    } else if (props.task?.recurrence_pattern_id) {
+        // If checking and we have a pattern ID, load it
+        loadRecurrencePattern()
     }
 }
+
+const loadRecurrencePattern = async () => {
+    if (!props.task?.recurrence_pattern_id) return
+
+    try {
+        isLoadingPattern.value = true
+        const pattern = await taskStore.fetchRecurrencePattern(props.task.recurrence_pattern_id)
+        selectedPattern.value = pattern
+    } catch (error) {
+        console.error('Error loading recurrence pattern:', error)
+    } finally {
+        isLoadingPattern.value = false
+    }
+}
+
 
 const filteredMembers = computed(() => {
     return organizationStore.members.filter(member => {
@@ -249,6 +284,7 @@ const handleSubmit = async (event: Event) => {
 }
 
 onMounted(() => {
+    console.log('Task form mounted', props.task, props.currentOccurrence)
     document.addEventListener('click', (event) => {
         const target = event.target as HTMLElement
         if (!target.closest('.relative')) {
@@ -256,4 +292,12 @@ onMounted(() => {
         }
     })
 })
+
+watch(() => props.task, async (newTask) => {
+    if (newTask?.recurring && newTask.recurrence_pattern_id) {
+        await loadRecurrencePattern()
+    } else {
+        selectedPattern.value = null
+    }
+}, { immediate: true })
 </script>

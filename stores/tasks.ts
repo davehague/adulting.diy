@@ -15,6 +15,8 @@ export const useTaskStore = defineStore(
 
     // State
     const tasks = ref<Task[]>([]);
+    const taskOccurrences = ref<Record<string, TaskOccurrence[]>>({});
+
     const pendingOccurrences = ref<(TaskOccurrence & { task: Task })[]>([]);
     const loading = ref(false);
     const error = ref<string | null>(null);
@@ -44,6 +46,7 @@ export const useTaskStore = defineStore(
           params: { organization_id: organizationId },
         });
         tasks.value = response;
+        await fetchTaskOccurrencesForTasks();
       } catch (e) {
         error.value = e instanceof Error ? e.message : "Failed to fetch tasks";
         throw error.value;
@@ -65,6 +68,8 @@ export const useTaskStore = defineStore(
           occurrence: TaskOccurrence;
         }>("/api/tasks", { task: taskData, occurrence: occurrenceData });
         tasks.value.push(response.task);
+        // Add this line:
+        taskOccurrences.value[response.task.id] = [response.occurrence];
         pendingOccurrences.value.push({
           ...response.occurrence,
           task: response.task,
@@ -100,6 +105,15 @@ export const useTaskStore = defineStore(
       }
     };
 
+    const tasksWithCurrentOccurrence = computed(() =>
+      tasks.value.map((task) => ({
+        ...task,
+        current_occurrence: taskOccurrences.value[task.id]?.find(
+          (o) => o.status === "pending" || o.status === "in_progress"
+        ),
+      }))
+    );
+
     const createRecurrencePattern = async (
       patternData: Omit<RecurrencePattern, "id" | "created_at" | "updated_at">
     ): Promise<string> => {
@@ -117,6 +131,31 @@ export const useTaskStore = defineStore(
           e instanceof Error
             ? e.message
             : "Failed to create recurrence pattern";
+        throw error.value;
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const fetchTaskOccurrencesForTasks = async () => {
+      loading.value = true;
+      error.value = null;
+
+      try {
+        await Promise.all(
+          tasks.value.map(async (task) => {
+            const occurrences = await api.get<TaskOccurrence[]>(
+              "/api/tasks/occurrences",
+              {
+                params: { task_id: task.id },
+              }
+            );
+            taskOccurrences.value[task.id] = occurrences;
+          })
+        );
+      } catch (e) {
+        error.value =
+          e instanceof Error ? e.message : "Failed to fetch task occurrences";
         throw error.value;
       } finally {
         loading.value = false;
@@ -166,12 +205,26 @@ export const useTaskStore = defineStore(
           occurrenceData
         );
 
+        // Update in taskOccurrences
+        const taskId = response.task_id;
+        if (taskOccurrences.value[taskId]) {
+          const occurrenceIndex = taskOccurrences.value[taskId].findIndex(
+            (o) => o.id === id
+          );
+          if (occurrenceIndex !== -1) {
+            taskOccurrences.value[taskId][occurrenceIndex] = response;
+          }
+        }
+
         // Update the occurrence in pendingOccurrences if it exists
         const index = pendingOccurrences.value.findIndex((o) => o.id === id);
         if (index !== -1) {
+          // Create a new object with all properties from both the existing occurrence and the response
           pendingOccurrences.value[index] = {
             ...pendingOccurrences.value[index],
             ...response,
+            // Ensure we preserve the task reference
+            task: pendingOccurrences.value[index].task,
           };
         }
 
@@ -179,6 +232,26 @@ export const useTaskStore = defineStore(
       } catch (e) {
         error.value =
           e instanceof Error ? e.message : "Failed to update occurrence";
+        throw error.value;
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const fetchRecurrencePattern = async (
+      patternId: string
+    ): Promise<RecurrencePattern> => {
+      loading.value = true;
+      error.value = null;
+
+      try {
+        const response = await api.get<RecurrencePattern>(
+          `/api/tasks/patterns/${patternId}`
+        );
+        return response;
+      } catch (e) {
+        error.value =
+          e instanceof Error ? e.message : "Failed to fetch recurrence pattern";
         throw error.value;
       } finally {
         loading.value = false;
@@ -218,12 +291,14 @@ export const useTaskStore = defineStore(
       // Getters
       sortedTasks,
       sortedPendingOccurrences,
+      tasksWithCurrentOccurrence,
 
       // Actions
       fetchTasks,
       createTask,
       updateTask,
       createRecurrencePattern,
+      fetchRecurrencePattern,
       fetchPendingOccurrences,
       updateOccurrence,
       fetchTaskOccurrences,

@@ -50,7 +50,8 @@
     <!-- Task Form Modal -->
     <div v-if="showNewTaskForm" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
       <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-        <TaskForm :task="editingTask" @save="handleSaveTask" @cancel="closeTaskForm" />
+        <TaskForm :task="editingTask" :current-occurrence="editingOccurrence" @save="handleSaveTask"
+          @cancel="closeTaskForm" />
       </div>
     </div>
   </div>
@@ -69,8 +70,9 @@ import TaskForm from '@/components/task/TaskForm.vue'
 const router = useRouter()
 const authStore = useAuthStore()
 const organizationStore = useOrganizationStore()
-const { tasks, loading, error } = useTasks()
-const { loadTasks, saveTask, updateTask, updateOccurrence, fetchTaskOccurrences } = useTaskActions()
+const { tasks, loading, error, tasksWithCurrentOccurrence } = useTasks()
+const { loadTasks, saveTask, updateTask, updateOccurrence } = useTaskActions()
+const taskStore = useTaskStore()
 
 const showNewTaskForm = ref(false)
 const currentFilter = ref('all')
@@ -87,11 +89,12 @@ const filters = [
 ]
 
 const filteredTasks = computed(() => {
-  // Basic filtering - expand based on your needs
   if (currentFilter.value === 'my') {
-    return tasks.value.filter(task => task.created_by === authStore.user?.id)
+    return tasksWithCurrentOccurrence.value.filter((task: Task) =>
+      task.created_by === authStore.user?.id
+    )
   }
-  return tasks.value
+  return tasksWithCurrentOccurrence.value
 })
 
 const closeTaskForm = () => {
@@ -99,10 +102,9 @@ const closeTaskForm = () => {
   editingTask.value = null
 }
 
-const handleEditTask = async (task: Task) => {
+const handleEditTask = async (task: Task, occurrence?: TaskOccurrence) => {
   editingTask.value = task
-  const occurrences = await fetchTaskOccurrences(task.id)
-  editingOccurrence.value = occurrences[0] // Get first occurrence
+  editingOccurrence.value = occurrence || null
   showNewTaskForm.value = true
 }
 
@@ -144,6 +146,7 @@ onMounted(async () => {
     }
 
     await loadTasks(organizationStore.currentOrganization.id)
+    await taskStore.fetchPendingOccurrences(organizationStore.currentOrganization.id)
   } catch (err) {
     error.value = 'Failed to load your tasks. Please try again.'
   }

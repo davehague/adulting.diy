@@ -314,45 +314,6 @@ export class TaskService {
     }
   }
 
-  async updateTaskOccurrenceStatus(
-    id: string,
-    status: TaskOccurrence["status"],
-    executedBy?: string,
-    executionNotes?: string
-  ): Promise<TaskOccurrence> {
-    try {
-      const updateData: Partial<TaskOccurrence> = {
-        status,
-        executed_by: executedBy,
-        execution_notes: executionNotes,
-        executed_datetime: executedBy ? new Date().toISOString() : undefined,
-      };
-
-      const { data, error } = await serverSupabase
-        .from("task_occurrences")
-        .update(updateData)
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error(
-          "[TaskService] Error updating task occurrence status:",
-          error
-        );
-        throw error;
-      }
-
-      return data;
-    } catch (error) {
-      console.error(
-        "[TaskService] Unexpected error in updateTaskOccurrenceStatus:",
-        error
-      );
-      throw error;
-    }
-  }
-
   async findPendingOccurrencesByOrganization(
     organizationId: string
   ): Promise<(TaskOccurrence & { task: Task })[]> {
