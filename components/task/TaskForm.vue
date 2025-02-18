@@ -25,12 +25,34 @@
         <!-- Assignees -->
         <div>
             <label class="block text-sm font-medium text-gray-700">Assign To</label>
-            <select v-model="formData.occurrence.assigned_to" multiple
-                class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                <option v-for="member in organizationStore.members" :key="member.id" :value="member.user_id">
-                    {{ member.user.name || member.user.email }}
-                </option>
-            </select>
+            <div class="relative mt-1">
+                <div class="flex flex-wrap gap-2 p-2 border border-gray-300 rounded-md min-h-[42px]">
+                    <!-- Selected users -->
+                    <div v-for="userId in formData.occurrence.assigned_to" :key="userId"
+                        class="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                        {{organizationStore.members.find(m => m.user_id === userId)?.user.name ||
+                            organizationStore.members.find(m => m.user_id === userId)?.user.email}}
+                        <button type="button" @click="removeAssignee(userId)" class="text-blue-600 hover:text-blue-800">
+                            ×
+                        </button>
+                    </div>
+                    <!-- Input for filtering -->
+                    <input v-model="assigneeSearch" @focus="showAssigneeDropdown = true" placeholder="Search members..."
+                        class="flex-1 min-w-[120px] outline-none border-none p-0" />
+                </div>
+
+                <!-- Dropdown -->
+                <div v-if="showAssigneeDropdown"
+                    class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                    <div v-for="member in filteredMembers" :key="member.id" @click="addAssignee(member.user_id)"
+                        class="px-4 py-2 hover:bg-gray-100 cursor-pointer">
+                        {{ member.user.name || member.user.email }}
+                    </div>
+                    <div v-if="filteredMembers.length === 0" class="px-4 py-2 text-gray-500">
+                        No members found
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Reminders -->
@@ -113,6 +135,7 @@ import RecurrencePatternModal from '@/components/task/RecurrencePatternModal.vue
 
 const props = defineProps<{
     task?: Task | null
+    currentOccurrence?: TaskOccurrence | null
 }>()
 
 const emit = defineEmits<{
@@ -126,10 +149,15 @@ const organizationStore = useOrganizationStore()
 const showRecurrenceModal = ref(false)
 const selectedPattern = ref<RecurrencePattern | null>(null)
 
+const assigneeSearch = ref('')
+const showAssigneeDropdown = ref(false)
+
 // Initialize form with default values
 const formData = ref<{
     task: Partial<Task>
-    occurrence: Partial<TaskOccurrence>
+    occurrence: Partial<TaskOccurrence> & {
+        assigned_to: string[]
+    }
 }>({
     task: {
         title: '',
@@ -142,9 +170,9 @@ const formData = ref<{
         ...props.task // Spread existing task data if editing
     },
     occurrence: {
-        due_date: new Date().toISOString().split('T')[0], // Today's date as default
-        assigned_to: [] as string[], // Explicitly type and initialize as empty array
-        status: 'pending' as TaskOccurrence['status'] // Explicitly type the status
+        due_date: props.currentOccurrence?.due_date || new Date().toISOString().split('T')[0],
+        assigned_to: props.currentOccurrence?.assigned_to || [],
+        status: (props.currentOccurrence?.status || 'pending') as TaskOccurrence['status']
     }
 })
 
@@ -166,6 +194,28 @@ const handleRecurringChange = (event: Event) => {
         selectedPattern.value = null
         formData.value.task.recurrence_pattern_id = undefined
     }
+}
+
+const filteredMembers = computed(() => {
+    return organizationStore.members.filter(member => {
+        const searchTerm = assigneeSearch.value.toLowerCase()
+        const userName = (member.user.name || '').toLowerCase()
+        const userEmail = (member.user.email || '').toLowerCase()
+        const isNotSelected = !formData.value.occurrence.assigned_to.includes(member.user_id)
+
+        return isNotSelected && (userName.includes(searchTerm) || userEmail.includes(searchTerm))
+    })
+})
+
+const addAssignee = (userId: string) => {
+    if (!formData.value.occurrence.assigned_to.includes(userId)) {
+        formData.value.occurrence.assigned_to.push(userId)
+    }
+    assigneeSearch.value = ''
+}
+
+const removeAssignee = (userId: string) => {
+    formData.value.occurrence.assigned_to = formData.value.occurrence.assigned_to.filter(id => id !== userId)
 }
 
 const handleRecurrenceSelect = async (pattern: RecurrencePattern) => {
@@ -197,4 +247,13 @@ const handleSubmit = async (event: Event) => {
         // You might want to handle this error in the UI
     }
 }
+
+onMounted(() => {
+    document.addEventListener('click', (event) => {
+        const target = event.target as HTMLElement
+        if (!target.closest('.relative')) {
+            showAssigneeDropdown.value = false
+        }
+    })
+})
 </script>

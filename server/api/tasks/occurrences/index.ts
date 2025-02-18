@@ -8,8 +8,39 @@ const taskService = new TaskService();
 
 export default defineProtectedEventHandler(async (event, authenticatedUser) => {
   if (event.method === "GET") {
-    const { organization_id } = getQuery(event);
+    const { organization_id, task_id } = getQuery(event);
 
+    // If task_id is provided, fetch occurrences for that specific task
+    if (task_id) {
+      try {
+        // First verify the task exists and user has access
+        const task = await taskService.findTaskById(task_id as string);
+        if (!task) {
+          throw createError({
+            statusCode: 404,
+            message: "Task not found",
+          });
+        }
+        if (task.organization_id !== authenticatedUser.organizationId) {
+          throw createError({
+            statusCode: 403,
+            message: "Unauthorized access to task",
+          });
+        }
+
+        const occurrences = await taskService.findOccurrencesByTaskId(
+          task_id as string
+        );
+        return occurrences;
+      } catch (error) {
+        throw createError({
+          statusCode: 500,
+          message: "Failed to fetch task occurrences",
+        });
+      }
+    }
+
+    // Existing organization-wide fetch logic
     if (!organization_id) {
       throw createError({
         statusCode: 400,

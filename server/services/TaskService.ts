@@ -69,6 +69,37 @@ export class TaskService {
     return { task, occurrence };
   };
 
+  async findOccurrencesByTaskId(taskId: string): Promise<TaskOccurrence[]> {
+    try {
+      const { data, error } = await serverSupabase
+        .from("task_occurrences")
+        .select(
+          `
+          *,
+          task:tasks(*)
+        `
+        )
+        .eq("task_id", taskId)
+        .order("due_date", { ascending: true });
+
+      if (error) {
+        console.error(
+          "[TaskService] Error finding occurrences for task:",
+          error
+        );
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error(
+        "[TaskService] Unexpected error in findOccurrencesByTaskId:",
+        error
+      );
+      throw error;
+    }
+  }
+
   createFutureOccurrences = async (
     task: Task,
     initialDueDate: string
@@ -245,6 +276,38 @@ export class TaskService {
     } catch (error) {
       console.error(
         "[TaskService] Unexpected error in createTaskOccurrence:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  async updateTaskOccurrence(
+    id: string,
+    occurrenceData: Partial<TaskOccurrence>
+  ): Promise<TaskOccurrence> {
+    try {
+      const { data, error } = await serverSupabase
+        .from("task_occurrences")
+        .update(occurrenceData)
+        .eq("id", id)
+        .select(
+          `
+        *,
+        task:tasks(*)
+      `
+        )
+        .single();
+
+      if (error) {
+        console.error("[TaskService] Error updating task occurrence:", error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error(
+        "[TaskService] Unexpected error in updateTaskOccurrence:",
         error
       );
       throw error;

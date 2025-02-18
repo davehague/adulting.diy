@@ -61,12 +61,17 @@ export const useTaskActions = () => {
     await store.fetchPendingOccurrences(organizationId);
   };
 
-  const updateOccurrenceStatus = async (
+  const updateOccurrence = async (
     id: string,
-    status: TaskOccurrence["status"],
-    executionNotes?: string
+    occurrenceData: Partial<TaskOccurrence>
   ): Promise<TaskOccurrence> => {
-    return await store.updateOccurrenceStatus(id, status, executionNotes);
+    return await store.updateOccurrence(id, occurrenceData);
+  };
+
+  const fetchTaskOccurrences = async (
+    taskId: string
+  ): Promise<TaskOccurrence[]> => {
+    return await store.fetchTaskOccurrences(taskId);
   };
 
   return {
@@ -75,6 +80,7 @@ export const useTaskActions = () => {
     updateTask,
     loadTasks,
     loadPendingOccurrences,
-    updateOccurrenceStatus,
+    updateOccurrence,
+    fetchTaskOccurrences,
   };
 };

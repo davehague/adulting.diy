@@ -153,24 +153,20 @@ export const useTaskStore = defineStore(
       }
     };
 
-    const updateOccurrenceStatus = async (
+    const updateOccurrence = async (
       id: string,
-      status: TaskOccurrence["status"],
-      executionNotes?: string
+      occurrenceData: Partial<TaskOccurrence>
     ): Promise<TaskOccurrence> => {
       loading.value = true;
       error.value = null;
 
       try {
         const response = await api.patch<TaskOccurrence>(
-          `/api/tasks/occurrences/${id}/status`,
-          {
-            status,
-            execution_notes: executionNotes,
-          }
+          `/api/tasks/occurrences/${id}`,
+          occurrenceData
         );
 
-        // Update the occurrence in the list
+        // Update the occurrence in pendingOccurrences if it exists
         const index = pendingOccurrences.value.findIndex((o) => o.id === id);
         if (index !== -1) {
           pendingOccurrences.value[index] = {
@@ -182,7 +178,30 @@ export const useTaskStore = defineStore(
         return response;
       } catch (e) {
         error.value =
-          e instanceof Error ? e.message : "Failed to update occurrence status";
+          e instanceof Error ? e.message : "Failed to update occurrence";
+        throw error.value;
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const fetchTaskOccurrences = async (
+      taskId: string
+    ): Promise<TaskOccurrence[]> => {
+      loading.value = true;
+      error.value = null;
+
+      try {
+        const response = await api.get<TaskOccurrence[]>(
+          "/api/tasks/occurrences",
+          {
+            params: { task_id: taskId },
+          }
+        );
+        return response;
+      } catch (e) {
+        error.value =
+          e instanceof Error ? e.message : "Failed to fetch task occurrences";
         throw error.value;
       } finally {
         loading.value = false;
@@ -206,7 +225,8 @@ export const useTaskStore = defineStore(
       updateTask,
       createRecurrencePattern,
       fetchPendingOccurrences,
-      updateOccurrenceStatus,
+      updateOccurrence,
+      fetchTaskOccurrences,
     };
   },
   {

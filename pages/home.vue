@@ -70,11 +70,14 @@ const router = useRouter()
 const authStore = useAuthStore()
 const organizationStore = useOrganizationStore()
 const { tasks, loading, error } = useTasks()
-const { loadTasks, saveTask, updateTask } = useTaskActions()
+const { loadTasks, saveTask, updateTask, updateOccurrence, fetchTaskOccurrences } = useTaskActions()
 
 const showNewTaskForm = ref(false)
 const currentFilter = ref('all')
+
 const editingTask = ref<Task | null>(null)
+const editingOccurrence = ref<TaskOccurrence | null>(null)
+
 
 const filters = [
   { label: 'All Tasks', value: 'all' },
@@ -96,18 +99,28 @@ const closeTaskForm = () => {
   editingTask.value = null
 }
 
-const handleSaveTask = async (taskData: Partial<Task>, occurrenceData: Partial<TaskOccurrence>) => {
-  if (editingTask.value) {
-    await updateTask(editingTask.value.id, taskData)
-  } else {
-    await saveTask(taskData, occurrenceData)
-  }
-  closeTaskForm()
+const handleEditTask = async (task: Task) => {
+  editingTask.value = task
+  const occurrences = await fetchTaskOccurrences(task.id)
+  editingOccurrence.value = occurrences[0] // Get first occurrence
+  showNewTaskForm.value = true
 }
 
-const handleEditTask = (task: Task) => {
-  editingTask.value = task
-  showNewTaskForm.value = true
+const handleSaveTask = async (taskData: Partial<Task>, occurrenceData: Partial<TaskOccurrence>) => {
+  try {
+    if (editingTask.value) {
+      await updateTask(editingTask.value.id, taskData)
+      if (editingOccurrence.value) {
+        await updateOccurrence(editingOccurrence.value.id, occurrenceData)
+      }
+    } else {
+      await saveTask(taskData, occurrenceData)
+    }
+    closeTaskForm()
+    await loadTasks(organizationStore.currentOrganization!.id)
+  } catch (error) {
+    console.error('Error saving task:', error)
+  }
 }
 
 const handleDeleteTask = async (id: string) => {
