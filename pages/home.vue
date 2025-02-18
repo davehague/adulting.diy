@@ -1,3 +1,4 @@
+// pages/home.vue
 <template>
   <div class="min-h-screen bg-gray-100">
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -10,7 +11,7 @@
         {{ error }}
       </div>
 
-      <!-- No Organization State - Will redirect to organization/create -->
+      <!-- No Organization State -->
       <div v-else-if="!organizationStore.currentOrganization" class="text-center py-12">
         <p class="text-gray-600">Redirecting to setup...</p>
       </div>
@@ -41,37 +42,40 @@
         </div>
 
         <!-- Task List -->
-        <div class="bg-white rounded-lg shadow-sm divide-y divide-gray-200">
-          <!-- Task list component will go here -->
-          <p class="p-4 text-gray-500 text-center">Task list component coming soon</p>
+        <div class="bg-white rounded-lg shadow-sm">
+          <TaskList :tasks="filteredTasks" @edit="handleEditTask" @delete="handleDeleteTask" />
         </div>
       </div>
     </main>
 
-    <!-- New Task Modal -->
+    <!-- Task Form Modal -->
     <div v-if="showNewTaskForm" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
-      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <!-- New task form component will go here -->
-        <p class="text-center">New task form coming soon</p>
+      <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+        <TaskForm :task="editingTask" @save="handleSaveTask" @cancel="closeTaskForm" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useOrganizationStore } from '@/stores/organization'
+import { useTasks, useTaskActions } from '@/composables/useTasks'
+import { type Task } from '@/types/tasks'
+import TaskList from '@/components/task/TaskList.vue'
+import TaskForm from '@/components/task/TaskForm.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const organizationStore = useOrganizationStore()
+const { tasks, loading, error } = useTasks()
+const { loadTasks, saveTask, updateTask } = useTaskActions()
 
-const loading = ref(true)
-const error = ref<string | null>(null)
 const showNewTaskForm = ref(false)
 const currentFilter = ref('all')
+const editingTask = ref<Task | null>(null)
 
 const filters = [
   { label: 'All Tasks', value: 'all' },
@@ -80,6 +84,42 @@ const filters = [
   { label: 'Completed', value: 'completed' }
 ]
 
+const filteredTasks = computed(() => {
+  // Basic filtering - expand based on your needs
+  if (currentFilter.value === 'my') {
+    return tasks.value.filter(task => task.created_by === authStore.user?.id)
+  }
+  return tasks.value
+})
+
+const closeTaskForm = () => {
+  showNewTaskForm.value = false
+  editingTask.value = null
+}
+
+const handleSaveTask = async (taskData: Partial<Task>) => {
+  if (editingTask.value) {
+    await updateTask(editingTask.value.id, taskData)
+  } else {
+    await saveTask({
+      ...taskData,
+      organization_id: organizationStore.currentOrganization?.id
+    })
+  }
+  closeTaskForm()
+}
+
+const handleEditTask = (task: Task) => {
+  editingTask.value = task
+  showNewTaskForm.value = true
+}
+
+const handleDeleteTask = async (id: string) => {
+  if (confirm('Are you sure you want to delete this task?')) {
+    // Add delete functionality to store/composable if needed
+  }
+}
+
 onMounted(async () => {
   try {
     if (!authStore.isAuthenticated) {
@@ -87,20 +127,16 @@ onMounted(async () => {
       return
     }
 
-    // Check if user has an organization
     await organizationStore.fetchUserOrganization()
 
     if (!organizationStore.currentOrganization) {
-      console.log('No organization found!')
+      router.push('/organization/create')
       return
     }
 
-    // TODO: Fetch tasks when task store is implemented
-
+    await loadTasks(organizationStore.currentOrganization.id)
   } catch (err) {
     error.value = 'Failed to load your tasks. Please try again.'
-  } finally {
-    loading.value = false
   }
 })
 </script>

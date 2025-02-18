@@ -31,7 +31,7 @@ CREATE TABLE adulting.tasks (
     
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     
-    created_by UUID NOT NULL REFERENCES auth.users(id),
+    created_by UUID NOT NULL REFERENCES adulting.users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
@@ -43,7 +43,7 @@ CREATE TABLE adulting.task_occurrences (
     status TEXT NOT NULL CHECK (status IN ('pending', 'completed', 'overdue', 'skipped', 'in_progress')),
     
     assigned_to UUID[] NOT NULL DEFAULT '{}',  -- Array of user IDs
-    executed_by UUID REFERENCES auth.users(id),
+    executed_by UUID REFERENCES adulting.users(id),
     executed_datetime TIMESTAMP WITH TIME ZONE,
     execution_notes TEXT,
     

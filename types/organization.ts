@@ -3,10 +3,10 @@ import type { User } from "./user";
 export type OrganizationRole = "admin" | "member" | "viewer";
 
 export interface Organization {
-  id: number;
+  id: string;
   name: string;
   created_at: string;
-  created_by: number;
+  created_by: string;
   updated_at: string;
   description: string | null;
 }

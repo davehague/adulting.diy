@@ -24,6 +24,12 @@ export default defineProtectedEventHandler(async (event, authenticatedUser) => {
           message: "Task not found",
         });
       }
+      if (task.organization_id !== authenticatedUser.organizationId) {
+        throw createError({
+          statusCode: 403,
+          message: "Unauthorized access to task",
+        });
+      }
       return task;
     } catch (error) {
       throw createError({
@@ -35,9 +41,23 @@ export default defineProtectedEventHandler(async (event, authenticatedUser) => {
 
   if (event.method === "PATCH") {
     try {
+      const task = await taskService.findTaskById(id);
+      if (!task) {
+        throw createError({
+          statusCode: 404,
+          message: "Task not found",
+        });
+      }
+      if (task.organization_id !== authenticatedUser.organizationId) {
+        throw createError({
+          statusCode: 403,
+          message: "Unauthorized access to task",
+        });
+      }
+
       const body = await readBody(event);
-      const task = await taskService.updateTask(id, body);
-      return task;
+      const updatedTask = await taskService.updateTask(id, body);
+      return updatedTask;
     } catch (error) {
       throw createError({
         statusCode: 500,

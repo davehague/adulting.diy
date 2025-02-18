@@ -1,13 +1,18 @@
-// server/utils/auth.ts
 import { H3Event, createError, getHeader } from "h3";
 import { OAuth2Client } from "google-auth-library";
+import { UserService } from "@/server/services/UserService";
+import { OrganizationService } from "@/server/services/OrganizationService";
 
 const client = new OAuth2Client(process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID);
 
 interface AuthenticatedUser {
   email: string;
-  // Add other user properties you might need from the token
+  userId: string;
+  organizationId: string;
 }
+
+const userService = new UserService();
+const organizationService = new OrganizationService();
 
 export async function verifyAuth(event: H3Event): Promise<AuthenticatedUser> {
   const authHeader = getHeader(event, "Authorization");
@@ -22,6 +27,7 @@ export async function verifyAuth(event: H3Event): Promise<AuthenticatedUser> {
   const token = authHeader.replace("Bearer ", "");
 
   try {
+    // Verify Google token
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID,
@@ -44,9 +50,28 @@ export async function verifyAuth(event: H3Event): Promise<AuthenticatedUser> {
       throw new Error("Invalid token issuer");
     }
 
+    // Get user from database
+    const user = await userService.findByEmail(payload.email);
+    if (!user) {
+      throw createError({
+        statusCode: 404,
+        message: "User not found",
+      });
+    }
+
+    // Get organization info
+    const orgInfo = await organizationService.findByUserEmail(payload.email);
+    if (!orgInfo) {
+      throw createError({
+        statusCode: 404,
+        message: "No organization membership found",
+      });
+    }
+
     return {
       email: payload.email,
-      // Add other user properties if needed
+      userId: user.id,
+      organizationId: orgInfo.organization.id,
     };
   } catch (error) {
     console.error("Token verification failed:", error);
