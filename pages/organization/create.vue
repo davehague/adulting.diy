@@ -27,7 +27,7 @@ definePageMeta({
 
 const router = useRouter()
 
-const handleOrgCreated = async (orgId: string) => {
+const handleOrgCreated = async () => {
     // Navigate to home page after successful creation
     await router.push('/home')
 }
