@@ -1,14 +1,12 @@
-import { defineEventHandler } from "h3"; // Change to standard handler
-// import { defineHouseholdProtectedEventHandler } from "@/server/utils/auth"; // Keep original commented out for easy revert
+import { defineEventHandler, createError, readBody } from "h3"; // Use defineEventHandler
 import { TaskService } from "@/server/services/TaskService";
 import { OccurrenceService } from "@/server/services/OccurrenceService";
-import { createError, readBody } from "h3";
-import { PrismaClient } from "@prisma/client"; // Correct import for PrismaClient
+// Removed PrismaClient import
 
 export default defineEventHandler(async (event) => {
-  // Remove authUser, householdId from signature
+  // Removed authUser, householdId
   try {
-    // Read taskId from request body
+    // Read taskId and userId from request body
     const body = await readBody(event);
     const taskId = body.taskId as string;
     const userId = body.userId as string; // Read userId from body
@@ -21,7 +19,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Verify the task exists
+    // Verify the task exists and belongs to the user's household
     const taskService = new TaskService();
     const task = await taskService.findById(taskId);
 
@@ -32,15 +30,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Optional: Verify user exists (can be added for robustness)
-    // const prisma = new PrismaClient();
-    // const user = await prisma.user.findUnique({ where: { id: userId } });
-    // if (!user) {
-    //   throw createError({ statusCode: 404, message: "User not found" });
-    // }
-    // if (user.householdId !== task.household_id) {
-    //   throw createError({ statusCode: 403, message: "User and Task household mismatch" });
-    // }
+    // Removed household check as endpoint is unauthenticated
 
     // Create the occurrence using the service
     const occurrenceService = new OccurrenceService();

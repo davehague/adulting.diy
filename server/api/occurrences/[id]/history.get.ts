@@ -30,16 +30,20 @@ export default defineHouseholdProtectedEventHandler(
 
       // Check household membership via the parent task
       // We included the task in findById, so we can access its household_id
+      // Removed logging
+
       if (
         existingOccurrence.task &&
-        existingOccurrence.task.household_id !== householdId
+        existingOccurrence.task.householdId !== householdId // Use camelCase
       ) {
+        // Removed logging
         throw createError({
           statusCode: 403,
           message:
             "You do not have permission to view history for this occurrence",
         });
       }
+      // Removed logging
 
       // Get the history logs using the service
       const historyLogs = await occurrenceService.getHistory(occurrenceId);

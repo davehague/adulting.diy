@@ -139,7 +139,7 @@ onMounted(async () => {
     }
 
     // If task fetch succeeded, immediately try fetching users and occurrences
-    console.log('Parent task loaded successfully, attempting to fetch users and occurrences...');
+    // Removed log
     await Promise.all([
       fetchHouseholdUsers(),
       fetchOccurrences()
@@ -176,7 +176,7 @@ const fetchHouseholdUsers = async () => {
     errorUsers.value = '';
     const usersData = await api.get<User[]>('/api/household/users');
     householdUsers.value = usersData;
-    console.log('Fetched Household Users:', JSON.stringify(householdUsers.value)); // Log fetched users
+    // Removed log
   } catch (err: any) {
     console.error('Error loading household users:', err);
     errorUsers.value = err.data?.message || 'Failed to load household users.';
@@ -227,11 +227,11 @@ const getAssigneeNames = (assigneeIds: string[] | undefined): string => {
   if (loadingUsers.value) {
     return 'Loading users...'; // Indicate users are still loading
   }
-  console.log(`getAssigneeNames called with IDs: ${JSON.stringify(assigneeIds)}`); // Log input IDs
+  // Removed log
   const names = assigneeIds
     .map(id => {
       const user = householdUsers.value.find(user => user.id === id);
-      console.log(`Finding user for ID ${id}:`, user ? user.name : 'Not Found'); // Log find result
+      // Removed log
       return user?.name;
     })
     .filter(name => !!name); // Filter out undefined names if user not found

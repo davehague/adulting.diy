@@ -98,18 +98,18 @@ export interface ReminderConfig {
 
 export interface TaskDefinition {
   id: string;
-  household_id: string;
+  householdId: string; // Renamed
   name: string;
   description?: string;
   instructions?: string;
-  category_id: string;
-  meta_status: TaskMetaStatus;
-  schedule_config: ScheduleConfig;
-  reminder_config?: ReminderConfig;
-  created_at: Date;
-  updated_at: Date;
-  created_by_user_id: string;
-  default_assignee_ids?: string[];
+  categoryId: string; // Renamed
+  metaStatus: TaskMetaStatus; // Renamed
+  scheduleConfig: ScheduleConfig; // Renamed
+  reminderConfig?: ReminderConfig; // Renamed
+  createdAt: Date; // Renamed
+  updatedAt: Date; // Renamed
+  createdByUserId: string; // Renamed
+  defaultAssigneeIds?: string[]; // Renamed
   category?: Category; // Add optional category if needed by TaskDefinition usage
 }
 

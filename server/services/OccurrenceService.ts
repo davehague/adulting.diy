@@ -141,8 +141,14 @@ export class OccurrenceService {
         where: { id },
         include: {
           task: {
-            include: {
-              category: true,
+            select: {
+              // Use select to specify fields
+              id: true,
+              name: true,
+              description: true,
+              householdId: true, // Explicitly select householdId (camelCase)
+              category: true, // Keep including category if needed elsewhere
+              // Add other necessary task fields if required by TaskOccurrence type
             },
           },
         },
@@ -191,7 +197,7 @@ export class OccurrenceService {
     count: number = 5 // Generate 5 by default
   ): Promise<TaskOccurrence[]> {
     try {
-      const dueDates = generateFutureDueDates(task.schedule_config, count);
+      const dueDates = generateFutureDueDates(task.scheduleConfig, count);
 
       if (!dueDates || dueDates.length === 0) {
         console.log(
@@ -205,7 +211,7 @@ export class OccurrenceService {
           taskId: task.id,
           dueDate: dueDate,
           status: "created", // Initial status
-          assigneeIds: task.default_assignee_ids || [], // Use default assignees
+          assigneeIds: task.defaultAssigneeIds || [], // Use default assignees
           // createdAt and updatedAt are handled by Prisma
         }));
 

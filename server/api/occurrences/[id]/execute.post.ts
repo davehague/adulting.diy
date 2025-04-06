@@ -29,10 +29,18 @@ export default defineHouseholdProtectedEventHandler(
       }
 
       // Check household membership via the parent task
-      // We included the task in findById, so we can access its household_id
+      // We included the task in findById, so we can access its householdId
+      console.log(
+        "[API Execute Check] Occurrence Task Household ID:",
+        existingOccurrence.task?.householdId
+      );
+      console.log(
+        "[API Execute Check] Authenticated User Household ID:",
+        householdId
+      );
       if (
         existingOccurrence.task &&
-        existingOccurrence.task.household_id !== householdId
+        existingOccurrence.task.householdId !== householdId // Corrected field name
       ) {
         throw createError({
           statusCode: 403,

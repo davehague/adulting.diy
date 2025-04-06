@@ -20,11 +20,11 @@
         <div>
           <h1 class="text-2xl font-bold text-gray-900">{{ task.name }}</h1>
           <div class="flex items-center mt-2">
-            <span class="px-2 py-1 text-xs font-semibold rounded-full mr-2" :class="getStatusClass(task.meta_status)">
-              {{ formatStatus(task.meta_status) }}
+            <span class="px-2 py-1 text-xs font-semibold rounded-full mr-2" :class="getStatusClass(task.metaStatus)">
+              {{ formatStatus(task.metaStatus) }}
             </span>
             <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-              {{ getCategoryName(task.category_id) }}
+              {{ getCategoryName(task.categoryId) }}
             </span>
           </div>
         </div>
@@ -33,15 +33,15 @@
             class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
             Edit Task
           </NuxtLink>
-          <button v-if="task.meta_status === 'active'" @click="pauseTask"
+          <button v-if="task.metaStatus === 'active'" @click="pauseTask"
             class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600">
             Pause Task
           </button>
-          <button v-if="task.meta_status === 'paused'" @click="unpauseTask"
+          <button v-if="task.metaStatus === 'paused'" @click="unpauseTask"
             class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
             Unpause Task
           </button>
-          <button v-if="task.meta_status !== 'soft-deleted'" @click="deleteTask"
+          <button v-if="task.metaStatus !== 'soft-deleted'" @click="deleteTask"
             class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">
             Delete Task
           </button>
@@ -67,7 +67,7 @@
             <div class="mb-4">
               <h3 class="text-sm font-medium text-gray-500 mb-1">Default Assignees</h3>
               <p class="text-gray-800">
-                {{ task.default_assignee_ids?.length ? 'Has default assignees' : 'No default assignees' }}
+                {{ task.defaultAssigneeIds?.length ? 'Has default assignees' : 'No default assignees' }}
               </p>
             </div>
           </div>
@@ -77,32 +77,32 @@
 
             <div class="mb-4">
               <h3 class="text-sm font-medium text-gray-500 mb-1">Schedule Type</h3>
-              <p class="text-gray-800">{{ formatSchedule(task.schedule_config) }}</p>
+              <p class="text-gray-800">{{ formatSchedule(task.scheduleConfig) }}</p>
             </div>
 
-            <div v-if="task.reminder_config" class="mb-4">
+            <div v-if="task.reminderConfig" class="mb-4">
               <h3 class="text-sm font-medium text-gray-500 mb-1">Reminders</h3>
               <ul class="list-disc pl-5 text-gray-800">
-                <li v-if="task.reminder_config.initialReminder">
-                  Initial: {{ task.reminder_config.initialReminder }} days before due date
+                <li v-if="task.reminderConfig.initialReminder">
+                  Initial: {{ task.reminderConfig.initialReminder }} days before due date
                 </li>
-                <li v-if="task.reminder_config.followUpReminder">
-                  Follow-up: {{ task.reminder_config.followUpReminder }} days before due date
+                <li v-if="task.reminderConfig.followUpReminder">
+                  Follow-up: {{ task.reminderConfig.followUpReminder }} days before due date
                 </li>
-                <li v-if="task.reminder_config.overdueReminder">
-                  Overdue: {{ task.reminder_config.overdueReminder }} days after due date
+                <li v-if="task.reminderConfig.overdueReminder">
+                  Overdue: {{ task.reminderConfig.overdueReminder }} days after due date
                 </li>
               </ul>
             </div>
 
             <div class="mb-4">
               <h3 class="text-sm font-medium text-gray-500 mb-1">Created</h3>
-              <p class="text-gray-800">{{ formatDate(task.created_at) }}</p>
+              <p class="text-gray-800">{{ formatDate(task.createdAt) }}</p>
             </div>
 
             <div class="mb-4">
               <h3 class="text-sm font-medium text-gray-500 mb-1">Last Updated</h3>
-              <p class="text-gray-800">{{ formatDate(task.updated_at) }}</p>
+              <p class="text-gray-800">{{ formatDate(task.updatedAt) }}</p>
             </div>
           </div>
         </div>
@@ -127,7 +127,7 @@
           <h3 class="text-lg font-semibold text-gray-700 mb-2">No Occurrences</h3>
           <p class="text-gray-500 mb-4">
             {{
-              task.meta_status === 'active'
+              task.metaStatus === 'active'
                 ? 'This task has no occurrences yet. They will be automatically generated based on the schedule.'
                 : 'This task is not active, so no occurrences will be generated.'
             }}
@@ -271,7 +271,7 @@ const fetchHouseholdUsers = async () => {
     loadingUsers.value = true;
     const usersData = await api.get<User[]>('/api/household/users');
     householdUsers.value = usersData;
-    // console.log('Fetched Household Users (Task Detail):', JSON.stringify(householdUsers.value)); // Optional debug log
+    // Removed debug log
   } catch (err: any) {
     console.error('Error loading household users:', err);
     // Handle user loading error if needed, maybe display a message
@@ -425,8 +425,12 @@ const getAssigneeNames = (assigneeIds: string[] | undefined): string => {
   if (loadingUsers.value) {
     return 'Loading...'; // Indicate users are still loading
   }
+  // Removed debug logs from getAssigneeNames
   const names = assigneeIds
-    .map(id => householdUsers.value.find(user => user.id === id)?.name)
+    .map(id => {
+      const user = householdUsers.value.find(user => user.id === id);
+      return user?.name;
+    })
     .filter(name => !!name); // Filter out undefined names if user not found
 
   return names.length > 0 ? names.join(', ') : 'Unknown User(s)';
