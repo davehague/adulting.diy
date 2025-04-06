@@ -36,7 +36,7 @@ export default defineHouseholdProtectedEventHandler(
       }
       if (body.assigneeIds && Array.isArray(body.assigneeIds)) {
         // Ensure all IDs are strings (basic validation)
-        if (body.assigneeIds.every((id: any) => typeof id === "string"))) { // Added closing parenthesis
+        if (body.assigneeIds.every((id: any) => typeof id === "string")) {
           updateData.assignee_ids = body.assigneeIds;
         } else {
           throw createError({

@@ -1,5 +1,54 @@
 import prisma from "@/server/utils/prisma/client";
-import type { TaskDefinition } from "@/types";
+import type {
+  TaskDefinition,
+  Category,
+  ScheduleConfig,
+  ReminderConfig,
+  TaskMetaStatus,
+} from "@/types";
+import { TaskDefinition as PrismaTaskDefinition, Prisma } from "@prisma/client"; // Import Prisma namespace
+
+// Helper function to map Prisma Task object (with included category) to our TaskDefinition type
+function mapPrismaTaskToDefinition(
+  prismaTask: PrismaTaskDefinition & { category: Category }
+): TaskDefinition {
+  const {
+    householdId,
+    categoryId,
+    metaStatus,
+    scheduleConfig,
+    reminderConfig,
+    createdAt,
+    updatedAt,
+    createdByUserId,
+    defaultAssigneeIds,
+    category,
+    description, // Extract description
+    instructions, // Extract instructions
+    ...rest // Keep the rest for required fields like id, name
+  } = prismaTask;
+
+  return {
+    ...rest, // Spread required fields (id, name)
+    description: description ?? undefined, // Map null to undefined
+    instructions: instructions ?? undefined, // Map null to undefined
+    household_id: householdId,
+    category_id: categoryId,
+    meta_status: metaStatus as TaskMetaStatus, // Assert type
+    // Prisma stores JSON, assume it matches ScheduleConfig structure
+    // Assert structure; Prisma returns JsonValue, needs casting
+    schedule_config: scheduleConfig as unknown as ScheduleConfig,
+    // Assert structure or undefined; Prisma returns JsonValue | null
+    reminder_config: reminderConfig
+      ? (reminderConfig as unknown as ReminderConfig)
+      : undefined,
+    created_at: createdAt,
+    updated_at: updatedAt,
+    created_by_user_id: createdByUserId,
+    default_assignee_ids: defaultAssigneeIds ?? undefined, // Handle null from DB
+    category: category, // Assign the included category object
+  };
+}
 
 export class TaskService {
   /**
@@ -54,7 +103,7 @@ export class TaskService {
         },
       });
 
-      return tasks;
+      return tasks.map(mapPrismaTaskToDefinition);
     } catch (error) {
       console.error(
         `[TaskService] Unexpected error in findForHousehold:`,
@@ -76,7 +125,7 @@ export class TaskService {
         },
       });
 
-      return task;
+      return task ? mapPrismaTaskToDefinition(task) : null;
     } catch (error) {
       console.error(`[TaskService] Unexpected error in findById:`, error);
       throw error;
@@ -86,18 +135,38 @@ export class TaskService {
   /**
    * Create a task
    */
+  // Use Prisma's generated type for input, excluding relations and audit fields
   async create(
-    data: Omit<TaskDefinition, "id" | "createdAt" | "updatedAt">
+    // Use UncheckedCreateInput which expects scalar foreign keys (householdId, categoryId)
+    data: Omit<
+      Prisma.TaskDefinitionUncheckedCreateInput,
+      "id" | "createdAt" | "updatedAt" // Omit audit fields
+      // defaultAssigneeIds is part of this type if in schema
+    >
   ): Promise<TaskDefinition> {
     try {
+      // Ensure data matches Prisma's expected input structure (camelCase)
       const task = await prisma.taskDefinition.create({
-        data,
+        // Pass data directly, as UncheckedCreateInput includes scalar FKs (householdId, categoryId)
+        data: {
+          ...data,
+          // Handle JSON fields correctly
+          scheduleConfig: data.scheduleConfig
+            ? (data.scheduleConfig as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
+          reminderConfig: data.reminderConfig
+            ? (data.reminderConfig as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
+        },
         include: {
           category: true,
         },
       });
 
-      return task;
+      // Map the result (which includes the category) back to our TaskDefinition type
+      return mapPrismaTaskToDefinition(
+        task as PrismaTaskDefinition & { category: Category }
+      );
     } catch (error) {
       console.error(`[TaskService] Unexpected error in create:`, error);
       throw error;
@@ -109,21 +178,65 @@ export class TaskService {
    */
   async update(
     id: string,
+    // Input data uses our TaskDefinition structure (snake_case, optional category object)
     data: Partial<TaskDefinition>
   ): Promise<TaskDefinition> {
     try {
+      // Manually construct the data payload for Prisma, mapping fields
+      const prismaUpdateData: Prisma.TaskDefinitionUpdateInput = {
+        updatedAt: new Date(),
+      };
+
+      // Map snake_case fields from TaskDefinition to camelCase for Prisma
+      if (data.name !== undefined) prismaUpdateData.name = data.name;
+      if (data.description !== undefined)
+        prismaUpdateData.description = data.description; // Prisma handles null
+      if (data.instructions !== undefined)
+        prismaUpdateData.instructions = data.instructions; // Prisma handles null
+      if (data.meta_status !== undefined)
+        prismaUpdateData.metaStatus = data.meta_status;
+      if (data.default_assignee_ids !== undefined)
+        prismaUpdateData.defaultAssigneeIds = data.default_assignee_ids;
+
+      // Handle relation updates via connect
+      if (data.category_id !== undefined) {
+        prismaUpdateData.category = { connect: { id: data.category_id } };
+      }
+      // Note: Updating household_id might require similar logic if allowed
+      // if (data.household_id !== undefined) {
+      //   prismaUpdateData.household = { connect: { id: data.household_id } };
+      // }
+
+      // Handle JSON fields
+      if (data.schedule_config !== undefined) {
+        prismaUpdateData.scheduleConfig =
+          data.schedule_config as unknown as Prisma.InputJsonValue;
+      }
+      if (data.reminder_config !== undefined) {
+        // Handle potential undefined for optional reminder_config
+        prismaUpdateData.reminderConfig = data.reminder_config
+          ? (data.reminder_config as unknown as Prisma.InputJsonValue)
+          : Prisma.JsonNull;
+      } else if (
+        data.hasOwnProperty("reminder_config") &&
+        data.reminder_config === undefined
+      ) {
+        // Explicitly set to null if undefined was passed
+        prismaUpdateData.reminderConfig = Prisma.JsonNull;
+      }
+
       const task = await prisma.taskDefinition.update({
         where: { id },
-        data: {
-          ...data,
-          updatedAt: new Date(),
-        },
+        data: prismaUpdateData,
         include: {
           category: true,
         },
       });
 
-      return task;
+      // Map the result (which includes the category) back to our TaskDefinition type
+      return mapPrismaTaskToDefinition(
+        task as PrismaTaskDefinition & { category: Category }
+      );
     } catch (error) {
       console.error(`[TaskService] Unexpected error in update:`, error);
       throw error;
@@ -166,7 +279,7 @@ export class TaskService {
           },
         });
 
-        return task;
+        return mapPrismaTaskToDefinition(task);
       });
     } catch (error) {
       console.error(`[TaskService] Unexpected error in pause:`, error);
@@ -190,7 +303,7 @@ export class TaskService {
         },
       });
 
-      return task;
+      return mapPrismaTaskToDefinition(task);
     } catch (error) {
       console.error(`[TaskService] Unexpected error in unpause:`, error);
       throw error;
@@ -233,7 +346,7 @@ export class TaskService {
           },
         });
 
-        return task;
+        return mapPrismaTaskToDefinition(task);
       });
     } catch (error) {
       console.error(`[TaskService] Unexpected error in softDelete:`, error);

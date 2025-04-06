@@ -1,5 +1,5 @@
 // types/task.ts
-import type { Category } from "./category"; // Import Category if not already (assuming it exists)
+import type { Category } from "."; // Import Category via index barrel file
 import type { User } from "./user"; // Import User type
 export type TaskMetaStatus = "active" | "paused" | "soft-deleted" | "completed";
 
@@ -122,16 +122,16 @@ export type OccurrenceStatus =
 
 export interface TaskOccurrence {
   id: string;
-  task_id: string;
-  due_date: Date;
+  taskId: string; // Renamed from task_id
+  dueDate: Date; // Renamed from due_date
   status: OccurrenceStatus;
-  assignee_ids: string[];
-  completed_at?: Date;
-  skipped_at?: Date;
-  created_at: Date;
-  user?: User; // Add optional user property
-  updated_at: Date;
-  task?: TaskDefinition; // Add optional task property
+  assigneeIds: string[]; // Renamed from assignee_ids
+  completedAt?: Date; // Renamed from completed_at
+  skippedAt?: Date; // Renamed from skipped_at
+  createdAt: Date; // Renamed from created_at
+  user?: User;
+  updatedAt: Date; // Renamed from updated_at
+  task?: TaskDefinition;
 }
 
 export type HistoryLogType =

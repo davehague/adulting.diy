@@ -235,16 +235,16 @@ export const useTaskStore = defineStore(
     // Update an occurrence (Blueprint Step 4.12 / 4.13)
     async function updateOccurrence(
       occurrenceId: string,
-      occurrenceData: Partial<Pick<TaskOccurrence, "due_date" | "assignee_ids">>
+      occurrenceData: Partial<Pick<TaskOccurrence, "dueDate" | "assigneeIds">>
     ) {
       isLoading.value = true; // Consider more granular loading
       error.value = null;
       try {
         // Prepare data for API (ensure date is handled correctly if needed)
         const payload: any = {};
-        if (occurrenceData.due_date) payload.dueDate = occurrenceData.due_date; // Match API expected field name
-        if (occurrenceData.assignee_ids)
-          payload.assigneeIds = occurrenceData.assignee_ids; // Match API expected field name
+        if (occurrenceData.dueDate) payload.dueDate = occurrenceData.dueDate; // Match API expected field name
+        if (occurrenceData.assigneeIds)
+          payload.assigneeIds = occurrenceData.assigneeIds; // Match API expected field name
 
         // Replace with actual API call structure
         const updatedOccurrence = await $api.put(

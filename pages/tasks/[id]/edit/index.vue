@@ -80,9 +80,4 @@ const handleSubmit = async (formData: any) => {
     submitting.value = false;
   }
 };
-
-// Page metadata
-definePageMeta({
-  middleware: 'auth'
-});
 </script>

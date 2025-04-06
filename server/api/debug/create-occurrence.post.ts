@@ -39,13 +39,10 @@ export default defineHouseholdProtectedEventHandler(
       // Create the occurrence using the service
       const occurrenceService = new OccurrenceService();
       const newOccurrence = await occurrenceService.create({
-        task_id: taskId,
-        dueDate: new Date(), // Due today
+        taskId: taskId, // Renamed from task_id
+        dueDate: new Date(), // Renamed from due_date
         status: "assigned", // Default status
-        assignee_ids: [authUser.userId], // Assign to current user
-        // Explicitly set optional fields to null/undefined if needed by Prisma schema
-        completedAt: null,
-        skippedAt: null,
+        assigneeIds: [authUser.userId], // Renamed from assignee_ids
       });
 
       console.log(

@@ -156,7 +156,7 @@
             <tbody class="bg-white divide-y divide-gray-200">
               <tr v-for="occurrence in occurrences.slice(0, 5)" :key="occurrence.id">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ formatDate(occurrence.due_date) }}
+                  {{ formatDate(occurrence.dueDate) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
@@ -165,7 +165,7 @@
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ occurrence.assignee_ids?.length ? 'Assigned' : 'Unassigned' }}
+                  {{ occurrence.assigneeIds?.length ? 'Assigned' : 'Unassigned' }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                   <NuxtLink :to="`/occurrences/${occurrence.id}`" class="text-blue-600 hover:text-blue-900">
@@ -265,7 +265,7 @@ const pauseTask = async () => {
   try {
     // TODO: Implement pauseTask action in store and call it here
     // Placeholder: Direct API call for now, ideally move to store action
-    await api.post(`/api/tasks/${taskId}/pause`);
+    await api.post(`/api/tasks/${taskId}/pause`, {});
     await taskStore.fetchTaskById(taskId); // Refetch task via store
     await fetchOccurrences(); // Refetch occurrences locally for now
   } catch (err) {
@@ -278,7 +278,7 @@ const unpauseTask = async () => {
   // TODO: Implement unpauseTask action in store and call it here
   try {
     // Placeholder: Direct API call for now, ideally move to store action
-    await api.post(`/api/tasks/${taskId}/unpause`);
+    await api.post(`/api/tasks/${taskId}/unpause`, {});
     await taskStore.fetchTaskById(taskId); // Refetch task via store
     await fetchOccurrences(); // Refetch occurrences locally for now
   } catch (err) {
@@ -395,8 +395,4 @@ const formatSchedule = (scheduleConfig: any): string => {
   }
 };
 
-// Page metadata
-definePageMeta({
-  middleware: 'auth'
-});
 </script>

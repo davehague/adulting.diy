@@ -248,7 +248,7 @@ const pauseTask = async (taskId: string) => {
   // TODO: Implement pauseTask action in store and call it here
   try {
     // Placeholder: Direct API call for now, ideally move to store action
-    await api.post(`/api/tasks/${taskId}/pause`);
+    await api.post(`/api/tasks/${taskId}/pause`, {}); // Pass empty object for data
     await taskStore.fetchTasks(filters); // Refetch tasks via store
   } catch (err) {
     console.error('Error pausing task:', err);
@@ -260,7 +260,7 @@ const unpauseTask = async (taskId: string) => {
   // TODO: Implement unpauseTask action in store and call it here
   try {
     // Placeholder: Direct API call for now, ideally move to store action
-    await api.post(`/api/tasks/${taskId}/unpause`);
+    await api.post(`/api/tasks/${taskId}/unpause`, {}); // Pass empty object for data
     await taskStore.fetchTasks(filters); // Refetch tasks via store
   } catch (err) {
     console.error('Error unpausing task:', err);
@@ -286,6 +286,5 @@ const deleteTask = async (taskId: string) => {
 
 // Page metadata
 definePageMeta({
-  middleware: 'auth'
 });
 </script>
