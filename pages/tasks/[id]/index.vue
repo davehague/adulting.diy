@@ -165,7 +165,7 @@
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ occurrence.assigneeIds?.length ? 'Assigned' : 'Unassigned' }}
+                  {{ getAssigneeNames(occurrence.assigneeIds) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                   <NuxtLink :to="`/occurrences/${occurrence.id}`" class="text-blue-600 hover:text-blue-900">
@@ -200,7 +200,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/utils/api'; // Keep for categories/occurrences for now
 import { useTaskStore } from '@/stores/tasks';
-import type { TaskDefinition, TaskOccurrence, Category } from '@/types';
+import type { TaskDefinition, TaskOccurrence, Category, User } from '@/types'; // Add User type
 
 const route = useRoute();
 const router = useRouter();
@@ -220,7 +220,9 @@ const error = computed(() => taskStore.error);
 // Keep local state for occurrences and categories
 const occurrences = ref<TaskOccurrence[]>([]);
 const categories = ref<Category[]>([]);
+const householdUsers = ref<User[]>([]); // State for household users
 const loadingOccurrences = ref(true);
+const loadingUsers = ref(false); // Add loading state for users
 
 // Load data
 onMounted(async () => {
@@ -234,7 +236,11 @@ onMounted(async () => {
     // await fetchTask(); // Removed local fetch
 
     // Load occurrences
-    await fetchOccurrences();
+    // Fetch occurrences and users in parallel
+    await Promise.all([
+      fetchOccurrences(),
+      fetchHouseholdUsers()
+    ]);
     // Store handles loading/error state for the task itself
   } catch (err) {
     // Log error, but primary error display relies on store.error
@@ -256,6 +262,21 @@ const fetchOccurrences = async () => {
     console.error('Error loading occurrences:', err);
     // Don't set the main error state here, let the task loading handle that.
     // Maybe add a specific occurrence loading error message if needed.
+  }
+};
+
+// Fetch household users
+const fetchHouseholdUsers = async () => {
+  try {
+    loadingUsers.value = true;
+    const usersData = await api.get<User[]>('/api/household/users');
+    householdUsers.value = usersData;
+    // console.log('Fetched Household Users (Task Detail):', JSON.stringify(householdUsers.value)); // Optional debug log
+  } catch (err: any) {
+    console.error('Error loading household users:', err);
+    // Handle user loading error if needed, maybe display a message
+  } finally {
+    loadingUsers.value = false;
   }
 };
 
@@ -394,6 +415,21 @@ const formatSchedule = (scheduleConfig: any): string => {
     default:
       return 'Custom schedule';
   }
+};
+
+// Helper to get assignee names
+const getAssigneeNames = (assigneeIds: string[] | undefined): string => {
+  if (!assigneeIds || assigneeIds.length === 0) {
+    return 'Unassigned';
+  }
+  if (loadingUsers.value) {
+    return 'Loading...'; // Indicate users are still loading
+  }
+  const names = assigneeIds
+    .map(id => householdUsers.value.find(user => user.id === id)?.name)
+    .filter(name => !!name); // Filter out undefined names if user not found
+
+  return names.length > 0 ? names.join(', ') : 'Unknown User(s)';
 };
 
 </script>

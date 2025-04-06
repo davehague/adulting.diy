@@ -54,7 +54,10 @@ export function calculateNextDueDate(
       return null;
 
     default:
-      console.error("[Schedule] Unknown schedule type:", scheduleConfig.type);
+      console.error(
+        "[Schedule] Unknown or unexpected schedule configuration received:",
+        scheduleConfig
+      );
       return null;
   }
 }

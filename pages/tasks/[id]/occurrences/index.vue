@@ -61,7 +61,7 @@
         <tbody class="bg-white divide-y divide-gray-200">
           <tr v-for="occurrence in occurrences" :key="occurrence.id">
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-              {{ formatDate(occurrence.due_date) }}
+              {{ formatDate(occurrence.dueDate) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
@@ -70,8 +70,7 @@
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              <!-- TODO: Fetch and display user names based on assignee_ids -->
-              {{ occurrence.assignee_ids?.length ? `${occurrence.assignee_ids.length} assigned` : 'Unassigned' }}
+              {{ getAssigneeNames(occurrence.assigneeIds) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
               <NuxtLink :to="`/occurrences/${occurrence.id}`" class="text-blue-600 hover:text-blue-900">
@@ -101,7 +100,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useApi } from '@/utils/api';
 import { useTaskStore } from '@/stores/tasks';
-import type { TaskDefinition, TaskOccurrence } from '@/types';
+import type { TaskDefinition, TaskOccurrence, User } from '@/types'; // Add User type
 
 const route = useRoute();
 const api = useApi();
@@ -115,6 +114,9 @@ const occurrences = ref<TaskOccurrence[]>([]);
 const loadingTask = ref(true); // Separate loading for parent task
 const loadingOccurrences = ref(true);
 const errorTask = ref('');
+const householdUsers = ref<User[]>([]); // State for household users
+const loadingUsers = ref(false);
+const errorUsers = ref('');
 const errorOccurrences = ref('');
 
 // Fetch parent task details (for name/category display)
@@ -126,13 +128,22 @@ onMounted(async () => {
   errorTask.value = '';
   try {
     // Use store if task might already be loaded, otherwise fetch directly
+    // Clear any previous store error before fetching
+    taskStore.error = '';
     if (taskStore.selectedTask?.id !== taskId) {
       await taskStore.fetchTaskById(taskId);
     }
+    // Check for an error *after* the fetch attempt
     if (taskStore.error) {
-      // Use the store's error for the parent task loading
-      throw new Error(taskStore.error);
+      throw new Error(taskStore.error); // Throw if the fetch itself failed
     }
+
+    // If task fetch succeeded, immediately try fetching users and occurrences
+    console.log('Parent task loaded successfully, attempting to fetch users and occurrences...');
+    await Promise.all([
+      fetchHouseholdUsers(),
+      fetchOccurrences()
+    ]);
   } catch (err: any) {
     console.error('Error loading parent task:', err);
     errorTask.value = err.message || 'Failed to load parent task details.';
@@ -140,10 +151,7 @@ onMounted(async () => {
     loadingTask.value = false;
   }
 
-  // Fetch occurrences if parent task loaded successfully
-  if (!errorTask.value) {
-    await fetchOccurrences();
-  }
+  // Removed the separate if block, fetch is now attempted within the try block above
 });
 
 // Fetch task occurrences
@@ -158,6 +166,23 @@ const fetchOccurrences = async () => {
     errorOccurrences.value = err.data?.message || 'Failed to load occurrences for this task.';
   } finally {
     loadingOccurrences.value = false;
+  }
+};
+
+// Fetch household users
+const fetchHouseholdUsers = async () => {
+  try {
+    loadingUsers.value = true;
+    errorUsers.value = '';
+    const usersData = await api.get<User[]>('/api/household/users');
+    householdUsers.value = usersData;
+    console.log('Fetched Household Users:', JSON.stringify(householdUsers.value)); // Log fetched users
+  } catch (err: any) {
+    console.error('Error loading household users:', err);
+    errorUsers.value = err.data?.message || 'Failed to load household users.';
+    // Optionally display this error somewhere
+  } finally {
+    loadingUsers.value = false;
   }
 };
 
@@ -194,6 +219,26 @@ const handleSkip = async (occurrenceId: string) => {
   }
 };
 
+// Helper to get assignee names
+const getAssigneeNames = (assigneeIds: string[] | undefined): string => {
+  if (!assigneeIds || assigneeIds.length === 0) {
+    return 'Unassigned';
+  }
+  if (loadingUsers.value) {
+    return 'Loading users...'; // Indicate users are still loading
+  }
+  console.log(`getAssigneeNames called with IDs: ${JSON.stringify(assigneeIds)}`); // Log input IDs
+  const names = assigneeIds
+    .map(id => {
+      const user = householdUsers.value.find(user => user.id === id);
+      console.log(`Finding user for ID ${id}:`, user ? user.name : 'Not Found'); // Log find result
+      return user?.name;
+    })
+    .filter(name => !!name); // Filter out undefined names if user not found
+
+  return names.length > 0 ? names.join(', ') : 'Unknown User(s)';
+};
+
 // Helper functions (copied from Task View page, consider moving to utils)
 const formatDate = (date: Date | string): string => {
   if (!date) return 'Unknown';
@@ -227,8 +272,4 @@ const getOccurrenceStatusClass = (status: string): string => {
   }
 };
 
-// Page metadata
-definePageMeta({
-  middleware: 'auth'
-});
 </script>

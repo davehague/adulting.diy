@@ -26,19 +26,19 @@ This document outlines the manual testing steps to be performed after the comple
 ## Phase 3: Core Task Management
 
 - [x] **3.1: Category Seeding:** Check `Category` table in DB. Expected: Predefined categories ("Cleaning", "Maintenance", "Shopping") exist.
-- [ ] **3.2: Task Creation Success:** Navigate to Task List, click "Create Task", fill form (Name, Category, Desc, Instr), submit. Expected: New task appears in list, `TaskDefinition` record created linked to household, `metaStatus`='Active'.
-- [ ] **3.3: Task Creation Failure (Invalid Data):** Attempt creation with invalid/missing data. Expected: Form shows validation errors, task not created.
-- [ ] **3.4: Task List View:** Navigate to Task List page. Expected: All tasks for the household are displayed (Name, Category, Status).
-- [ ] **3.5: Task Detail View:** Click a task in the list. Expected: Navigated to Task View page, all details displayed correctly.
-- [ ] **3.6: Task Editing Success:** Navigate to Task View, click "Edit", modify basic fields, submit. Expected: Task View updates, DB record updated, changes reflected in Task List.
-- [ ] **3.7: Occurrence Empty State:** Navigate to Task View page. Expected: "No occurrences yet" message displayed in occurrence section. API `GET /api/tasks/:id/occurrences` returns empty array.
+- [x] **3.2: Task Creation Success:** Navigate to Task List, click "Create Task", fill form (Name, Category, Desc, Instr), submit. Expected: New task appears in list, `TaskDefinition` record created linked to household, `metaStatus`='Active'.
+- [x] **3.3: Task Creation Failure (Invalid Data):** Attempt creation with invalid/missing data. Expected: Form shows validation errors, task not created.
+- [x] **3.4: Task List View:** Navigate to Task List page. Expected: All tasks for the household are displayed (Name, Category, Status).
+- [x] **3.5: Task Detail View:** Click a task in the list. Expected: Navigated to Task View page, all details displayed correctly.
+- [x] **3.6: Task Editing Success:** Navigate to Task View, click "Edit", modify basic fields, submit. Expected: Task View updates, DB record updated, changes reflected in Task List.
+- [x] **3.7: Occurrence Empty State:** Navigate to Task View page. Expected: "No occurrences yet" message displayed in occurrence section. API `GET /api/tasks/:id/occurrences` returns empty array.
 
 ---
 
 ## Phase 4: Occurrence Interaction
 
-- [ ] **4.1: Manual Occurrence Creation (Temporary):** Use temp API/mechanism to create test occurrence (linked to TaskDef, assigned to user, due date). Expected: `TaskOccurrence` record created, status 'Assigned'.
-- [ ] **4.2: Occurrence List View:** Navigate to Occurrences List / Task View. Expected: Manually created occurrence displayed (Task Name, Assignee, Due Date).
+- [x] **4.1: Manual Occurrence Creation (Temporary):** Use temp API/mechanism to create test occurrence (linked to TaskDef, assigned to user, due date). Expected: `TaskOccurrence` record created, status 'Assigned'.
+- [x] **4.2: Occurrence List View:** Navigate to Occurrences List / Task View. Expected: Manually created occurrence displayed (Task Name, Assignee, Due Date).
 - [ ] **4.3: Execute Occurrence:** Find test occurrence, click "Execute". Expected: Status changes to 'Completed' in UI/DB, `completedAt` set, history log entry created.
 - [ ] **4.4: Skip Occurrence:** Create test occurrence, find it, click "Skip", enter reason, submit. Expected: Status changes to 'Skipped' in UI/DB, `skippedAt` set, reason stored (likely in `OccurrenceHistoryLog`).
 - [ ] **4.5: Add Comment:** Navigate to Occurrence View, find "Add Comment", enter comment, submit. Expected: Comment appears in Timeline/History, `OccurrenceHistoryLog` record created (type 'Comment').

@@ -2,7 +2,6 @@ import { defineEventHandler, createError } from "h3";
 import prisma from "@/server/utils/prisma/client";
 import { OccurrenceService } from "@/server/services/OccurrenceService";
 import { TaskDefinition as PrismaTaskDefinition } from "@prisma/client";
-import { mapPrismaTaskToDefinition } from "@/server/services/TaskService"; // Assuming this helper is exported or moved
 import type { Category } from "@/types";
 import { addMonths } from "date-fns";
 
