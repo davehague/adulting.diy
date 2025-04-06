@@ -1,18 +1,16 @@
 import { H3Event, createError, getHeader } from "h3";
 import { OAuth2Client } from "google-auth-library";
 import { UserService } from "@/server/services/UserService";
-import { OrganizationService } from "@/server/services/OrganizationService";
 
 const client = new OAuth2Client(process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID);
 
 interface AuthenticatedUser {
   email: string;
   userId: string;
-  organizationId: string;
+  householdId: string | null;
 }
 
 const userService = new UserService();
-const organizationService = new OrganizationService();
 
 export async function verifyAuth(event: H3Event): Promise<AuthenticatedUser> {
   const authHeader = getHeader(event, "Authorization");
@@ -59,19 +57,10 @@ export async function verifyAuth(event: H3Event): Promise<AuthenticatedUser> {
       });
     }
 
-    // Get organization info
-    const orgInfo = await organizationService.findByUserEmail(payload.email);
-    if (!orgInfo) {
-      throw createError({
-        statusCode: 404,
-        message: "No organization membership found",
-      });
-    }
-
     return {
       email: payload.email,
       userId: user.id,
-      organizationId: orgInfo.organization.id,
+      householdId: user.household_id || null,
     };
   } catch (error) {
     console.error("Token verification failed:", error);
@@ -95,6 +84,17 @@ export function verifyUserAccess(
   }
 }
 
+// Helper to verify user belongs to a household
+export function verifyHouseholdAccess(householdId: string | null) {
+  if (!householdId) {
+    throw createError({
+      statusCode: 403,
+      message: "You need to be part of a household to access this resource",
+    });
+  }
+  return householdId;
+}
+
 // Optional: Create a wrapper for protected routes
 export function defineProtectedEventHandler(
   handler: (
@@ -105,5 +105,20 @@ export function defineProtectedEventHandler(
   return defineEventHandler(async (event: H3Event) => {
     const authenticatedUser = await verifyAuth(event);
     return handler(event, authenticatedUser);
+  });
+}
+
+// Optional: Create a wrapper for household-protected routes
+export function defineHouseholdProtectedEventHandler(
+  handler: (
+    event: H3Event,
+    authenticatedUser: AuthenticatedUser,
+    householdId: string
+  ) => Promise<any>
+) {
+  return defineEventHandler(async (event: H3Event) => {
+    const authenticatedUser = await verifyAuth(event);
+    const householdId = verifyHouseholdAccess(authenticatedUser.householdId);
+    return handler(event, authenticatedUser, householdId);
   });
 }

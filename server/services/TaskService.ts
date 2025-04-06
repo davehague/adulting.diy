@@ -1,405 +1,242 @@
-// server/services/TaskService.ts
-
-import {
-  type Task,
-  type RecurrencePattern,
-  type TaskOccurrence,
-  type TaskOccurrenceNotification,
-} from "@/types/tasks";
-import { serverSupabase } from "@/server/utils/supabaseServerClient";
-import { addDays, addWeeks, addMonths, addYears } from "date-fns";
+import prisma from "@/server/utils/prisma/client";
+import type { TaskDefinition } from "@/types";
 
 export class TaskService {
-  // Core Task Methods
-  async createTask(
-    taskData: Omit<Task, "id" | "created_at" | "updated_at">
-  ): Promise<Task> {
-    console.log("[TaskService] Creating new task:", taskData.title);
+  /**
+   * Find tasks for a household
+   */
+  async findForHousehold(
+    householdId: string,
+    filters: {
+      status?: string;
+      categoryId?: string;
+      search?: string;
+    } = {}
+  ): Promise<TaskDefinition[]> {
     try {
-      const { data, error } = await serverSupabase
-        .from("tasks")
-        .insert(taskData)
-        .select()
-        .single();
+      // Build the where clause based on filters
+      const where: any = {
+        householdId,
+        metaStatus: { not: "soft-deleted" }, // Exclude soft-deleted by default
+      };
 
-      if (error) {
-        console.error("[TaskService] Error creating task:", error);
-        throw error;
+      // Add status filter if provided, overriding the default exclusion if necessary
+      if (filters.status) {
+        // If the filter is specifically for 'soft-deleted', allow it. Otherwise, use the provided status.
+        where.metaStatus =
+          filters.status === "soft-deleted" ? "soft-deleted" : filters.status;
+      } else {
+        // Ensure the default exclusion remains if no specific status filter is given
+        where.metaStatus = { not: "soft-deleted" };
       }
 
-      console.log("[TaskService] Successfully created task:", data.id);
-      return data;
-    } catch (error) {
-      console.error("[TaskService] Unexpected error in createTask:", error);
-      throw error;
-    }
-  }
-
-  createTaskWithOccurrence = async (
-    taskData: Partial<Task>,
-    occurrenceData: Partial<TaskOccurrence>
-  ) => {
-    const { data: task, error: taskError } = await serverSupabase
-      .from("tasks")
-      .insert(taskData)
-      .select()
-      .single();
-
-    if (taskError) throw taskError;
-
-    // Create initial occurrence
-    const { data: occurrence, error: occurrenceError } = await serverSupabase
-      .from("task_occurrences")
-      .insert({
-        task_id: task.id,
-        due_date: occurrenceData.due_date,
-        status: "pending",
-        assigned_to: occurrenceData.assigned_to || [],
-      })
-      .select()
-      .single();
-
-    if (occurrenceError) throw occurrenceError;
-
-    // If task is recurring, calculate and create future occurrences
-    if (task.recurring && task.recurrence_pattern_id) {
-      await this.createFutureOccurrences(task, occurrence.due_date);
-    }
-
-    return { task, occurrence };
-  };
-
-  async findOccurrencesByTaskId(taskId: string): Promise<TaskOccurrence[]> {
-    try {
-      const { data, error } = await serverSupabase
-        .from("task_occurrences")
-        .select(
-          `
-          *,
-          task:tasks(*)
-        `
-        )
-        .eq("task_id", taskId)
-        .order("due_date", { ascending: true });
-
-      if (error) {
-        console.error(
-          "[TaskService] Error finding occurrences for task:",
-          error
-        );
-        throw error;
+      // Add category filter if provided
+      if (filters.categoryId) {
+        where.categoryId = filters.categoryId;
       }
 
-      return data || [];
-    } catch (error) {
-      console.error(
-        "[TaskService] Unexpected error in findOccurrencesByTaskId:",
-        error
-      );
-      throw error;
-    }
-  }
-
-  createFutureOccurrences = async (
-    task: Task,
-    initialDueDate: string
-  ): Promise<void> => {
-    if (!task.recurrence_pattern_id) return;
-
-    // Fetch the recurrence pattern
-    const { data: pattern, error: patternError } = await serverSupabase
-      .from("recurrence_patterns")
-      .select()
-      .eq("id", task.recurrence_pattern_id)
-      .single();
-
-    if (patternError) throw patternError;
-
-    const occurrences: Partial<TaskOccurrence>[] = [];
-    let currentDate = new Date(initialDueDate);
-    const endDate = pattern.end_date ? new Date(pattern.end_date) : null;
-    let occurrenceCount = 0;
-
-    while (
-      (!endDate || currentDate <= endDate) &&
-      (!pattern.end_after_occurrences ||
-        occurrenceCount < pattern.end_after_occurrences)
-    ) {
-      // Calculate next occurrence based on pattern type
-      switch (pattern.type) {
-        case "daily":
-          currentDate = addDays(currentDate, pattern.interval);
-          break;
-        case "weekly":
-          currentDate = addWeeks(currentDate, pattern.interval);
-          break;
-        case "monthly":
-        case "monthly_by_weekday":
-          currentDate = addMonths(currentDate, pattern.interval);
-          break;
-        case "yearly":
-          currentDate = addYears(currentDate, pattern.interval);
-          break;
+      // Add search filter if provided
+      if (filters.search) {
+        where.OR = [
+          { name: { contains: filters.search, mode: "insensitive" } },
+          { description: { contains: filters.search, mode: "insensitive" } },
+        ];
       }
 
-      occurrences.push({
-        task_id: task.id,
-        due_date: currentDate.toISOString(),
-        status: "pending",
-        assigned_to: [], // You might want to copy from initial occurrence
+      // Find tasks
+      const tasks = await prisma.taskDefinition.findMany({
+        where,
+        include: {
+          category: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
       });
 
-      occurrenceCount++;
-    }
-
-    if (occurrences.length > 0) {
-      const { error: insertError } = await serverSupabase
-        .from("task_occurrences")
-        .insert(occurrences);
-
-      if (insertError) throw insertError;
-    }
-  };
-
-  async updateTask(id: string, taskData: Partial<Task>): Promise<Task> {
-    console.log("[TaskService] Updating task:", id);
-    try {
-      const { data, error } = await serverSupabase
-        .from("tasks")
-        .update(taskData)
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error("[TaskService] Error updating task:", error);
-        throw error;
-      }
-
-      return data;
-    } catch (error) {
-      console.error("[TaskService] Unexpected error in updateTask:", error);
-      throw error;
-    }
-  }
-
-  async findTaskById(id: string): Promise<Task | null> {
-    try {
-      const { data, error } = await serverSupabase
-        .from("tasks")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle();
-
-      if (error) {
-        console.error("[TaskService] Error finding task:", error);
-        throw error;
-      }
-
-      return data;
-    } catch (error) {
-      console.error("[TaskService] Unexpected error in findTaskById:", error);
-      throw error;
-    }
-  }
-
-  async findTasksByOrganization(organizationId: string): Promise<Task[]> {
-    try {
-      const { data, error } = await serverSupabase
-        .from("tasks")
-        .select("*")
-        .eq("organization_id", organizationId)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        console.error("[TaskService] Error finding organization tasks:", error);
-        throw error;
-      }
-
-      return data || [];
+      return tasks;
     } catch (error) {
       console.error(
-        "[TaskService] Unexpected error in findTasksByOrganization:",
+        `[TaskService] Unexpected error in findForHousehold:`,
         error
       );
       throw error;
     }
   }
 
-  // Recurrence Pattern Methods
-  async createRecurrencePattern(
-    patternData: Omit<RecurrencePattern, "id" | "created_at" | "updated_at">
-  ): Promise<RecurrencePattern> {
+  /**
+   * Find a task by ID
+   */
+  async findById(id: string): Promise<TaskDefinition | null> {
     try {
-      const { data, error } = await serverSupabase
-        .from("recurrence_patterns")
-        .insert(patternData)
-        .select()
-        .single();
+      const task = await prisma.taskDefinition.findUnique({
+        where: { id },
+        include: {
+          category: true,
+        },
+      });
 
-      if (error) {
-        console.error(
-          "[TaskService] Error creating recurrence pattern:",
-          error
-        );
-        throw error;
-      }
-
-      return data;
+      return task;
     } catch (error) {
-      console.error(
-        "[TaskService] Unexpected error in createRecurrencePattern:",
-        error
-      );
+      console.error(`[TaskService] Unexpected error in findById:`, error);
       throw error;
     }
   }
 
-  // Task Occurrence Methods
-  async createTaskOccurrence(
-    occurrenceData: Omit<TaskOccurrence, "id" | "created_at" | "updated_at">
-  ): Promise<TaskOccurrence> {
+  /**
+   * Create a task
+   */
+  async create(
+    data: Omit<TaskDefinition, "id" | "createdAt" | "updatedAt">
+  ): Promise<TaskDefinition> {
     try {
-      const { data, error } = await serverSupabase
-        .from("task_occurrences")
-        .insert(occurrenceData)
-        .select()
-        .single();
+      const task = await prisma.taskDefinition.create({
+        data,
+        include: {
+          category: true,
+        },
+      });
 
-      if (error) {
-        console.error("[TaskService] Error creating task occurrence:", error);
-        throw error;
-      }
-
-      return data;
+      return task;
     } catch (error) {
-      console.error(
-        "[TaskService] Unexpected error in createTaskOccurrence:",
-        error
-      );
+      console.error(`[TaskService] Unexpected error in create:`, error);
       throw error;
     }
   }
 
-  async updateTaskOccurrence(
+  /**
+   * Update a task
+   */
+  async update(
     id: string,
-    occurrenceData: Partial<TaskOccurrence>
-  ): Promise<TaskOccurrence> {
+    data: Partial<TaskDefinition>
+  ): Promise<TaskDefinition> {
     try {
-      const { data, error } = await serverSupabase
-        .from("task_occurrences")
-        .update(occurrenceData)
-        .eq("id", id)
-        .select(
-          `
-        *,
-        task:tasks(*)
-      `
-        )
-        .single();
+      const task = await prisma.taskDefinition.update({
+        where: { id },
+        data: {
+          ...data,
+          updatedAt: new Date(),
+        },
+        include: {
+          category: true,
+        },
+      });
 
-      if (error) {
-        console.error("[TaskService] Error updating task occurrence:", error);
-        throw error;
-      }
-
-      return data;
+      return task;
     } catch (error) {
-      console.error(
-        "[TaskService] Unexpected error in updateTaskOccurrence:",
-        error
-      );
+      console.error(`[TaskService] Unexpected error in update:`, error);
       throw error;
     }
   }
 
-  async findPendingOccurrencesByOrganization(
-    organizationId: string
-  ): Promise<(TaskOccurrence & { task: Task })[]> {
+  /**
+   * Pause a task
+   */
+  async pause(id: string): Promise<TaskDefinition> {
     try {
-      const { data, error } = await serverSupabase
-        .from("task_occurrences")
-        .select(
-          `
-          *,
-          task:tasks(*)
-        `
-        )
-        .eq("task.organization_id", organizationId)
-        .in("status", ["pending", "in_progress"])
-        .order("due_date", { ascending: true });
+      // Start a transaction to ensure all related operations succeed or fail together
+      return await prisma.$transaction(async (tx) => {
+        // Update task status
+        const task = await tx.taskDefinition.update({
+          where: { id },
+          data: {
+            metaStatus: "paused",
+            updatedAt: new Date(),
+          },
+          include: {
+            category: true,
+          },
+        });
 
-      if (error) {
-        console.error(
-          "[TaskService] Error finding pending occurrences:",
-          error
-        );
-        throw error;
-      }
+        // Delete future occurrences
+        await tx.taskOccurrence.updateMany({
+          where: {
+            taskId: id,
+            status: {
+              in: ["created", "assigned"],
+            },
+            dueDate: {
+              gt: new Date(),
+            },
+          },
+          data: {
+            status: "deleted",
+            updatedAt: new Date(),
+          },
+        });
 
-      return data || [];
+        return task;
+      });
     } catch (error) {
-      console.error(
-        "[TaskService] Unexpected error in findPendingOccurrencesByOrganization:",
-        error
-      );
+      console.error(`[TaskService] Unexpected error in pause:`, error);
       throw error;
     }
   }
 
-  // Notification Methods
-  async createNotification(
-    notificationData: Omit<
-      TaskOccurrenceNotification,
-      "id" | "created_at" | "updated_at"
-    >
-  ): Promise<TaskOccurrenceNotification> {
+  /**
+   * Unpause a task
+   */
+  async unpause(id: string): Promise<TaskDefinition> {
     try {
-      const { data, error } = await serverSupabase
-        .from("task_occurrence_notifications")
-        .insert(notificationData)
-        .select()
-        .single();
+      const task = await prisma.taskDefinition.update({
+        where: { id },
+        data: {
+          metaStatus: "active",
+          updatedAt: new Date(),
+        },
+        include: {
+          category: true,
+        },
+      });
 
-      if (error) {
-        console.error("[TaskService] Error creating notification:", error);
-        throw error;
-      }
-
-      return data;
+      return task;
     } catch (error) {
-      console.error(
-        "[TaskService] Unexpected error in createNotification:",
-        error
-      );
+      console.error(`[TaskService] Unexpected error in unpause:`, error);
       throw error;
     }
   }
 
-  async markNotificationSent(id: string): Promise<TaskOccurrenceNotification> {
+  /**
+   * Soft delete a task
+   */
+  async softDelete(id: string): Promise<TaskDefinition> {
     try {
-      const { data, error } = await serverSupabase
-        .from("task_occurrence_notifications")
-        .update({ sent_at: new Date().toISOString() })
-        .eq("id", id)
-        .select()
-        .single();
+      // Start a transaction to ensure all related operations succeed or fail together
+      return await prisma.$transaction(async (tx) => {
+        // Update task status
+        const task = await tx.taskDefinition.update({
+          where: { id },
+          data: {
+            metaStatus: "soft-deleted",
+            updatedAt: new Date(),
+          },
+          include: {
+            category: true,
+          },
+        });
 
-      if (error) {
-        console.error(
-          "[TaskService] Error marking notification as sent:",
-          error
-        );
-        throw error;
-      }
+        // Delete future occurrences
+        await tx.taskOccurrence.updateMany({
+          where: {
+            taskId: id,
+            status: {
+              in: ["created", "assigned"],
+            },
+            dueDate: {
+              gt: new Date(),
+            },
+          },
+          data: {
+            status: "deleted",
+            updatedAt: new Date(),
+          },
+        });
 
-      return data;
+        return task;
+      });
     } catch (error) {
-      console.error(
-        "[TaskService] Unexpected error in markNotificationSent:",
-        error
-      );
+      console.error(`[TaskService] Unexpected error in softDelete:`, error);
       throw error;
     }
   }

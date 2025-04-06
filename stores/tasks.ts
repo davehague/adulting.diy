@@ -1,310 +1,298 @@
-// stores/tasks.ts
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import { useApi } from "@/utils/api";
-import {
-  type Task,
-  type RecurrencePattern,
-  type TaskOccurrence,
-} from "@/types/tasks";
+import type { TaskDefinition, TaskOccurrence } from "~/types"; // Assuming types are defined
+
+// Placeholder for API utility - replace with actual implementation later
+const $api = {
+  get: async (
+    url: string,
+    options?: { params?: Record<string, string> }
+  ): Promise<any> => {
+    const queryString = options?.params
+      ? `?${new URLSearchParams(options.params).toString()}`
+      : "";
+    console.log(`API GET: ${url}${queryString}`);
+    // Simulate filtering based on params for placeholder
+    if (url === "/api/tasks" && options?.params) {
+      console.log(
+        "Placeholder: Simulating filtering with params:",
+        options.params
+      );
+      // Return a subset or specific data based on params if needed for testing
+    }
+    return []; // Still return empty array for placeholder
+  },
+  post: async (url: string, body: any): Promise<any> => {
+    console.log(`API POST: ${url}`, body);
+    return {};
+  },
+  put: async (url: string, body: any): Promise<any> => {
+    console.log(`API PUT: ${url}`, body);
+    return {};
+  },
+};
 
 export const useTaskStore = defineStore(
   "tasks",
   () => {
-    const api = useApi();
-
     // State
-    const tasks = ref<Task[]>([]);
-    const taskOccurrences = ref<Record<string, TaskOccurrence[]>>({});
-
-    const pendingOccurrences = ref<(TaskOccurrence & { task: Task })[]>([]);
-    const loading = ref(false);
+    const taskList = ref<TaskDefinition[]>([]);
+    const currentTask = ref<TaskDefinition | null>(null);
+    const currentTaskOccurrences = ref<TaskOccurrence[]>([]);
+    const isLoading = ref(false);
     const error = ref<string | null>(null);
 
-    // Getters
-    const sortedTasks = computed(() =>
-      [...tasks.value].sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      )
-    );
-
-    const sortedPendingOccurrences = computed(() =>
-      [...pendingOccurrences.value].sort(
-        (a, b) =>
-          new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
-      )
+    // Getters (Computed Properties)
+    const tasks = computed(() => taskList.value);
+    const selectedTask = computed(() => currentTask.value);
+    const occurrencesForSelectedTask = computed(
+      () => currentTaskOccurrences.value
     );
 
     // Actions
-    const fetchTasks = async (organizationId: string) => {
-      loading.value = true;
-      error.value = null;
 
+    // Fetch all tasks for the household (Blueprint Step 3.3)
+    async function fetchTasks(
+      filters: { status?: string; categoryId?: string; search?: string } = {}
+    ) {
+      isLoading.value = true;
+      error.value = null;
       try {
-        const response = await api.get<Task[]>("/api/tasks", {
-          params: { organization_id: organizationId },
-        });
-        tasks.value = response;
-        await fetchTaskOccurrencesForTasks();
-      } catch (e) {
-        error.value = e instanceof Error ? e.message : "Failed to fetch tasks";
-        throw error.value;
+        // Prepare query parameters
+        const params: Record<string, string> = {};
+        if (filters.status) params.status = filters.status;
+        if (filters.categoryId) params.categoryId = filters.categoryId;
+        if (filters.search) params.search = filters.search;
+
+        // Replace with actual API call structure - using placeholder $api for now
+        // In a real app, this would use the composable like useApi()
+        const data = await $api.get("/api/tasks", { params });
+        taskList.value = data as TaskDefinition[]; // Add type assertion/validation
+      } catch (err: any) {
+        error.value = err.message || "Failed to fetch tasks";
+        taskList.value = []; // Clear list on error
       } finally {
-        loading.value = false;
+        isLoading.value = false;
       }
-    };
+    }
 
-    const createTask = async (
-      taskData: Partial<Task>,
-      occurrenceData: Partial<TaskOccurrence>
-    ): Promise<{ task: Task; occurrence: TaskOccurrence }> => {
-      loading.value = true;
+    // Fetch a single task definition (Blueprint Step 3.8)
+    async function fetchTaskById(taskId: string) {
+      isLoading.value = true;
       error.value = null;
-
+      currentTask.value = null; // Clear previous task
       try {
-        const response = await api.post<{
-          task: Task;
-          occurrence: TaskOccurrence;
-        }>("/api/tasks", { task: taskData, occurrence: occurrenceData });
-        tasks.value.push(response.task);
-        // Add this line:
-        taskOccurrences.value[response.task.id] = [response.occurrence];
-        pendingOccurrences.value.push({
-          ...response.occurrence,
-          task: response.task,
-        });
-        return response;
-      } catch (e) {
-        error.value = e instanceof Error ? e.message : "Failed to create task";
-        throw error.value;
+        // Replace with actual API call structure
+        const data = await $api.get(`/api/tasks/${taskId}`);
+        currentTask.value = data as TaskDefinition; // Add type assertion/validation
+      } catch (err: any) {
+        error.value = err.message || `Failed to fetch task ${taskId}`;
       } finally {
-        loading.value = false;
+        isLoading.value = false;
       }
-    };
+    }
 
-    const updateTask = async (
-      id: string,
-      taskData: Partial<Task>
-    ): Promise<Task> => {
-      loading.value = true;
+    // Create a new task definition (Blueprint Step 3.2 / 3.7)
+    async function createTask(
+      taskData: Omit<
+        TaskDefinition,
+        | "id"
+        | "householdId"
+        | "createdAt"
+        | "updatedAt"
+        | "metaStatus"
+        | "occurrences"
+      >
+    ) {
+      isLoading.value = true;
       error.value = null;
-
       try {
-        const response = await api.patch<Task>(`/api/tasks/${id}`, taskData);
-        const index = tasks.value.findIndex((t) => t.id === id);
-        if (index !== -1) {
-          tasks.value[index] = response;
+        // Replace with actual API call structure
+        const newTask = await $api.post("/api/tasks", taskData);
+        // Optionally add to list or refetch
+        await fetchTasks(); // Refetch list after creation
+        return newTask as TaskDefinition;
+      } catch (err: any) {
+        error.value = err.message || "Failed to create task";
+        throw err; // Re-throw to handle in component
+      } finally {
+        isLoading.value = false;
+      }
+    }
+
+    // Update an existing task definition (Blueprint Step 3.10 / 3.11)
+    async function updateTask(
+      taskId: string,
+      taskData: Partial<TaskDefinition>
+    ) {
+      isLoading.value = true;
+      error.value = null;
+      try {
+        // Replace with actual API call structure
+        const updatedTask = await $api.put(`/api/tasks/${taskId}`, taskData);
+        // Update in list or refetch
+        await fetchTasks(); // Refetch list after update
+        if (currentTask.value?.id === taskId) {
+          currentTask.value = updatedTask as TaskDefinition; // Update current task if viewing
         }
-        return response;
-      } catch (e) {
-        error.value = e instanceof Error ? e.message : "Failed to update task";
-        throw error.value;
+        return updatedTask as TaskDefinition;
+      } catch (err: any) {
+        error.value = err.message || `Failed to update task ${taskId}`;
+        throw err; // Re-throw to handle in component
       } finally {
-        loading.value = false;
+        isLoading.value = false;
       }
-    };
+    }
 
-    const tasksWithCurrentOccurrence = computed(() =>
-      tasks.value.map((task) => ({
-        ...task,
-        current_occurrence: taskOccurrences.value[task.id]?.find(
-          (o) => o.status === "pending" || o.status === "in_progress"
-        ),
-      }))
-    );
-
-    const createRecurrencePattern = async (
-      patternData: Omit<RecurrencePattern, "id" | "created_at" | "updated_at">
-    ): Promise<string> => {
-      loading.value = true;
+    // Fetch occurrences for a specific task (Blueprint Step 3.12)
+    async function fetchOccurrencesForTask(taskId: string) {
+      isLoading.value = true;
       error.value = null;
-
+      currentTaskOccurrences.value = []; // Clear previous occurrences
       try {
-        const response = await api.post<RecurrencePattern>(
-          "/api/tasks/patterns",
-          patternData
-        );
-        return response.id;
-      } catch (e) {
+        // Replace with actual API call structure
+        const data = await $api.get(`/api/tasks/${taskId}/occurrences`);
+        currentTaskOccurrences.value = data as TaskOccurrence[]; // Add type assertion/validation
+      } catch (err: any) {
         error.value =
-          e instanceof Error
-            ? e.message
-            : "Failed to create recurrence pattern";
-        throw error.value;
+          err.message || `Failed to fetch occurrences for task ${taskId}`;
       } finally {
-        loading.value = false;
+        isLoading.value = false;
       }
-    };
+    }
 
-    const fetchTaskOccurrencesForTasks = async () => {
-      loading.value = true;
+    // --- Actions for Occurrence Interaction (Phase 4) ---
+
+    // Execute an occurrence (Blueprint Step 4.4 / 4.6)
+    async function executeOccurrence(occurrenceId: string) {
+      isLoading.value = true; // Consider a more granular loading state if needed
       error.value = null;
-
       try {
-        await Promise.all(
-          tasks.value.map(async (task) => {
-            const occurrences = await api.get<TaskOccurrence[]>(
-              "/api/tasks/occurrences",
-              {
-                params: { task_id: task.id },
-              }
-            );
-            taskOccurrences.value[task.id] = occurrences;
-          })
+        // Replace with actual API call structure
+        const updatedOccurrence = await $api.post(
+          `/api/occurrences/${occurrenceId}/execute`,
+          {}
         );
-      } catch (e) {
+        // Optionally update the specific occurrence in the local state if needed,
+        // or refetch the list for the current task if viewing that page.
+        // For simplicity now, we might rely on the page to refetch after action.
+        return updatedOccurrence as TaskOccurrence;
+      } catch (err: any) {
         error.value =
-          e instanceof Error ? e.message : "Failed to fetch task occurrences";
-        throw error.value;
+          err.message || `Failed to execute occurrence ${occurrenceId}`;
+        throw err; // Re-throw to handle in component
       } finally {
-        loading.value = false;
+        isLoading.value = false;
       }
-    };
+    }
 
-    const fetchPendingOccurrences = async (organizationId: string) => {
-      if (!process.client) {
-        console.warn(
-          "[TaskStore] Attempting to fetch during SSR, deferring..."
-        );
-        return;
-      }
-
-      loading.value = true;
+    // Skip an occurrence (Blueprint Step 4.5 / 4.6)
+    async function skipOccurrence(occurrenceId: string, reason: string) {
+      isLoading.value = true;
       error.value = null;
-
       try {
-        const response = await api.get<(TaskOccurrence & { task: Task })[]>(
-          "/api/tasks/occurrences",
-          {
-            params: { organization_id: organizationId },
-          }
+        // Replace with actual API call structure
+        const updatedOccurrence = await $api.post(
+          `/api/occurrences/${occurrenceId}/skip`,
+          { reason }
         );
-        pendingOccurrences.value = response;
-      } catch (e) {
+        // Optionally update the specific occurrence in the local state
+        return updatedOccurrence as TaskOccurrence;
+      } catch (err: any) {
         error.value =
-          e instanceof Error
-            ? e.message
-            : "Failed to fetch pending occurrences";
-        throw error.value;
+          err.message || `Failed to skip occurrence ${occurrenceId}`;
+        throw err; // Re-throw to handle in component
       } finally {
-        loading.value = false;
+        isLoading.value = false;
       }
-    };
+    }
 
-    const updateOccurrence = async (
-      id: string,
-      occurrenceData: Partial<TaskOccurrence>
-    ): Promise<TaskOccurrence> => {
-      loading.value = true;
+    // Add a comment to an occurrence (Blueprint Step 4.7 / 4.11)
+    async function commentOnOccurrence(occurrenceId: string, comment: string) {
+      // Note: This action doesn't modify core task/occurrence state directly,
+      // so isLoading might not be strictly necessary unless we want global loading.
+      // error.value = null; // Clear previous errors if desired
+      try {
+        // Replace with actual API call structure
+        const historyLog = await $api.post(
+          `/api/occurrences/${occurrenceId}/comments`,
+          { comment }
+        );
+        // The timeline component fetches its own data, so no state update needed here.
+        // We might want to trigger a refetch on the timeline component if it's visible.
+        return historyLog; // Return the new log entry
+      } catch (err: any) {
+        // Handle error specifically for commenting if needed
+        console.error(
+          `Failed to add comment to occurrence ${occurrenceId}:`,
+          err
+        );
+        // error.value = err.message || `Failed to add comment`; // Set global error if desired
+        throw err; // Re-throw to handle in component
+      }
+    }
+
+    // Update an occurrence (Blueprint Step 4.12 / 4.13)
+    async function updateOccurrence(
+      occurrenceId: string,
+      occurrenceData: Partial<Pick<TaskOccurrence, "due_date" | "assignee_ids">>
+    ) {
+      isLoading.value = true; // Consider more granular loading
       error.value = null;
-
       try {
-        const response = await api.patch<TaskOccurrence>(
-          `/api/tasks/occurrences/${id}`,
-          occurrenceData
+        // Prepare data for API (ensure date is handled correctly if needed)
+        const payload: any = {};
+        if (occurrenceData.due_date) payload.dueDate = occurrenceData.due_date; // Match API expected field name
+        if (occurrenceData.assignee_ids)
+          payload.assigneeIds = occurrenceData.assignee_ids; // Match API expected field name
+
+        // Replace with actual API call structure
+        const updatedOccurrence = await $api.put(
+          `/api/occurrences/${occurrenceId}`,
+          payload
         );
-
-        // Update in taskOccurrences
-        const taskId = response.task_id;
-        if (taskOccurrences.value[taskId]) {
-          const occurrenceIndex = taskOccurrences.value[taskId].findIndex(
-            (o) => o.id === id
-          );
-          if (occurrenceIndex !== -1) {
-            taskOccurrences.value[taskId][occurrenceIndex] = response;
-          }
-        }
-
-        // Update the occurrence in pendingOccurrences if it exists
-        const index = pendingOccurrences.value.findIndex((o) => o.id === id);
-        if (index !== -1) {
-          // Create a new object with all properties from both the existing occurrence and the response
-          pendingOccurrences.value[index] = {
-            ...pendingOccurrences.value[index],
-            ...response,
-            // Ensure we preserve the task reference
-            task: pendingOccurrences.value[index].task,
-          };
-        }
-
-        return response;
-      } catch (e) {
+        // Optionally update the specific occurrence in the local state if needed,
+        // or rely on the page to refetch.
+        return updatedOccurrence as TaskOccurrence;
+      } catch (err: any) {
         error.value =
-          e instanceof Error ? e.message : "Failed to update occurrence";
-        throw error.value;
+          err.message || `Failed to update occurrence ${occurrenceId}`;
+        throw err; // Re-throw to handle in component
       } finally {
-        loading.value = false;
+        isLoading.value = false;
       }
-    };
+    }
 
-    const fetchRecurrencePattern = async (
-      patternId: string
-    ): Promise<RecurrencePattern> => {
-      loading.value = true;
-      error.value = null;
+    // async function fetchOccurrenceHistory(occurrenceId: string) { ... }
 
-      try {
-        const response = await api.get<RecurrencePattern>(
-          `/api/tasks/patterns/${patternId}`
-        );
-        return response;
-      } catch (e) {
-        error.value =
-          e instanceof Error ? e.message : "Failed to fetch recurrence pattern";
-        throw error.value;
-      } finally {
-        loading.value = false;
-      }
-    };
-
-    const fetchTaskOccurrences = async (
-      taskId: string
-    ): Promise<TaskOccurrence[]> => {
-      loading.value = true;
-      error.value = null;
-
-      try {
-        const response = await api.get<TaskOccurrence[]>(
-          "/api/tasks/occurrences",
-          {
-            params: { task_id: taskId },
-          }
-        );
-        return response;
-      } catch (e) {
-        error.value =
-          e instanceof Error ? e.message : "Failed to fetch task occurrences";
-        throw error.value;
-      } finally {
-        loading.value = false;
-      }
-    };
+    // --- Placeholder actions for Advanced Task Logic (Phase 5) ---
+    // async function pauseTask(taskId: string) { ... }
+    // async function unpauseTask(taskId: string) { ... }
+    // async function deleteTask(taskId: string) { ... }
 
     return {
       // State
-      tasks,
-      pendingOccurrences,
-      loading,
+      isLoading,
       error,
-
       // Getters
-      sortedTasks,
-      sortedPendingOccurrences,
-      tasksWithCurrentOccurrence,
-
+      tasks,
+      selectedTask,
+      occurrencesForSelectedTask,
       // Actions
       fetchTasks,
+      fetchTaskById,
       createTask,
       updateTask,
-      createRecurrencePattern,
-      fetchRecurrencePattern,
-      fetchPendingOccurrences,
-      updateOccurrence,
-      fetchTaskOccurrences,
+      fetchOccurrencesForTask,
+      executeOccurrence, // Add new action
+      skipOccurrence,
+      commentOnOccurrence,
+      updateOccurrence, // Add new action
+      // Add other actions as needed...
     };
   },
   {
-    persist: true,
+    // Persist configuration if needed for tasks (likely not needed for task list itself)
+    // persist: true,
   }
 );

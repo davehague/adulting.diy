@@ -1,26 +1,19 @@
-import type { User, GoogleUser } from "~/types";
-import { serverSupabase } from "@/server/utils/supabaseServerClient";
+import type { User, GoogleUser } from '~/types';
+import prisma from '@/server/utils/prisma/client';
 
 export class UserService {
   async findByEmail(email: string): Promise<User | null> {
     console.log(`[UserService] Finding user by email:`, email);
     try {
-      const { data, error } = await serverSupabase
-        .from("users")
-        .select("*")
-        .eq("email", email)
-        .maybeSingle();
-
-      if (error) {
-        console.error(`[UserService] Error finding user:`, error);
-        throw error;
-      }
+      const user = await prisma.user.findUnique({
+        where: { email }
+      });
 
       console.log(
         `[UserService] Find result:`,
-        data ? "User found" : "User not found"
+        user ? "User found" : "User not found"
       );
-      return data;
+      return user;
     } catch (error) {
       console.error(`[UserService] Unexpected error in findByEmail:`, error);
       throw error;
@@ -38,34 +31,23 @@ export class UserService {
       if (existingUser) {
         console.log(`[UserService] Updating existing user:`, existingUser.id);
         return this.update(existingUser.id, {
-          last_login: new Date(),
+          lastLogin: new Date(),
         });
       }
 
-      // Default organization_id - you might want to handle this differently
-      const DEFAULT_ORG_ID = 1;
-
       console.log(`[UserService] No existing user found, creating new user`);
-      const { data, error } = await serverSupabase
-        .from("users")
-        .insert({
+      const newUser = await prisma.user.create({
+        data: {
           email: googleUser.email,
           name: googleUser.name,
           picture: googleUser.picture,
-          organization_id: DEFAULT_ORG_ID,
-          last_login: new Date(),
-          // created_at and updated_at will be handled by Supabase
-        })
-        .select()
-        .single();
+          lastLogin: new Date(),
+          // Default notification preferences will be set by the schema
+        }
+      });
 
-      if (error) {
-        console.error(`[UserService] Error creating user:`, error);
-        throw error;
-      }
-
-      console.log(`[UserService] Successfully created new user:`, data.id);
-      return data;
+      console.log(`[UserService] Successfully created new user:`, newUser.id);
+      return newUser;
     } catch (error) {
       console.error(`[UserService] Error in createFromGoogle:`, error);
       throw error;
@@ -75,20 +57,13 @@ export class UserService {
   async update(id: string, data: Partial<User>): Promise<User> {
     const updateData = {
       ...data,
-      updated_at: new Date(),
+      updatedAt: new Date(),
     };
 
-    const { data: updated, error } = await serverSupabase
-      .from("users")
-      .update(updateData)
-      .eq("id", id)
-      .select("*")
-      .single();
-
-    if (error) {
-      console.error(`[UserService] Error updating user:`, error);
-      throw error;
-    }
+    const updated = await prisma.user.update({
+      where: { id },
+      data: updateData
+    });
 
     return updated;
   }

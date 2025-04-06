@@ -1,154 +1,130 @@
 <template>
-  <div class="min-h-screen bg-gray-100">
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <!-- Loading and Error States -->
-      <div v-if="loading" class="text-center py-12">
-        <p class="text-gray-600">Loading your tasks...</p>
-      </div>
+  <div class="container mx-auto px-4 py-8">
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+      <p class="text-gray-600 mt-1">Welcome, {{ authStore.user?.name }}</p>
+    </div>
 
-      <div v-else-if="error" class="max-w-2xl mx-auto bg-red-50 text-red-600 p-4 rounded-md">
-        {{ error }}
-      </div>
-
-      <!-- No Organization State -->
-      <div v-else-if="!organizationStore.currentOrganization" class="text-center py-12">
-        <p class="text-gray-600">Redirecting to setup...</p>
-      </div>
-
-      <!-- Task Dashboard -->
-      <div v-else class="space-y-6">
-        <!-- Task Actions -->
-        <div class="flex justify-between items-center">
-          <h1 class="text-2xl font-semibold text-gray-900">My Tasks</h1>
-          <button @click="showNewTaskForm = true"
-            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            New Task
-          </button>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Quick Actions Card -->
+      <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="px-6 py-4 bg-blue-500 text-white">
+          <h2 class="font-bold text-lg">Quick Actions</h2>
         </div>
-
-        <!-- Task Filters -->
-        <div class="bg-white rounded-lg shadow-sm p-4">
-          <div class="flex space-x-4">
-            <button v-for="filter in filters" :key="filter.value" @click="currentFilter = filter.value" :class="[
-              currentFilter === filter.value
-                ? 'text-blue-600 border-blue-600'
-                : 'text-gray-500 border-transparent hover:text-gray-700',
-              'pb-2 border-b-2 font-medium'
-            ]">
-              {{ filter.label }}
+        <div class="p-6">
+          <div class="space-y-4">
+            <NuxtLink to="/tasks/create"
+              class="block w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded text-center">
+              Create New Task
+            </NuxtLink>
+            <NuxtLink to="/tasks"
+              class="block w-full py-2 px-4 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded text-center">
+              View All Tasks
+            </NuxtLink>
+            <button @click="logout"
+              class="block w-full py-2 px-4 bg-red-500 hover:bg-red-600 text-white rounded text-center">
+              Logout
             </button>
           </div>
         </div>
+      </div>
 
-        <!-- Task List -->
-        <div class="bg-white rounded-lg shadow-sm">
-          <TaskList :tasks="filteredTasks" @edit="handleEditTask" @delete="handleDeleteTask" />
+      <!-- Household Info Card -->
+      <div v-if="authStore.user?.householdId" class="bg-white rounded-lg shadow-md overflow-hidden">
+        <!-- Use camelCase -->
+        <div class="px-6 py-4 bg-green-500 text-white">
+          <h2 class="font-bold text-lg">Your Household</h2>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-4">
+            You're part of a household
+          </p>
+          <NuxtLink to="/household"
+            class="block w-full py-2 px-4 bg-green-500 hover:bg-green-600 text-white rounded text-center">
+            Manage Household
+          </NuxtLink>
         </div>
       </div>
-    </main>
 
-    <!-- Task Form Modal -->
-    <div v-if="showNewTaskForm" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
-      <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-        <TaskForm :task="editingTask" :current-occurrence="editingOccurrence" @save="handleSaveTask"
-          @cancel="closeTaskForm" />
+      <!-- Getting Started Card -->
+      <div v-else class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="px-6 py-4 bg-yellow-500 text-white">
+          <h2 class="font-bold text-lg">Getting Started</h2>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-600 mb-4">
+            You need to join or create a household to get started.
+          </p>
+          <NuxtLink to="/setup-household"
+            class="block w-full py-2 px-4 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-center">
+            Setup Household
+          </NuxtLink>
+        </div>
       </div>
+
+      <!-- Upcoming Tasks Card -->
+      <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="px-6 py-4 bg-purple-500 text-white">
+          <h2 class="font-bold text-lg">Upcoming Tasks</h2>
+        </div>
+        <div class="p-6">
+          <!-- Placeholder for upcoming tasks -->
+          <p class="text-gray-600 text-center py-4">
+            No upcoming tasks.
+          </p>
+          <NuxtLink to="/tasks"
+            class="block w-full py-2 px-4 bg-purple-500 hover:bg-purple-600 text-white rounded text-center">
+            View All Tasks
+          </NuxtLink>
+        </div>
+      </div>
+    </div>
+
+    <!-- Debug section -->
+    <div v-if="debugMode" class="mt-6 p-4 bg-gray-100 rounded-md">
+      <h3 class="font-medium mb-2">Debug Info:</h3>
+      <pre class="text-xs overflow-auto">{{ debugInfo }}</pre>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { useOrganizationStore } from '@/stores/organization'
-import { useTasks, useTaskActions } from '@/composables/useTasks'
-import { type Task, type TaskOccurrence } from '@/types/tasks'
-import TaskList from '@/components/task/TaskList.vue'
-import TaskForm from '@/components/task/TaskForm.vue'
+import { ref, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 
-const router = useRouter()
-const authStore = useAuthStore()
-const organizationStore = useOrganizationStore()
-const { tasks, loading, error, tasksWithCurrentOccurrence } = useTasks()
-const { loadTasks, saveTask, updateTask, updateOccurrence } = useTaskActions()
-const taskStore = useTaskStore()
+const router = useRouter();
+const authStore = useAuthStore();
 
-const showNewTaskForm = ref(false)
-const currentFilter = ref('all')
+// Debug mode
+const debugMode = ref(false);
 
-const editingTask = ref<Task | null>(null)
-const editingOccurrence = ref<TaskOccurrence | null>(null)
+// Debug information
+const debugInfo = computed(() => {
+  return JSON.stringify({
+    user: authStore.user,
+    isAuthenticated: authStore.isAuthenticated
+  }, null, 2);
+});
 
+// Logout function
+const logout = () => {
+  authStore.logout();
+  router.push('/login');
+};
 
-const filters = [
-  { label: 'All Tasks', value: 'all' },
-  { label: 'My Tasks', value: 'my' },
-  { label: 'Due Soon', value: 'due' },
-  { label: 'Completed', value: 'completed' }
-]
-
-const filteredTasks = computed(() => {
-  if (currentFilter.value === 'my') {
-    return tasksWithCurrentOccurrence.value.filter((task: Task) =>
-      task.created_by === authStore.user?.id
-    )
-  }
-  return tasksWithCurrentOccurrence.value
-})
-
-const closeTaskForm = () => {
-  showNewTaskForm.value = false
-  editingTask.value = null
-}
-
-const handleEditTask = async (task: Task, occurrence?: TaskOccurrence) => {
-  editingTask.value = task
-  editingOccurrence.value = occurrence || null
-  showNewTaskForm.value = true
-}
-
-const handleSaveTask = async (taskData: Partial<Task>, occurrenceData: Partial<TaskOccurrence>) => {
-  try {
-    if (editingTask.value) {
-      await updateTask(editingTask.value.id, taskData)
-      if (editingOccurrence.value) {
-        await updateOccurrence(editingOccurrence.value.id, occurrenceData)
-      }
-    } else {
-      await saveTask(taskData, occurrenceData)
+// Toggle debug mode with key press (Ctrl+D)
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'd') {
+      e.preventDefault();
+      debugMode.value = !debugMode.value;
     }
-    closeTaskForm()
-    await loadTasks(organizationStore.currentOrganization!.id)
-  } catch (error) {
-    console.error('Error saving task:', error)
-  }
+  });
 }
 
-const handleDeleteTask = async (id: string) => {
-  if (confirm('Are you sure you want to delete this task?')) {
-    // Add delete functionality to store/composable if needed
-  }
-}
-
-onMounted(async () => {
-  try {
-    if (!authStore.isAuthenticated) {
-      router.push('/login')
-      return
-    }
-
-    await organizationStore.fetchUserOrganization()
-
-    if (!organizationStore.currentOrganization) {
-      router.push('/organization/create')
-      return
-    }
-
-    await loadTasks(organizationStore.currentOrganization.id)
-    await taskStore.fetchPendingOccurrences(organizationStore.currentOrganization.id)
-  } catch (err) {
-    error.value = 'Failed to load your tasks. Please try again.'
-  }
-})
+// Page metadata
+definePageMeta({
+  // middleware: 'auth' // Removed redundant named middleware
+});
 </script>

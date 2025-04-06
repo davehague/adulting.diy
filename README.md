@@ -1,121 +1,110 @@
 # adulting.diy Task Management System
 
-This project is a multi-tenant task management system built with Vue.js, Nuxt 3, and Vercel Postgres. It's designed to help organizations manage recurring and non-recurring tasks efficiently.
+This project is a task management system built with Nuxt 3, Vue.js, Prisma, and CockroachDB. It's designed to help households manage recurring and non-recurring tasks efficiently.
 
 ## Features
 
-Multi-tenant architecture supporting multiple organizations
-Recurring and non-recurring task management
-Custom categorization system for tasks
-Task dependencies for non-recurring tasks
-Flexible notification system for upcoming and overdue tasks
-Soft deletion for exception handling in recurring tasks
-Google Sign-In authentication
-Persistent authentication state across page reloads and server-side rendering
+- Household-based multi-tenancy
+- Recurring and non-recurring task management (based on schedules)
+- Task occurrences tracking (completion, skipping, comments)
+- Custom categorization system for tasks
+- Flexible notification system (planned)
+- Task pausing and soft deletion
+- User authentication (Email/Password)
+- Persistent authentication state
 
-## Tech
+## Tech Stack
 
-- Vue.js (latest version) / Nuxt 3
-- [Supabase](https://supabase.com/) for data persistences (PaaS)
-- [Pinia](https://pinia.vuejs.org/ssr/nuxt.html) for state management (with [Pinia Persisted State](https://prazdevs.github.io/pinia-plugin-persistedstate/frameworks/nuxt.html))
-- Tailwind CSS for utility-first styling
-- Lucide Vue Next for icons
-- [Vue3-Google-Sign-In for authentication](https://vue3-google-signin.wavezync.com/guide/)
+- **Framework:** [Nuxt 3](https://nuxt.com/)
+- **UI Library:** [Vue.js](https://vuejs.org/)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+- **State Management:** [Pinia](https://pinia.vuejs.org/)
+- **Database ORM:** [Prisma](https://www.prisma.io/)
+- **Database:** [CockroachDB](https://www.cockroachlabs.com/) (compatible with PostgreSQL)
+- **Icons:** [Lucide Vue Next](https://lucide.dev/)
 
 ## Prerequisites
 
-- Node.js (version compatible with Nuxt 3)
-- npm or yarn
+- Node.js (version compatible with Nuxt 3 - check `.nvmrc` or `package.json` engines)
+- npm or yarn or pnpm
+- Access to a CockroachDB instance (local or cloud)
 
 ## Getting Started
 
-1. Clone the repository:
-2. Install dependencies using `npm install`
+1.  **Clone the repository:**
 
-### Setting up Google Sign-In
+    ```bash
+    git clone <repository-url>
+    cd adulting-diy
+    ```
 
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select an existing one
-3. Go to the Credentials page
-4. Create an OAuth 2.0 Client ID
-   - Application type: Web application
-   - Add authorized JavaScript origins: `https://localhost:3000` (for development)
-   - Add authorized redirect URIs: `https://localhost:3000` (for development)
-5. Copy the Client ID and paste it into your `.env` file as `GOOGLE_CLIENT_ID`
+2.  **Install dependencies:**
 
-Local dev now requires HTTPS. Use `mkcert` to create local certificates:
+    ```bash
+    npm install
+    # or yarn install or pnpm install
+    ```
 
-_**Note**: Install mkcert using chocolately (Windows) or Homebrew (Mac)_
+3.  **Set up Environment Variables:**
 
-```
-mkcert localhost
-```
+    - Create a `.env` file in the project root.
+    - Add your CockroachDB connection string:
+      ```dotenv
+      DATABASE_URL="postgresql://user:password@host:port/adulting?sslmode=verify-full"
+      ```
+      _(Replace with your actual connection details. Ensure the database name is `adulting` or update the connection string accordingly)_
 
-Note: `nuxt.config.ts` is already set up to use the cert during local dev:
+4.  **Set up the Database Schema:**
 
-```
-export default defineNuxtConfig({
-  devServer: {
-    https: {
-      key: './localhost-key.pem',
-      cert: './localhost.pem',
-    }
-  },
-```
+    - Run the Prisma migrations to create the necessary tables:
+      ```bash
+      npx prisma migrate dev
+      ```
+      _(This will apply existing migrations and prompt you to create new ones if you change `prisma/schema.prisma`)_
 
-### Setting up Supabase
+5.  **(Optional) Seed Initial Data:**
 
-1. Refer to [this gist](https://www.davehague.com/gists/5f694889f466d18c5b48fda89ddfc14a) to create a new schema on your Supabase project.
-2. Add the variables `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` to your `.env` file
-3. Create the users table in your schema:
+    - If needed, run the seed script to populate the database with initial data (e.g., default categories):
+      ```bash
+      node scripts/seed.js
+      ```
 
-   ```
-   CREATE TABLE <schema>.organizations (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL
-   );
+6.  **Run the Development Server:**
 
-   -- Insert default organization
-   INSERT INTO <schema>.organizations (id, name)
-   VALUES (1, 'Default organization');
+    - The project might require HTTPS for local development (check `nuxt.config.ts`). If so, you may need to generate local certificates using `mkcert`:
+      ```bash
+      # Install mkcert (e.g., brew install mkcert on macOS)
+      mkcert -install
+      mkcert localhost
+      ```
+      _(The `nuxt.config.ts` should be pre-configured to use `localhost-key.pem` and `localhost.pem` if HTTPS is enabled)_
+    - Start the Nuxt development server:
+      ```bash
+      npm run dev
+      # or yarn dev or pnpm dev
+      ```
 
-   CREATE TABLE <schema>.users (
-   id SERIAL PRIMARY KEY,
-   organization_id INTEGER REFERENCES <schema>.organizations(id),
-   name VARCHAR(255) NOT NULL,
-   email VARCHAR(255) NOT NULL UNIQUE,
-   picture VARCHAR(1024),
-   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-   last_login TIMESTAMPTZ DEFAULT NULL
-   );
-
-   -- Enable RLS on both tables
-   ALTER TABLE <schema>.organizations ENABLE ROW LEVEL SECURITY;
-   ALTER TABLE <schema>.users ENABLE ROW LEVEL SECURITY;
-   ```
-
-**Note**: We default to org_id = 1 in `UserService`, but modify as needed.
+7.  Open your browser to the specified local address (e.g., `https://localhost:3000`).
 
 ## Styling with Tailwind CSS
 
-This project uses Tailwind CSS for styling. Tailwind provides a set of utility classes that you can use directly in your HTML to style your components. To customize your Tailwind setup, you can modify the `tailwind.config.js` file (if you've created one) or add Tailwind-specific configuration to your `nuxt.config.ts` file.
+This project uses Tailwind CSS for styling. Modify `tailwind.config.ts` for customizations.
 
 ## Icons with Lucide Vue Next
 
-The project includes [Lucide](https://lucide.dev/) for icons. You can use these icons in your Vue components as needed.
+The project includes [Lucide](https://lucide.dev/) for icons.
 
 ## Favicon
 
-To change the title and favicon, update `nuxt.config.ts`. Create your own favicon at https://favicon.io/ and simply drop overtop of the files in the `public` folder.
+To change the title and favicon, update `nuxt.config.ts`. Create your own favicon at https://favicon.io/ and replace the files in the `public` folder.
 
 ## Environment Variables
 
-Create a `.env` file in the root directory of the project to store secret project variables.
+Ensure your `.env` file contains the necessary variables:
 
-```
-NUXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_KEY=your_supabase_anon_key
-SUPABASE_SCHEMA=your_supabase_schema
+```dotenv
+# Example .env file
+DATABASE_URL="postgresql://user:password@host:port/adulting?sslmode=verify-full"
+
+# Add other environment variables as needed (e.g., for email services, etc.)
 ```

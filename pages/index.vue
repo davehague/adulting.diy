@@ -93,7 +93,7 @@ const features = [
 const howItWorks = [
   {
     title: 'Sign Up',
-    description: 'Create an account for your organization and invite team members.'
+    description: 'Create an account for your household and invite team members.'
   },
   {
     title: 'Customize',

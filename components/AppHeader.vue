@@ -5,7 +5,6 @@
         <img v-if="user?.picture" :src="user.picture" alt="Profile" class="w-8 h-8 rounded-full">
         <span>{{ user?.name }}</span>
         <NuxtLink to="/home">Home</NuxtLink>
-        <NuxtLink to="/organization/settings">Org Settings</NuxtLink>
         <button @click="logout" class="text-red-500 hover:text-red-700">Logout</button>
       </div>
       <NuxtLink v-else to="/login"

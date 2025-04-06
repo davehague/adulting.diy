@@ -1,0 +1,12 @@
+Adulting.DIY: Keep up with your home, your dog, and your life.  Get email reminders of what's coming up that needs done. This is something my wife and I really need in our lives.  My previous employer (a facilities management company) offered me a version of this service but I lost access to it when I left the company.  Features at a minimum:
+
+Task workflow - create, assign, respond, execute, delete
+Task sharing - all household members see the tasks that need to be completed
+Task categories - house, dog, auto, etc
+Notifications and reminders - get alerted via email when someone creates, assigns, responds, executes, or deletes a task
+Notification when a task is approaching, due date is reached, task is overdue
+One time tasks that don't repeat
+Recurring tasks that repeat over time
+Repeat on the same day of the week, month, 2nd friday, etc (fixed schedule repeating)
+Variable repeating, 2 weeks after last execution
+This app will also be multi-household, meaning data will need to be segmented.

@@ -17,7 +17,6 @@ export default defineNuxtConfig({
   googleSignIn: {
     clientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID,
   },
-  css: ["~/assets/css/main.css"],
   postcss: {
     plugins: {
       tailwindcss: {},

@@ -1,91 +1,94 @@
-import { useOrganizationStore } from "~/stores/organization";
+import { useAuthStore } from "@/stores/auth";
 
-export default defineNuxtRouteMiddleware(async (to) => {
-  // Add safety check for SSR
-  if (process.server) {
-    console.log("[Auth Middleware] Deferring auth check during SSR");
-    return;
-  }
+export default defineNuxtRouteMiddleware(async (to, from) => {
+  // Add 'from' parameter
+  console.log(
+    `[Global Auth Middleware] Running. From: ${from.fullPath}, To: ${to.fullPath}`
+  );
 
   const authStore = useAuthStore();
-  const organizationStore = useOrganizationStore();
-  const publicRoutes = ["/"];
-  const authRoutes = ["/login"];
-  const orgSetupRoutes = ["/organization/create"];
 
-  console.log("[Auth Middleware] Route requested:", to.path);
-  console.log("[Auth Middleware] Auth status:", authStore.isAuthenticated);
-
-  // Allow public routes
-  if (publicRoutes.includes(to.path)) {
-    console.log("[Auth Middleware] Allowing public route access");
-    return;
-  }
-
-  // Allow auth routes when not authenticated
-  if (!authStore.isAuthenticated && authRoutes.includes(to.path)) {
+  // On client-side, wait for the auth store to be ready (hydrated from persisted state)
+  if (import.meta.client && !authStore.isReady) {
     console.log(
-      "[Auth Middleware] Allowing unauthenticated access to auth route"
+      "[Global Auth Middleware] Store not ready on client, skipping run."
     );
-    return;
+    return; // Wait for the store to be ready via plugin
   }
 
-  // Redirect to login if trying to access protected routes while not authenticated
-  if (!authStore.isAuthenticated) {
-    console.log("[Auth Middleware] Redirecting unauthenticated user to login");
-    return navigateTo("/login");
-  }
+  const isAuthenticated = authStore.isAuthenticated;
+  const userHasHousehold = !!authStore.user?.householdId;
 
-  // Redirect to home if trying to access auth routes while authenticated
-  if (authStore.isAuthenticated && authRoutes.includes(to.path)) {
-    console.log(
-      "[Auth Middleware] Redirecting authenticated user away from auth route"
-    );
-    return navigateTo("/home");
-  }
+  const publicRoutes = ["/", "/login"];
+  const setupRoutes = ["/setup-household", "/profile"]; // Routes allowed for users without household
 
-  // Check organization association if authenticated
-  if (authStore.isAuthenticated && !organizationStore.currentOrganization) {
-    console.log("[Auth Middleware] Checking organization association");
+  const isGoingToPublic = publicRoutes.includes(to.path);
+  const isGoingToSetup = setupRoutes.includes(to.path);
 
-    // Add retry logic for timing-sensitive operations
-    let retries = 3;
-    while (retries > 0) {
-      try {
-        await organizationStore.fetchUserOrganization();
-        console.log(
-          "[Auth Middleware] Organization status:",
-          !!organizationStore.currentOrganization
-        );
-        break;
-      } catch (error) {
-        console.error(
-          `[Auth Middleware] Attempt ${4 - retries}/3 failed:`,
-          error
-        );
-        retries--;
-        if (retries === 0) {
-          if (!orgSetupRoutes.includes(to.path)) {
-            console.log(
-              "[Auth Middleware] All retries failed, redirecting to organization creation"
-            );
-            return navigateTo("/organization/create", { replace: true });
-          }
-        } else {
-          await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1s between retries
-        }
-      }
-    }
+  console.log(
+    `[Global Auth Middleware] State: isAuthenticated=${isAuthenticated}, userHasHousehold=${userHasHousehold}, Target: ${to.path}`
+  );
 
-    // If still no organization and not on create org page, redirect to create
-    if (
-      !organizationStore.currentOrganization &&
-      !orgSetupRoutes.includes(to.path)
-    ) {
+  // --- Scenario 1: User is NOT Authenticated ---
+  if (!isAuthenticated) {
+    if (isGoingToPublic) {
       console.log(
-        "[Auth Middleware] No organization found, redirecting to create"
+        "[Global Auth Middleware] Unauthenticated user accessing public route. Allowing."
       );
-      return navigateTo("/organization/create", { replace: true });
+      return; // Allow access to public routes
+    } else {
+      console.log(
+        `[Global Auth Middleware] Unauthenticated user accessing protected route ${to.path}. Redirecting to /login.`
+      );
+      return navigateTo("/login"); // Redirect to login for protected routes
     }
   }
+
+  // --- Scenario 2: User IS Authenticated ---
+  if (isAuthenticated) {
+    // Redirect away from login page if authenticated
+    if (to.path === "/login") {
+      console.log(
+        "[Global Auth Middleware] Authenticated user accessing /login. Redirecting to /home."
+      );
+      return navigateTo("/home");
+    }
+
+    // Sub-scenario 2a: User HAS a household
+    if (userHasHousehold) {
+      // If they have a household, they should NOT be on the setup page.
+      if (to.path === "/setup-household") {
+        console.log(
+          "[Global Auth Middleware] User with household accessing /setup-household. Redirecting to /home."
+        );
+        return navigateTo("/home");
+      }
+      // Otherwise, allow access to any other route
+      console.log(
+        `[Global Auth Middleware] User with household accessing ${to.path}. Allowing.`
+      );
+      return;
+    }
+
+    // Sub-scenario 2b: User does NOT have a household
+    if (!userHasHousehold) {
+      // Allow access to the designated setup/profile routes
+      if (isGoingToSetup) {
+        console.log(
+          `[Global Auth Middleware] User without household accessing allowed route ${to.path}. Allowing.`
+        );
+        return;
+      }
+      // Redirect to setup page if trying to access any other protected route
+      console.log(
+        `[Global Auth Middleware] User without household accessing protected route ${to.path}. Redirecting to /setup-household.`
+      );
+      return navigateTo("/setup-household");
+    }
+  }
+
+  // Fallback (should not be reached ideally)
+  console.warn(
+    "[Global Auth Middleware] Fallback reached, something unexpected happened."
+  );
 });
