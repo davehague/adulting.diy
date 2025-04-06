@@ -142,11 +142,12 @@ export type HistoryLogType =
 
 export interface OccurrenceHistoryLog {
   id: string;
-  occurrence_id: string;
-  user_id: string;
-  log_type: HistoryLogType;
-  old_value?: string;
-  new_value?: string;
+  occurrenceId: string; // Use camelCase
+  userId: string; // Use camelCase
+  logType: HistoryLogType; // Use camelCase
+  oldValue?: string; // Use camelCase
+  newValue?: string; // Use camelCase
   comment?: string;
-  created_at: Date;
+  createdAt: Date; // Use camelCase
+  user?: User; // Add optional user based on service include
 }

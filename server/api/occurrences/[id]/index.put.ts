@@ -20,13 +20,14 @@ export default defineHouseholdProtectedEventHandler(
       const body = await readBody(event);
 
       // Validate input data (basic check)
+      // Use camelCase consistent with Prisma schema expected by the service
       const updateData: Partial<
-        Pick<TaskOccurrence, "due_date" | "assignee_ids">
+        Pick<TaskOccurrence, "dueDate" | "assigneeIds">
       > = {};
       if (body.dueDate) {
         // Validate date format if needed, or rely on Prisma/service validation
         try {
-          updateData.due_date = new Date(body.dueDate);
+          updateData.dueDate = new Date(body.dueDate); // Use camelCase
         } catch (e) {
           throw createError({
             statusCode: 400,
@@ -37,7 +38,7 @@ export default defineHouseholdProtectedEventHandler(
       if (body.assigneeIds && Array.isArray(body.assigneeIds)) {
         // Ensure all IDs are strings (basic validation)
         if (body.assigneeIds.every((id: any) => typeof id === "string")) {
-          updateData.assignee_ids = body.assigneeIds;
+          updateData.assigneeIds = body.assigneeIds; // Use camelCase
         } else {
           throw createError({
             statusCode: 400,

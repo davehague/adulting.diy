@@ -7,9 +7,9 @@ import type {
   TaskMetaStatus,
 } from "@/types";
 import { TaskDefinition as PrismaTaskDefinition, Prisma } from "@prisma/client"; // Import Prisma namespace
-
+import { OccurrenceService } from "./OccurrenceService"; // Import OccurrenceService
 // Helper function to map Prisma Task object (with included category) to our TaskDefinition type
-function mapPrismaTaskToDefinition(
+export function mapPrismaTaskToDefinition( // Add export keyword
   prismaTask: PrismaTaskDefinition & { category: Category }
 ): TaskDefinition {
   const {
@@ -164,9 +164,33 @@ export class TaskService {
       });
 
       // Map the result (which includes the category) back to our TaskDefinition type
-      return mapPrismaTaskToDefinition(
-        task as PrismaTaskDefinition & { category: Category }
+      const taskDefinition = mapPrismaTaskToDefinition(
+        task as PrismaTaskDefinition & { category: Category } // Cast needed because include adds category
       );
+
+      // After successful task creation, generate initial occurrences
+      // Use the mapped TaskDefinition (taskDefinition) which has snake_case properties
+      try {
+        const occurrenceService = new OccurrenceService();
+        console.log(
+          `[TaskService] Attempting to generate occurrences for task ${taskDefinition.id}...`
+        );
+        const generated = await occurrenceService.generateAndCreateOccurrences(
+          taskDefinition
+        );
+        console.log(
+          `[TaskService] ${generated.length} occurrences generated for task ${taskDefinition.id}.`
+        );
+      } catch (genError) {
+        // Log the error but allow task creation to succeed for now.
+        // Consider if this should throw an error to fail the whole task creation.
+        console.error(
+          `[TaskService] CRITICAL: Failed to generate initial occurrences for task ${taskDefinition.id}:`,
+          genError
+        );
+      }
+
+      return taskDefinition; // Return the mapped task definition
     } catch (error) {
       console.error(`[TaskService] Unexpected error in create:`, error);
       throw error;

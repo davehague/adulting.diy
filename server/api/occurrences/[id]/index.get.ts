@@ -30,7 +30,7 @@ export default defineHouseholdProtectedEventHandler(
 
       // Get the task to verify household
       const taskService = new TaskService();
-      const task = await taskService.findById(occurrence.task_id);
+      const task = await taskService.findById(occurrence.taskId); // Use camelCase taskId
 
       // Ensure task belongs to user's household
       if (!task || task.household_id !== householdId) {

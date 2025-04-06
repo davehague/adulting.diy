@@ -60,7 +60,7 @@ export async function verifyAuth(event: H3Event): Promise<AuthenticatedUser> {
     return {
       email: payload.email,
       userId: user.id,
-      householdId: user.household_id || null,
+      householdId: user.householdId || null,
     };
   } catch (error) {
     console.error("Token verification failed:", error);

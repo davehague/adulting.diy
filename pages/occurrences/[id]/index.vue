@@ -8,7 +8,7 @@
             <p>{{ error }}</p>
             <div class="mt-2">
                 <!-- Provide appropriate back link, maybe to task or general occurrences list -->
-                <NuxtLink v-if="occurrence?.task_id" :to="`/tasks/${occurrence.task_id}/occurrences`"
+                <NuxtLink v-if="occurrence?.taskId" :to="`/tasks/${occurrence.taskId}/occurrences`"
                     class="text-blue-600 hover:text-blue-800 mr-4">
                     Back to Task Occurrences
                 </NuxtLink>
@@ -28,7 +28,7 @@
                         &larr; Task: {{ occurrence.task.name }}
                     </NuxtLink>
                     <h1 class="text-2xl font-bold text-gray-900">Occurrence Details</h1>
-                    <p class="text-gray-500">Due: {{ formatDate(occurrence.due_date) }}</p>
+                    <p class="text-gray-500">Due: {{ formatDate(occurrence.dueDate) }}</p>
                 </div>
                 <!-- Action Buttons (Edit, Execute, Skip, Comment) -->
                 <div class="flex space-x-2">
@@ -62,23 +62,23 @@
                                     </span>
                                 </dd>
                             </div>
-                            <div v-if="occurrence.completed_at">
+                            <div v-if="occurrence.completedAt">
                                 <dt class="text-sm font-medium text-gray-500">Completed At</dt>
-                                <dd class="mt-1 text-sm text-gray-900">{{ formatDateTime(occurrence.completed_at) }}
+                                <dd class="mt-1 text-sm text-gray-900">{{ formatDateTime(occurrence.completedAt) }}
                                 </dd>
                             </div>
-                            <div v-if="occurrence.skipped_at">
+                            <div v-if="occurrence.skippedAt">
                                 <dt class="text-sm font-medium text-gray-500">Skipped At</dt>
-                                <dd class="mt-1 text-sm text-gray-900">{{ formatDateTime(occurrence.skipped_at) }}</dd>
+                                <dd class="mt-1 text-sm text-gray-900">{{ formatDateTime(occurrence.skippedAt) }}</dd>
                             </div>
                         </dl>
                     </div>
                     <div>
                         <h2 class="text-lg font-semibold mb-3">Assignees</h2>
                         <!-- TODO: Fetch and display user names -->
-                        <p v-if="!occurrence.assignee_ids?.length" class="text-sm text-gray-500">No users assigned.</p>
+                        <p v-if="!occurrence.assigneeIds?.length" class="text-sm text-gray-500">No users assigned.</p>
                         <ul v-else class="list-disc pl-5 text-sm text-gray-900">
-                            <li v-for="userId in occurrence.assignee_ids" :key="userId">{{ userId }} (Name Placeholder)
+                            <li v-for="userId in occurrence.assigneeIds" :key="userId">{{ userId }} (Name Placeholder)
                             </li>
                         </ul>
                     </div>
@@ -209,8 +209,8 @@ const handleUpdate = async (formData: { dueDate: string, assigneeIds: string[] }
     try {
         // Convert date string back to Date object if necessary for the store action
         const updatePayload = {
-            due_date: new Date(formData.dueDate), // Convert string back to Date
-            assignee_ids: formData.assigneeIds
+            dueDate: new Date(formData.dueDate), // Convert string back to Date
+            assigneeIds: formData.assigneeIds
         };
         await taskStore.updateOccurrence(occurrenceId, updatePayload);
 
@@ -291,6 +291,4 @@ const getOccurrenceStatusClass = (status: string | undefined): string => {
         default: return 'bg-gray-100 text-gray-800';
     }
 };
-
-// Page metadata (Global auth middleware applies)
 </script>

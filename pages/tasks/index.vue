@@ -143,13 +143,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch } from 'vue'; // Added watch and computed
+import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { useApi } from '@/utils/api';
-import { useTaskStore } from '@/stores/tasks'; // Import task store
+import { useTaskStore } from '@/stores/tasks';
+import { useAuthStore } from '@/stores/auth'; // Import auth store
 import type { TaskDefinition, Category } from '@/types';
 
 const api = useApi(); // Keep for categories for now
-const taskStore = useTaskStore(); // Get task store instance
+const taskStore = useTaskStore();
+const authStore = useAuthStore(); // Get auth store instance
 
 // State
 // Use computed properties to get state from the store
@@ -178,15 +180,29 @@ onMounted(async () => {
     // Handle category loading error if needed
   }
 
-  // Fetch initial tasks using the store action
-  await taskStore.fetchTasks(filters);
+  // Fetch initial tasks only after auth is ready
+  watch(() => authStore.isReady, (ready) => {
+    if (ready) {
+      console.log('[Tasks Page] Auth ready, fetching tasks.');
+      taskStore.fetchTasks(filters);
+    }
+  }, { immediate: true }); // immediate: true runs the watcher once on setup
+
+  // Also handle the case where auth is already ready when component mounts
+  if (authStore.isReady) {
+    console.log('[Tasks Page] Auth already ready on mount, fetching tasks.');
+    await taskStore.fetchTasks(filters);
+  }
 });
 
 // Remove local fetchTasks function, store handles it
 
 // Watch filters changes to refresh tasks via store action
+// Watch filters changes, but only fetch if auth is ready
 watch(filters, async (newFilters) => {
-  await taskStore.fetchTasks(newFilters);
+  if (authStore.isReady) {
+    await taskStore.fetchTasks(newFilters);
+  }
 }, { deep: true });
 
 // Helper functions

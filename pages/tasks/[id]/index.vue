@@ -322,7 +322,8 @@ const formatDate = (date: Date | string): string => {
   });
 };
 
-const formatStatus = (status: string): string => {
+const formatStatus = (status: string | undefined | null): string => {
+  if (!status) return 'Unknown'; // Handle null/undefined
   return status.charAt(0).toUpperCase() + status.slice(1).replace(/-/g, ' ');
 };
 
