@@ -73,9 +73,10 @@
               {{ getAssigneeNames(occurrence.assigneeIds) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-              <NuxtLink :to="`/occurrences/${occurrence.id}`" class="text-blue-600 hover:text-blue-900">
+              <a href="#" @click.prevent="navigateToOccurrence(occurrence.id)"
+                class="text-blue-600 hover:text-blue-900 cursor-pointer">
                 View
-              </NuxtLink>
+              </a>
               <!-- Execute/Skip Buttons (visible based on status) -->
               <button v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
                 @click="handleExecute(occurrence.id)" class="text-green-600 hover:text-green-900 ml-2"
@@ -97,12 +98,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router'; // Import useRouter
 import { useApi } from '@/utils/api';
 import { useTaskStore } from '@/stores/tasks';
 import type { TaskDefinition, TaskOccurrence, User } from '@/types'; // Add User type
 
 const route = useRoute();
+const router = useRouter(); // Get router instance
 const api = useApi();
 const taskStore = useTaskStore();
 
@@ -217,6 +219,16 @@ const handleSkip = async (occurrenceId: string) => {
   } else if (reason !== null) { // Only show alert if prompt wasn't cancelled
     alert('A reason is required to skip an occurrence.');
   }
+};
+
+// Function for programmatic navigation
+const navigateToOccurrence = (occurrenceId: string) => {
+  if (!occurrenceId) {
+    console.error("Cannot navigate: Occurrence ID is missing.");
+    return;
+  }
+  console.log(`Navigating to /occurrences/${occurrenceId}`); // Add log
+  router.push(`/occurrences/${occurrenceId}`);
 };
 
 // Helper to get assignee names

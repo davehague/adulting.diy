@@ -95,16 +95,16 @@
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                {{ getCategoryName(task.category_id) }}
+                {{ getCategoryName(task.categoryId) }}
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {{ formatSchedule(task.schedule_config) }}
+              {{ formatSchedule(task.scheduleConfig) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                :class="getStatusClass(task.meta_status)">
-                {{ task.meta_status.charAt(0).toUpperCase() + task.meta_status.slice(1) }}
+                :class="getStatusClass(task.metaStatus)">
+                {{ task.metaStatus.charAt(0).toUpperCase() + task.metaStatus.slice(1) }}
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
@@ -116,17 +116,17 @@
                 Edit
               </NuxtLink>
 
-              <button v-if="task.meta_status === 'active'" @click="pauseTask(task.id)"
+              <button v-if="task.metaStatus === 'active'" @click="pauseTask(task.id)"
                 class="text-yellow-600 hover:text-yellow-900">
                 Pause
               </button>
 
-              <button v-if="task.meta_status === 'paused'" @click="unpauseTask(task.id)"
+              <button v-if="task.metaStatus === 'paused'" @click="unpauseTask(task.id)"
                 class="text-blue-600 hover:text-blue-900">
                 Unpause
               </button>
 
-              <button v-if="task.meta_status !== 'soft-deleted'" @click="deleteTask(task.id)"
+              <button v-if="task.metaStatus !== 'soft-deleted'" @click="deleteTask(task.id)"
                 class="text-red-600 hover:text-red-900">
                 Delete
               </button>

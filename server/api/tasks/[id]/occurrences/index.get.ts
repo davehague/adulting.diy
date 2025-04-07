@@ -29,7 +29,7 @@ export default defineHouseholdProtectedEventHandler(
         });
       }
 
-      if (existingTask.household_id !== householdId) {
+      if (existingTask.householdId !== householdId) {
         throw createError({
           statusCode: 403,
           message:

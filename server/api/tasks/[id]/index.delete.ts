@@ -28,7 +28,7 @@ export default defineHouseholdProtectedEventHandler(
         });
       }
 
-      if (existingTask.household_id !== householdId) {
+      if (existingTask.householdId !== householdId) {
         throw createError({
           statusCode: 403,
           message: "You do not have permission to delete this task",
@@ -36,7 +36,7 @@ export default defineHouseholdProtectedEventHandler(
       }
 
       // Check if task is already deleted
-      if (existingTask.meta_status === "soft-deleted") {
+      if (existingTask.metaStatus === "soft-deleted") {
         throw createError({
           statusCode: 400,
           message: "Task is already deleted",

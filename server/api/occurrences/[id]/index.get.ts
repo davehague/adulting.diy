@@ -33,7 +33,7 @@ export default defineHouseholdProtectedEventHandler(
       const task = await taskService.findById(occurrence.taskId); // Use camelCase taskId
 
       // Ensure task belongs to user's household
-      if (!task || task.household_id !== householdId) {
+      if (!task || task.householdId !== householdId) {
         throw createError({
           statusCode: 403,
           message: "You do not have permission to access this occurrence",

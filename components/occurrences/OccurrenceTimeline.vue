@@ -51,14 +51,14 @@ import { formatDistanceToNow } from 'date-fns'; // For relative time formatting
 // Import icons (assuming Heroicons v1 - adjust path/import if using v2 or other library)
 // @ts-ignore - Suppress type error as @types/heroicons__vue is unavailable
 import {
-    ChatAltIcon,
+    ChatBubbleLeftEllipsisIcon, // Renamed from ChatAltIcon for v2
     CheckCircleIcon,
-    XCircleIcon,
+    XCircleIcon, // Note: XCircleIcon might be needed for skipped/deleted status changes later
     PencilIcon,
     UserGroupIcon,
     CalendarIcon,
-    PlusCircleIcon
-} from '@heroicons/vue/solid'; // Revert to original import path
+    PlusCircleIcon // Note: PlusCircleIcon might be needed for 'created' status later
+} from '@heroicons/vue/24/solid'; // Updated to v2 path
 
 // Props
 const props = defineProps<{
@@ -111,7 +111,7 @@ const formatRelativeTime = (date: Date): string => {
 
 const getIcon = (logType: OccurrenceHistoryLog['logType']) => {
     switch (logType) {
-        case 'comment': return ChatAltIcon;
+        case 'comment': return ChatBubbleLeftEllipsisIcon; // Use renamed icon
         case 'status_change':
             // Could refine based on newValue (e.g., completed, skipped)
             return CheckCircleIcon; // Default status change icon

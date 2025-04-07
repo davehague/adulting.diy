@@ -28,7 +28,7 @@ export default defineHouseholdProtectedEventHandler(
       }
 
       // Ensure task belongs to user's household
-      if (task.household_id !== householdId) {
+      if (task.householdId !== householdId) {
         throw createError({
           statusCode: 403,
           message: "You do not have permission to access this task",
