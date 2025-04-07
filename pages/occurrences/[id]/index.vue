@@ -1,294 +1,345 @@
 <template>
-    <div class="container mx-auto px-4 py-8">
-        <!-- Loading and Error States -->
-        <div v-if="loading" class="text-center py-8">
-            <p class="text-gray-600">Loading occurrence details...</p>
+    <div class="container mx-auto p-4 md:p-6">
+        <div v-if="loading" class="text-center py-10 text-gray-500">Loading occurrence details...</div>
+        <div v-else-if="error" class="text-center py-10 text-red-600">
+            Error loading occurrence: {{ error }}
         </div>
-        <div v-else-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            <p>{{ error }}</p>
-            <div class="mt-2">
-                <!-- Provide appropriate back link, maybe to task or general occurrences list -->
-                <NuxtLink v-if="occurrence?.taskId" :to="`/tasks/${occurrence.taskId}/occurrences`"
-                    class="text-blue-600 hover:text-blue-800 mr-4">
-                    Back to Task Occurrences
-                </NuxtLink>
-                <NuxtLink to="/occurrences" class="text-blue-600 hover:text-blue-800">
-                    Back to All Occurrences
-                </NuxtLink>
-            </div>
-        </div>
-
-        <!-- Occurrence Details -->
-        <div v-else-if="occurrence" class="space-y-8">
+        <div v-else-if="occurrence" class="space-y-6">
             <!-- Header -->
-            <div class="flex justify-between items-start">
-                <div>
-                    <NuxtLink v-if="occurrence.task" :to="`/tasks/${occurrence.task.id}`"
-                        class="text-blue-600 hover:text-blue-800 mb-1 block text-sm">
-                        &larr; Task: {{ occurrence.task.name }}
+            <div class="md:flex md:items-center md:justify-between pb-4 border-b border-gray-200">
+                <div class="min-w-0 flex-1">
+                    <NuxtLink :to="`/tasks/${occurrence.taskId}`"
+                        class="text-sm font-medium text-blue-600 hover:text-blue-800">
+                        &larr; Back to Task: {{ occurrence.task?.name || 'Task Details' }}
                     </NuxtLink>
-                    <h1 class="text-2xl font-bold text-gray-900">Occurrence Details</h1>
-                    <p class="text-gray-500">Due: {{ formatDate(occurrence.dueDate) }}</p>
+                    <h2 class="mt-2 text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl">
+                        Occurrence Details
+                    </h2>
+                    <p class="mt-1 text-sm text-gray-500">
+                        Due: {{ formatDate(occurrence.dueDate) }}
+                    </p>
                 </div>
-                <!-- Action Buttons (Edit, Execute, Skip, Comment) -->
-                <div class="flex space-x-2">
-                    <button @click="openEditModal"
-                        class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Edit</button>
-                    <button v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
-                        @click="handleExecute" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
-                        Execute
+                <div class="mt-4 flex md:ml-4 md:mt-0 space-x-3">
+                    <!-- Action Buttons Placeholder -->
+                    <button type="button" @click="showEditModal = true"
+                        class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                        Edit
                     </button>
-                    <button v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
-                        @click="handleSkip" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600">
+                    <button type="button" @click="showSkipModal = true" :disabled="isActionDisabled"
+                        class="inline-flex items-center rounded-md bg-yellow-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600 disabled:opacity-50">
                         Skip
                     </button>
-                    <button @click="openCommentModal"
-                        class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600">Comment</button>
+                    <button type="button" @click="executeOccurrence" :disabled="isActionDisabled"
+                        class="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700 disabled:opacity-50">
+                        Complete
+                    </button>
                 </div>
             </div>
 
-            <!-- Details Card -->
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <h2 class="text-lg font-semibold mb-3">Details</h2>
-                        <dl class="space-y-2">
-                            <div>
-                                <dt class="text-sm font-medium text-gray-500">Status</dt>
-                                <dd class="mt-1 text-sm text-gray-900">
-                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                                        :class="getOccurrenceStatusClass(occurrence.status)">
-                                        {{ formatOccurrenceStatus(occurrence.status) }}
-                                    </span>
-                                </dd>
-                            </div>
-                            <div v-if="occurrence.completedAt">
-                                <dt class="text-sm font-medium text-gray-500">Completed At</dt>
-                                <dd class="mt-1 text-sm text-gray-900">{{ formatDateTime(occurrence.completedAt) }}
-                                </dd>
-                            </div>
-                            <div v-if="occurrence.skippedAt">
-                                <dt class="text-sm font-medium text-gray-500">Skipped At</dt>
-                                <dd class="mt-1 text-sm text-gray-900">{{ formatDateTime(occurrence.skippedAt) }}</dd>
-                            </div>
-                        </dl>
-                    </div>
-                    <div>
-                        <h2 class="text-lg font-semibold mb-3">Assignees</h2>
-                        <!-- TODO: Fetch and display user names -->
-                        <p v-if="!occurrence.assigneeIds?.length" class="text-sm text-gray-500">No users assigned.</p>
-                        <ul v-else class="list-disc pl-5 text-sm text-gray-900">
-                            <li v-for="userId in occurrence.assigneeIds" :key="userId">{{ userId }} (Name Placeholder)
-                            </li>
-                        </ul>
-                    </div>
+            <!-- Occurrence Details -->
+            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <div class="px-4 py-5 sm:px-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Information</h3>
+                </div>
+                <div class="border-t border-gray-200 px-4 py-5 sm:p-0">
+                    <dl class="sm:divide-y sm:divide-gray-200">
+                        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Task</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                                <NuxtLink :to="`/tasks/${occurrence.taskId}`" class="text-blue-600 hover:underline">
+                                    {{ occurrence.task?.name || 'N/A' }}
+                                </NuxtLink>
+                            </dd>
+                        </div>
+                        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Category</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                                {{ occurrence.task?.category?.name || 'N/A' }}
+                            </dd>
+                        </div>
+                        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Status</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0 capitalize">
+                                <span :class="getStatusClass(occurrence.status)">
+                                    {{ occurrence.status }}
+                                </span>
+                            </dd>
+                        </div>
+                        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Due Date</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">{{
+                                formatDate(occurrence.dueDate) }}</dd>
+                        </div>
+                        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Assignees</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                                {{ formatAssignees(occurrence.assigneeIds) || 'Unassigned' }}
+                            </dd>
+                        </div>
+                        <div v-if="occurrence.status === 'completed'"
+                            class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Completed At</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">{{
+                                formatDateTime(occurrence.completedAt) }}</dd>
+                        </div>
+                        <div v-if="occurrence.status === 'skipped'"
+                            class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                            <dt class="text-sm font-medium text-gray-500">Skipped At</dt>
+                            <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">{{
+                                formatDateTime(occurrence.skippedAt) }}</dd>
+                        </div>
+                    </dl>
                 </div>
             </div>
+
+            <!-- Comment Form Placeholder -->
+            <div class="mt-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Add Comment</h3>
+                <form @submit.prevent="addComment">
+                    <div>
+                        <label for="comment" class="sr-only">Comment</label>
+                        <textarea id="comment" v-model="newComment" rows="3" required
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                            placeholder="Add your comment..."></textarea>
+                    </div>
+                    <div class="mt-3 flex justify-end">
+                        <button type="submit" :disabled="isSubmittingComment"
+                            class="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50">
+                            {{ isSubmittingComment ? 'Adding...' : 'Add Comment' }}
+                        </button>
+                    </div>
+                    <p v-if="commentError" class="mt-2 text-sm text-red-600">{{ commentError }}</p>
+                </form>
+            </div>
+
 
             <!-- History Timeline -->
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <OccurrenceTimeline :occurrence-id="occurrenceId" />
-            </div>
+            <OccurrenceTimeline :occurrence-id="occurrenceId" ref="timelineComponent" />
 
         </div>
-    </div>
+        <div v-else class="text-center py-10 text-gray-500">
+            Occurrence not found.
+        </div>
 
-    <!-- Edit Modal -->
-    <div v-if="showEditModal"
-        class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-        <div class="relative mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
-            <div class="mt-3 text-center">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Edit Occurrence</h3>
-                <div class="mt-2 px-7 py-3 text-left">
-                    <OccurrenceEditForm v-if="occurrence" :occurrence="occurrence" @submit="handleUpdate"
-                        @cancel="closeEditModal" ref="editFormRef" />
-                    <!-- Add loading state for submission within the modal if needed -->
+        <!-- Edit Modal -->
+        <div v-if="showEditModal"
+            class="fixed inset-0 z-10 overflow-y-auto bg-gray-500 bg-opacity-75 transition-opacity"
+            aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                <div
+                    class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+                    <div>
+                        <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Edit Occurrence</h3>
+                        <div class="mt-4">
+                            <OccurrenceEditForm v-if="occurrence" :occurrence="occurrence" @submit="handleEditSubmit"
+                                @cancel="handleEditCancel" :disabled="isSubmittingEdit" />
+                            <!-- Display submission error within the modal -->
+                            <p v-if="editError" class="mt-3 text-sm text-red-600">{{ editError }}</p>
+                        </div>
+                    </div>
+                    <!-- Buttons are now inside the form component -->
                 </div>
-                <!-- Modal close button (optional) -->
-                <!-- <button @click="closeEditModal" class="absolute top-0 right-0 mt-4 mr-4 text-gray-400 hover:text-gray-600">
-             &times;
-           </button> -->
             </div>
         </div>
-    </div>
 
-    <!-- TODO: Add Modals for Skip Reason, Comment -->
+        <!-- TODO: Implement Skip Modal -->
+
+    </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/utils/api';
-import { useTaskStore } from '@/stores/tasks'; // Using task store for execute/skip actions
+import type { TaskOccurrence, User } from '@/types';
 import OccurrenceTimeline from '@/components/occurrences/OccurrenceTimeline.vue';
-import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue'; // Import the edit form
-import type { TaskOccurrence } from '@/types'; // Assuming TaskOccurrence includes nested TaskDefinition after API call
+import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue'; // Import edit form
+import { format } from 'date-fns';
 
+// Setup
 const route = useRoute();
 const router = useRouter();
 const api = useApi();
-const taskStore = useTaskStore();
-
-// Occurrence ID from route params
-const occurrenceId = route.params.id as string;
+const occurrenceId = computed(() => route.params.id as string);
 
 // State
 const occurrence = ref<TaskOccurrence | null>(null);
-const loading = ref(true);
-const error = ref('');
-const showEditModal = ref(false); // State for edit modal visibility
-const editFormRef = ref<InstanceType<typeof OccurrenceEditForm> | null>(null); // Ref for edit form
+const householdUsers = ref<Pick<User, 'id' | 'name'>[]>([]); // For assignee formatting
+const loading = ref(false);
+const error = ref<string | null>(null);
+const newComment = ref('');
+const isSubmittingComment = ref(false);
+const commentError = ref<string | null>(null);
+const timelineComponent = ref<InstanceType<typeof OccurrenceTimeline> | null>(null); // Ref for timeline
 
-// Fetch occurrence data
-onMounted(async () => {
-    await fetchOccurrence();
-});
+// Modals State (placeholders)
+const showSkipModal = ref(false);
+const showEditModal = ref(false);
+const isSubmittingEdit = ref(false); // Add state for edit submission
+const editError = ref<string | null>(null); // Add state for edit error
 
+// Fetch Occurrence Data
 const fetchOccurrence = async () => {
+    if (!occurrenceId.value) return;
+    loading.value = true;
+    error.value = null;
     try {
-        loading.value = true;
-        error.value = '';
-        // Fetch the specific occurrence, assuming API includes the parent task details
-        const data = await api.get<TaskOccurrence>(`/api/occurrences/${occurrenceId}`);
-        occurrence.value = data;
+        // Fetch occurrence details - API should include task.name, task.category.name, task.householdId
+        const data = await api.get<TaskOccurrence>(`/api/occurrences/${occurrenceId.value}`);
+        // Convert date strings from API to Date objects
+        occurrence.value = {
+            ...data,
+            dueDate: new Date(data.dueDate),
+            createdAt: new Date(data.createdAt),
+            updatedAt: new Date(data.updatedAt),
+            ...(data.completedAt && { completedAt: new Date(data.completedAt) }),
+            ...(data.skippedAt && { skippedAt: new Date(data.skippedAt) }),
+        };
+
+        // Fetch household users if needed for formatting assignees (can be optimized)
+        if (data.assigneeIds?.length > 0) {
+            fetchHouseholdUsers();
+        }
+
     } catch (err: any) {
-        console.error('Error loading occurrence:', err);
-        error.value = err.data?.message || 'Failed to load occurrence details.';
-        occurrence.value = null; // Clear occurrence on error
+        console.error("Error fetching occurrence:", err);
+        error.value = err.data?.message || err.message || 'Failed to load occurrence details';
+        occurrence.value = null;
     } finally {
         loading.value = false;
     }
 };
 
-// --- Action Handlers ---
-
-const handleExecute = async () => {
-    if (!occurrence.value) return;
+// Fetch Household Users (for assignee formatting)
+const fetchHouseholdUsers = async () => {
     try {
-        await taskStore.executeOccurrence(occurrenceId);
-        await fetchOccurrence(); // Refetch details after action
+        const usersData = await api.get<Pick<User, 'id' | 'name'>[]>('/api/household/users');
+        householdUsers.value = usersData;
     } catch (err) {
-        console.error("Execute failed:", err);
-        alert(`Error executing occurrence: ${taskStore.error || 'Unknown error'}`);
+        console.error('Error fetching household users for formatting:', err);
+        // Non-critical, assignee IDs will be shown instead of names
     }
 };
 
-const handleSkip = async () => {
-    if (!occurrence.value) return;
-    const reason = prompt('Please enter a reason for skipping this occurrence:');
-    if (reason && reason.trim() !== '') {
-        try {
-            await taskStore.skipOccurrence(occurrenceId, reason.trim());
-            await fetchOccurrence(); // Refetch details after action
-        } catch (err) {
-            console.error("Skip failed:", err);
-            alert(`Error skipping occurrence: ${taskStore.error || 'Unknown error'}`);
-        }
-    } else if (reason !== null) {
-        alert('A reason is required to skip an occurrence.');
-    }
-};
 
-const openEditModal = () => {
-    if (!occurrence.value) return; // Don't open if occurrence not loaded
-    showEditModal.value = true;
-};
+// Computed property to disable actions if occurrence is completed/skipped/deleted
+const isActionDisabled = computed(() => {
+    return !occurrence.value || ['completed', 'skipped', 'deleted'].includes(occurrence.value.status);
+});
 
-const closeEditModal = () => {
-    showEditModal.value = false;
-};
-
-// Handle the update submission from the edit form
-const handleUpdate = async (formData: { dueDate: string, assigneeIds: string[] }) => {
-    if (!occurrence.value) return;
-
-    // Access the form's submitting state if needed
-    // Note: The OccurrenceEditForm manages its own isSubmitting state internally for the button
-    // but we might want a loading indicator on the page level too.
-
-    try {
-        // Convert date string back to Date object if necessary for the store action
-        const updatePayload = {
-            dueDate: new Date(formData.dueDate), // Convert string back to Date
-            assigneeIds: formData.assigneeIds
-        };
-        await taskStore.updateOccurrence(occurrenceId, updatePayload);
-
-        if (taskStore.error) {
-            // Throw error to be caught below if store indicates failure
-            throw new Error(taskStore.error);
-        }
-
-        closeEditModal();
-        await fetchOccurrence(); // Refetch details after successful update
-        alert('Occurrence updated successfully!'); // Simple feedback
-
-    } catch (err) {
-        console.error("Update failed:", err);
-        // Display error within the modal or use a notification system
-        // For now, just alert
-        alert(`Error updating occurrence: ${taskStore.error || 'Please check details and try again.'}`);
-        // We don't necessarily close the modal on error, let the user correct it.
-    } finally {
-        // If we had a page-level submitting state, set it back here.
-        // The form button's disabled state is handled within OccurrenceEditForm.
-    }
-};
-
-const openCommentModal = async () => {
-    const comment = prompt('Enter your comment:');
-    if (comment && comment.trim() !== '') {
-        try {
-            await taskStore.commentOnOccurrence(occurrenceId, comment.trim());
-            // Success! Maybe show a notification.
-            // The timeline component should ideally refetch itself or be triggered to refetch.
-            // For now, we can manually trigger a refetch of the whole occurrence page
-            // or rely on the user refreshing/navigating.
-            alert('Comment added successfully!');
-            // Consider adding a refetch for the timeline component here if possible
-        } catch (err) {
-            console.error("Comment failed:", err);
-            alert(`Error adding comment: ${taskStore.error || 'Unknown error'}`);
-        }
-    } else if (comment !== null) { // Only show alert if prompt wasn't cancelled
-        alert('Comment cannot be empty.');
-    }
-    // TODO: Implement Comment Modal properly
-};
-
-
-// --- Helper Functions ---
+// --- Formatting Helpers ---
 const formatDate = (date: Date | string | undefined): string => {
     if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-    });
+    try {
+        return format(new Date(date), 'PPP'); // e.g., Jun 20, 2024
+    } catch {
+        return 'Invalid Date';
+    }
 };
 
 const formatDateTime = (date: Date | string | undefined): string => {
     if (!date) return 'N/A';
-    return new Date(date).toLocaleString('en-US', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    });
-};
-
-const formatOccurrenceStatus = (status: string | undefined): string => {
-    if (!status) return 'Unknown';
-    return status.charAt(0).toUpperCase() + status.slice(1);
-};
-
-const getOccurrenceStatusClass = (status: string | undefined): string => {
-    if (!status) return 'bg-gray-100 text-gray-800';
-    switch (status) {
-        case 'created': return 'bg-gray-100 text-gray-800';
-        case 'assigned': return 'bg-blue-100 text-blue-800';
-        case 'completed': return 'bg-green-100 text-green-800';
-        case 'skipped': return 'bg-yellow-100 text-yellow-800';
-        case 'deleted': return 'bg-red-100 text-red-800';
-        default: return 'bg-gray-100 text-gray-800';
+    try {
+        return format(new Date(date), 'Pp'); // e.g., Jun 20, 2024, 4:30 PM
+    } catch {
+        return 'Invalid Date';
     }
 };
+
+const formatAssignees = (assigneeIds: string[] | undefined): string => {
+    if (!assigneeIds || assigneeIds.length === 0) return '';
+    if (householdUsers.value.length === 0) return assigneeIds.join(', '); // Fallback to IDs
+
+    return assigneeIds.map(id => {
+        const user = householdUsers.value.find(u => u.id === id);
+        return user ? user.name : id; // Show name or ID if user not found
+    }).join(', ');
+};
+
+const getStatusClass = (status: string): string => {
+    switch (status) {
+        case 'completed': return 'inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800';
+        case 'skipped': return 'inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800';
+        case 'deleted': return 'inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800';
+        case 'assigned': return 'inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800';
+        case 'created': return 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800';
+        default: return 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800';
+    }
+};
+
+// --- Actions ---
+
+const addComment = async () => {
+    if (!newComment.value.trim() || !occurrenceId.value) return;
+    isSubmittingComment.value = true;
+    commentError.value = null;
+    try {
+        await api.post(`/api/occurrences/${occurrenceId.value}/comments`, {
+            comment: newComment.value.trim()
+        });
+        newComment.value = ''; // Clear comment box
+        // Refresh timeline
+        if (timelineComponent.value) {
+            timelineComponent.value.fetchHistory();
+        }
+    } catch (err: any) {
+        console.error("Error adding comment:", err);
+        commentError.value = err.data?.message || 'Failed to add comment';
+    } finally {
+        isSubmittingComment.value = false;
+    }
+};
+
+const executeOccurrence = async () => {
+    if (!occurrenceId.value || isActionDisabled.value) return;
+    // Consider adding a loading state for the button
+    try {
+        await api.post(`/api/occurrences/${occurrenceId.value}/execute`, {});
+        // Refresh data after action
+        fetchOccurrence();
+        if (timelineComponent.value) {
+            timelineComponent.value.fetchHistory();
+        }
+    } catch (err: any) {
+        console.error("Error executing occurrence:", err);
+        error.value = err.data?.message || 'Failed to complete occurrence'; // Show error on page
+    }
+};
+
+// --- Edit Occurrence Logic ---
+const handleEditSubmit = async (formData: { dueDate: string; assigneeIds: string[] }) => {
+    if (!occurrenceId.value) return;
+    isSubmittingEdit.value = true;
+    editError.value = null;
+    try {
+        await api.put(`/api/occurrences/${occurrenceId.value}`, {
+            dueDate: formData.dueDate, // Already formatted as YYYY-MM-DD string
+            assigneeIds: formData.assigneeIds
+        });
+        showEditModal.value = false;
+        // Refresh data after successful edit
+        fetchOccurrence();
+        if (timelineComponent.value) {
+            timelineComponent.value.fetchHistory();
+        }
+    } catch (err: any) {
+        console.error("Error updating occurrence:", err);
+        editError.value = err.data?.message || 'Failed to save changes';
+        // Keep modal open to show error
+    } finally {
+        isSubmittingEdit.value = false;
+    }
+};
+
+const handleEditCancel = () => {
+    showEditModal.value = false;
+    editError.value = null; // Clear error on cancel
+};
+
+// TODO: Implement skipOccurrence (needs modal for reason)
+
+
+// Fetch data on component mount
+onMounted(fetchOccurrence);
+
 </script>

@@ -42,7 +42,7 @@ export default defineHouseholdProtectedEventHandler(
       // Check household membership via the parent task
       if (
         existingOccurrence.task &&
-        existingOccurrence.task.household_id !== householdId
+        existingOccurrence.task.householdId !== householdId // Use camelCase
       ) {
         throw createError({
           statusCode: 403,

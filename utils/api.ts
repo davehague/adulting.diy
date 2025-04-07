@@ -93,6 +93,17 @@ export const useApi = () => {
       body: JSON.stringify(data),
     });
 
+  const put = <T>(
+    endpoint: string,
+    data: unknown,
+    options: FetchOptions = {}
+  ) =>
+    apiFetch<T>(endpoint, {
+      ...options,
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+
   const del = <T>(endpoint: string, options: FetchOptions = {}) =>
     apiFetch<T>(endpoint, { ...options, method: "DELETE" });
 
@@ -100,6 +111,7 @@ export const useApi = () => {
     fetch: apiFetch,
     get,
     post,
+    put, // Add put method
     patch,
     delete: del,
   };

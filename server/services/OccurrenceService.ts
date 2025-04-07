@@ -3,8 +3,9 @@ import type {
   TaskOccurrence,
   OccurrenceHistoryLog,
   TaskDefinition,
+  OccurrenceStatus, // Import OccurrenceStatus
 } from "@/types";
-import { generateFutureDueDates } from "@/server/utils/schedule"; // Import the schedule utility
+import { calculateNextDueDate } from "@/server/utils/schedule"; // Import the correct schedule utility
 import { Prisma } from "@prisma/client"; // Import Prisma namespace for types
 
 // Define a type for the updatable fields, excluding relations and immutable fields
@@ -190,66 +191,69 @@ export class OccurrenceService {
   }
 
   /**
-   * Generate and create future occurrences for a task based on its schedule.
+   * Creates the initial occurrence for a newly created task definition.
+   * Calculates the first due date and creates the occurrence and history log.
    */
-  async generateAndCreateOccurrences(
-    task: TaskDefinition, // Pass the full task definition
-    count: number = 5 // Generate 5 by default
-  ): Promise<TaskOccurrence[]> {
+  async createInitialOccurrence(
+    task: TaskDefinition,
+    userId: string // User who created the task
+  ): Promise<TaskOccurrence | null> {
     try {
-      const dueDates = generateFutureDueDates(task.scheduleConfig, count);
+      const initialDueDate = calculateNextDueDate(task.scheduleConfig);
 
-      if (!dueDates || dueDates.length === 0) {
-        console.log(
-          `[OccurrenceService] No future occurrences generated for task ${task.id} based on schedule.`
+      if (!initialDueDate) {
+        console.warn(
+          `[OccurrenceService] Could not calculate initial due date for task ${task.id}. No occurrence created.`
         );
-        return [];
+        return null;
       }
 
-      const occurrencesToCreate: Prisma.TaskOccurrenceUncheckedCreateInput[] =
-        dueDates.map((dueDate) => ({
-          taskId: task.id,
-          dueDate: dueDate,
-          status: "created", // Initial status
-          assigneeIds: task.defaultAssigneeIds || [], // Use default assignees
-          // createdAt and updatedAt are handled by Prisma
-        }));
+      const initialAssignees = task.defaultAssigneeIds || [];
+      const initialStatus: OccurrenceStatus =
+        initialAssignees.length > 0 ? "assigned" : "created";
 
-      // Use Prisma's createMany for efficiency
-      await prisma.taskOccurrence.createMany({
-        data: occurrencesToCreate,
-        skipDuplicates: true, // Avoid errors if an occurrence somehow already exists for that date
+      // Use a transaction to create occurrence and history log together
+      const occurrence = await prisma.$transaction(async (tx) => {
+        const newOccurrence = await tx.taskOccurrence.create({
+          data: {
+            taskId: task.id,
+            dueDate: initialDueDate,
+            status: initialStatus,
+            assigneeIds: initialAssignees,
+          },
+        });
+
+        // Log the creation event
+        await tx.occurrenceHistoryLog.create({
+          data: {
+            occurrenceId: newOccurrence.id,
+            userId: userId, // The user who triggered the task creation
+            logType: "status_change", // Log as status change to 'created' or 'assigned'
+            newValue: initialStatus,
+            comment: `Initial occurrence created for task: ${task.name}`, // Add context
+          },
+        });
+
+        return newOccurrence;
       });
 
       console.log(
-        `[OccurrenceService] Created ${occurrencesToCreate.length} occurrences for task ${task.id}.`
+        `[OccurrenceService] Initial occurrence ${
+          occurrence.id
+        } created for task ${
+          task.id
+        } with status '${initialStatus}' and due date ${initialDueDate.toISOString()}`
       );
-
-      // Fetch the newly created occurrences to return them (createMany doesn't return records)
-      const createdOccurrences = await prisma.taskOccurrence.findMany({
-        where: {
-          taskId: task.id,
-          dueDate: {
-            in: dueDates,
-          },
-        },
-        orderBy: {
-          dueDate: "asc",
-        },
-      });
-
-      // Cast the result to the correct type, assuming Prisma returns string for status
-      return createdOccurrences as unknown as TaskOccurrence[];
+      return occurrence as unknown as TaskOccurrence; // Cast Prisma result
     } catch (error) {
       console.error(
-        `[OccurrenceService] Unexpected error in generateAndCreateOccurrences for task ${task.id}:`,
+        `[OccurrenceService] Error creating initial occurrence for task ${task.id}:`,
         error
       );
-      // Don't re-throw here, as this might be called in a non-blocking way or within another transaction
-      return []; // Return empty array on error
+      // Decide whether to re-throw or return null based on desired behavior in TaskService
+      throw error; // Re-throw to potentially fail the task creation if occurrence fails
     }
   }
-
   /**
    * Update an occurrence
    */

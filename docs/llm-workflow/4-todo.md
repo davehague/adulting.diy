@@ -47,13 +47,13 @@ This checklist outlines the steps for building the Adulting.DIY application base
 - [x] **4.4: Implement Occurrence Execute API:** `POST /api/occurrences/:id/execute` (auth, update status='Completed', set `completedAt`).
 - [x] **4.5: Implement Occurrence Skip API:** `POST /api/occurrences/:id/skip` (auth, require `reason`, update status='Skipped', set `skippedAt`).
 - [x] **4.6: Add Execute/Skip Buttons & Connect:** Add buttons to `OccurrencesListPage.vue`, wire to APIs via Task Store actions. Add modal for skip reason.
-- [x] **4.7: Implement Occurrence Comment API:** `POST /api/occurrences/:id/comments` (auth, create `OccurrenceHistoryLog` entry).
-- [x] **4.8: Implement Occurrence History Fetch API:** `GET /api/occurrences/:id/history` (auth, fetch history logs for occurrence).
-- [x] **4.9: Create Vue Component: OccurrenceTimeline.vue:** Fetch history (API 4.8), display comments/status changes.
-- [x] **4.10: Create Vue Page: OccurrenceViewPage.vue:** Dynamic route `pages/occurrences/[id].vue`. Display occurrence details & `OccurrenceTimeline.vue`. Link from Occurrences List.
-- [x] **4.11: Add Comment Button/Form & Connect:** Add UI on Occurrence View/List, wire to Comment API (4.7).
-- [x] **4.12: Implement Occurrence Edit API:** `PUT /api/occurrences/:id` (auth, allow changing `dueDate`, `assigneeIds`, log changes).
-- [x] **4.13: Add Edit Button/Form & Connect:** Add 'Edit' button on Occurrence row/view, create form/modal, wire to Edit API (4.12).
+- [ ] **4.7: Implement Occurrence Comment API:** `POST /api/occurrences/:id/comments` (auth, create `OccurrenceHistoryLog` entry).
+- [ ] **4.8: Implement Occurrence History Fetch API:** `GET /api/occurrences/:id/history` (auth, fetch history logs for occurrence).
+- [ ] **4.9: Create Vue Component: OccurrenceTimeline.vue:** Fetch history (API 4.8), display comments/status changes.
+- [ ] **4.10: Create Vue Page: OccurrenceViewPage.vue:** Dynamic route `pages/occurrences/[id].vue`. Display occurrence details & `OccurrenceTimeline.vue`. Link from Occurrences List.
+- [ ] **4.11: Add Comment Button/Form & Connect:** Add UI on Occurrence View/List, wire to Comment API (4.7).
+- [ ] **4.12: Implement Occurrence Edit API:** `PUT /api/occurrences/:id` (auth, allow changing `dueDate`, `assigneeIds`, log changes).
+- [ ] **4.13: Add Edit Button/Form & Connect:** Add 'Edit' button on Occurrence row/view, create form/modal, wire to Edit API (4.12).
 
 ## Phase 5: Advanced Task Logic
 

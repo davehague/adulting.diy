@@ -4,56 +4,47 @@ import { createError } from "h3";
 
 export default defineHouseholdProtectedEventHandler(
   async (event, authUser, householdId) => {
+    const occurrenceId = event.context.params?.id;
+
+    if (!occurrenceId) {
+      throw createError({
+        statusCode: 400,
+        message: "Occurrence ID is required",
+      });
+    }
+
+    const occurrenceService = new OccurrenceService();
+
     try {
-      // Get occurrence ID from route params
-      const occurrenceId = event.context.params?.id;
+      // First, verify the occurrence exists and belongs to the user's household
+      const occurrence = await occurrenceService.findById(occurrenceId);
 
-      if (!occurrenceId) {
-        throw createError({
-          statusCode: 400,
-          message: "Occurrence ID is required",
-        });
-      }
-
-      // Get occurrence service
-      const occurrenceService = new OccurrenceService();
-
-      // Verify occurrence exists and belongs to user's household
-      const existingOccurrence = await occurrenceService.findById(occurrenceId);
-
-      if (!existingOccurrence) {
+      if (!occurrence) {
         throw createError({
           statusCode: 404,
           message: "Occurrence not found",
         });
       }
 
-      // Check household membership via the parent task
-      // We included the task in findById, so we can access its household_id
-      // Removed logging
-
-      if (
-        existingOccurrence.task &&
-        existingOccurrence.task.householdId !== householdId // Use camelCase
-      ) {
-        // Removed logging
+      // The findById method should include task details including householdId
+      // Adjust the check based on the actual structure returned by findById
+      // Assuming occurrence.task.householdId exists
+      if (!occurrence.task || occurrence.task.householdId !== householdId) {
         throw createError({
           statusCode: 403,
           message:
-            "You do not have permission to view history for this occurrence",
+            "You do not have permission to view this occurrence's history",
         });
       }
-      // Removed logging
 
-      // Get the history logs using the service
+      // If authorized, fetch the history logs
       const historyLogs = await occurrenceService.getHistory(occurrenceId);
-
       return historyLogs;
     } catch (error) {
       console.error("[API] Error fetching occurrence history:", error);
 
       if ((error as any).statusCode) {
-        throw error;
+        throw error; // Re-throw known H3 errors
       }
 
       throw createError({

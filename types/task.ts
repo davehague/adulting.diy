@@ -39,6 +39,7 @@ interface BaseScheduleConfig {
 // Specific interfaces for each recurrence type
 export interface OnceScheduleConfig extends BaseScheduleConfig {
   type: "once";
+  dueDate: Date; // Add required due date for one-time tasks
 }
 
 export interface FixedIntervalScheduleConfig extends BaseScheduleConfig {

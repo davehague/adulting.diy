@@ -2,17 +2,18 @@
     <form @submit.prevent="handleSubmit" class="space-y-4">
         <!-- Due Date Field -->
         <div>
-            <label for="dueDate" class="block text-sm font-medium text-gray-700">Due Date*</label>
-            <input id="dueDate" v-model="formData.dueDate" type="date" required
+            <label for="edit-dueDate" class="block text-sm font-medium text-gray-700">Due Date*</label>
+            <input id="edit-dueDate" v-model="formData.dueDate" type="date" required
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
         </div>
 
         <!-- Assignees Field -->
         <div>
-            <label for="assignees" class="block text-sm font-medium text-gray-700">Assignees</label>
+            <label class="block text-sm font-medium text-gray-700">Assignees</label>
             <div v-if="loadingUsers" class="text-sm text-gray-500">Loading users...</div>
             <div v-else-if="userError" class="text-sm text-red-600">{{ userError }}</div>
-            <div v-else class="mt-1 max-h-40 overflow-y-auto border rounded-md p-2 space-y-1">
+            <div v-else-if="householdUsers.length > 0"
+                class="mt-2 space-y-2 max-h-48 overflow-y-auto border rounded-md p-3">
                 <div v-for="user in householdUsers" :key="user.id">
                     <label class="inline-flex items-center">
                         <input type="checkbox" :value="user.id" v-model="formData.assigneeIds"
@@ -21,12 +22,10 @@
                     </label>
                 </div>
             </div>
-            <p v-if="!loadingUsers && !userError && !householdUsers.length" class="text-sm text-gray-500 mt-1">
-                No other users found in this household.
-            </p>
+            <p v-else class="text-sm text-gray-500 mt-1">No users found in household to assign.</p>
         </div>
 
-        <!-- Validation Errors -->
+        <!-- Validation Error -->
         <div v-if="validationError" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">
             <p>{{ validationError }}</p>
         </div>
@@ -47,87 +46,71 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watchEffect } from 'vue';
+import { ref, reactive, onMounted, watch } from 'vue';
 import { useApi } from '@/utils/api';
 import type { TaskOccurrence, User } from '@/types';
+import { format } from 'date-fns';
 
 // Props
-interface Props {
-    occurrence: TaskOccurrence;
-}
-const props = defineProps<Props>();
+const props = defineProps<{
+    occurrence: TaskOccurrence; // Pass the full occurrence object to pre-populate
+}>();
 
 // Emits
 const emit = defineEmits<{
-    (e: 'submit', data: { dueDate: string, assigneeIds: string[] }): void;
+    (e: 'submit', data: { dueDate: string; assigneeIds: string[] }): void;
     (e: 'cancel'): void;
 }>();
 
 // Setup
 const api = useApi();
-const householdUsers = ref<User[]>([]);
-const loadingUsers = ref(true);
-const userError = ref('');
+const householdUsers = ref<Pick<User, 'id' | 'name' | 'email'>[]>([]);
+const loadingUsers = ref(false);
+const userError = ref<string | null>(null);
 const isSubmitting = ref(false);
-const validationError = ref('');
+const validationError = ref<string | null>(null);
 
-// Form data structure
+// Form data - initialized from prop
 const formData = reactive({
-    dueDate: '',
-    assigneeIds: [] as string[],
+    // Format date to YYYY-MM-DD for the input type="date"
+    dueDate: props.occurrence.dueDate ? format(new Date(props.occurrence.dueDate), 'yyyy-MM-dd') : '',
+    assigneeIds: [...(props.occurrence.assigneeIds || [])] // Clone array
 });
 
-// Load household users and initialize form
-onMounted(async () => {
-    await fetchHouseholdUsers();
-    initializeForm();
-});
+// Watch for prop changes to reset form data if the occurrence prop updates
+watch(() => props.occurrence, (newOccurrence) => {
+    formData.dueDate = newOccurrence.dueDate ? format(new Date(newOccurrence.dueDate), 'yyyy-MM-dd') : '';
+    formData.assigneeIds = [...(newOccurrence.assigneeIds || [])];
+    validationError.value = null; // Reset validation on prop change
+}, { deep: true });
 
-// Watch for prop changes to re-initialize (if component is reused)
-watchEffect(() => {
-    initializeForm();
-});
 
-const initializeForm = () => {
-    if (props.occurrence) {
-        // Format date to YYYY-MM-DD for input[type="date"]
-        try {
-            formData.dueDate = props.occurrence.due_date ? new Date(props.occurrence.due_date).toISOString().split('T')[0] : '';
-        } catch (e) {
-            console.error("Error formatting due date:", e);
-            formData.dueDate = ''; // Fallback
-        }
-        formData.assigneeIds = props.occurrence.assignee_ids ? [...props.occurrence.assignee_ids] : [];
-    }
-};
-
+// Fetch Household Users
 const fetchHouseholdUsers = async () => {
+    loadingUsers.value = true;
+    userError.value = null;
     try {
-        loadingUsers.value = true;
-        userError.value = '';
-        // Assuming GET /api/household/users returns User[]
-        const users = await api.get<User[]>('/api/household/users');
-        householdUsers.value = users;
-    } catch (err: any) {
+        const usersData = await api.get<Pick<User, 'id' | 'name' | 'email'>[]>('/api/household/users');
+        householdUsers.value = usersData;
+    } catch (err) {
         console.error('Error fetching household users:', err);
-        userError.value = 'Failed to load household users.';
+        userError.value = 'Failed to load users for assignment.';
     } finally {
         loadingUsers.value = false;
     }
 };
 
+// Load users on mount
+onMounted(fetchHouseholdUsers);
+
 // Form validation
 const validateForm = () => {
-    validationError.value = '';
-    if (!formData.dueDate) {
-        validationError.value = 'Due date is required.';
+    validationError.value = null; // Reset
+    if (!formData.dueDate || !/^\d{4}-\d{2}-\d{2}$/.test(formData.dueDate)) {
+        validationError.value = 'Due date is required and must be in YYYY-MM-DD format.';
         return false;
     }
-    // Basic date format check
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.dueDate)) {
-        validationError.value = 'Due date must be in YYYY-MM-DD format.';
-        return false;
-    }
+    // Optional: Add validation for assigneeIds if needed (e.g., at least one?)
     return true;
 };
 
@@ -136,12 +119,13 @@ const handleSubmit = () => {
     if (!validateForm()) {
         return;
     }
-    isSubmitting.value = true;
-    emit('submit', { ...formData });
-    // Parent component will handle actual API call and set isSubmitting back to false
+    isSubmitting.value = true; // Set submitting state (parent should reset on success/error)
+    emit('submit', { ...formData }); // Emit only the necessary fields
 };
 
+// Handle cancellation
 const handleCancel = () => {
     emit('cancel');
 };
+
 </script>

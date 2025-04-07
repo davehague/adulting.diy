@@ -1,120 +1,166 @@
 <template>
-    <div>
+    <div class="mt-6 flow-root">
         <h3 class="text-lg font-medium text-gray-900 mb-4">Occurrence History</h3>
-
-        <!-- Loading State -->
-        <div v-if="loading" class="text-center py-4">
-            <p class="text-gray-500">Loading history...</p>
+        <div v-if="loading" class="text-center text-gray-500 py-4">Loading history...</div>
+        <div v-else-if="error" class="text-center text-red-600 py-4">
+            Error loading history: {{ error }}
         </div>
-
-        <!-- Error State -->
-        <div v-else-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            <p>{{ error }}</p>
-        </div>
-
-        <!-- Empty State -->
-        <div v-else-if="!historyLogs.length" class="text-center py-4 border-t border-gray-200">
-            <p class="text-gray-500">No history recorded for this occurrence yet.</p>
-        </div>
-
-        <!-- Timeline -->
-        <ul v-else class="space-y-4 border-t border-gray-200 pt-4">
-            <li v-for="log in historyLogs" :key="log.id" class="flex items-start space-x-3">
-                <!-- Icon based on log type -->
-                <div class="flex-shrink-0">
-                    <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-gray-400">
-                        <component :is="getIconComponent(log.log_type)" class="h-5 w-5 text-white" aria-hidden="true" />
-                    </span>
-                </div>
-                <div class="min-w-0 flex-1">
-                    <p class="text-sm text-gray-500">
-                        <span class="font-medium text-gray-900">{{ log.user?.name || 'System' }}</span>
-                        {{ formatLogMessage(log) }}
-                    </p>
-                    <p class="mt-0.5 text-xs text-gray-400">
-                        {{ formatDate(log.created_at) }}
-                    </p>
+        <ul v-else-if="historyLogs.length > 0" role="list" class="-mb-8">
+            <li v-for="(log, logIdx) in historyLogs" :key="log.id">
+                <div class="relative pb-8">
+                    <!-- Vertical line connector -->
+                    <span v-if="logIdx !== historyLogs.length - 1"
+                        class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
+                    <div class="relative flex space-x-3">
+                        <div>
+                            <span
+                                :class="[getIconBackground(log.logType), 'h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white']">
+                                <component :is="getIcon(log.logType)" class="h-5 w-5 text-white" aria-hidden="true" />
+                            </span>
+                        </div>
+                        <div class="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
+                            <div>
+                                <p class="text-sm text-gray-500">
+                                    {{ formatLogMessage(log) }}
+                                    <span class="font-medium text-gray-900">{{ log.user?.name || 'System' }}</span>
+                                </p>
+                                <p v-if="log.logType === 'comment' && log.comment"
+                                    class="mt-1 text-sm text-gray-700 italic">
+                                    "{{ log.comment }}"
+                                </p>
+                            </div>
+                            <div class="whitespace-nowrap text-right text-sm text-gray-500">
+                                <time :datetime="log.createdAt.toISOString()">{{ formatRelativeTime(log.createdAt)
+                                }}</time>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </li>
         </ul>
+        <div v-else class="text-center text-gray-500 py-4">No history found for this occurrence.</div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, h } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
 import { useApi } from '@/utils/api';
 import type { OccurrenceHistoryLog } from '@/types';
-import { ChatBubbleLeftEllipsisIcon, ArrowPathIcon, CalendarDaysIcon, UserGroupIcon, PencilIcon } from '@heroicons/vue/24/solid'; // Example icons
+import { formatDistanceToNow } from 'date-fns'; // For relative time formatting
+
+// Import icons (assuming Heroicons v1 - adjust path/import if using v2 or other library)
+// @ts-ignore - Suppress type error as @types/heroicons__vue is unavailable
+import {
+    ChatAltIcon,
+    CheckCircleIcon,
+    XCircleIcon,
+    PencilIcon,
+    UserGroupIcon,
+    CalendarIcon,
+    PlusCircleIcon
+} from '@heroicons/vue/solid'; // Revert to original import path
 
 // Props
-interface Props {
+const props = defineProps<{
     occurrenceId: string;
-}
-const props = defineProps<Props>();
+}>();
 
-// Setup
-const api = useApi();
+// State
 const historyLogs = ref<OccurrenceHistoryLog[]>([]);
-const loading = ref(true);
-const error = ref('');
+const loading = ref(false);
+const error = ref<string | null>(null);
+const api = useApi();
 
-// Fetch history data
-onMounted(async () => {
+// Fetch history function
+const fetchHistory = async () => {
     if (!props.occurrenceId) {
-        error.value = 'Occurrence ID is required to load history.';
-        loading.value = false;
+        historyLogs.value = [];
+        error.value = null;
         return;
     }
+    loading.value = true;
+    error.value = null;
     try {
-        loading.value = true;
-        error.value = '';
         const data = await api.get<OccurrenceHistoryLog[]>(`/api/occurrences/${props.occurrenceId}/history`);
-        // Sort logs just in case API doesn't guarantee order (though it should)
-        historyLogs.value = data.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        // Ensure dates are Date objects
+        historyLogs.value = data.map(log => ({
+            ...log,
+            createdAt: new Date(log.createdAt) // Convert string date from API to Date object
+        }));
     } catch (err: any) {
-        console.error('Error loading occurrence history:', err);
-        error.value = err.data?.message || 'Failed to load occurrence history.';
+        console.error("Error fetching occurrence history:", err);
+        error.value = err.data?.message || err.message || 'Failed to load history';
+        historyLogs.value = [];
     } finally {
         loading.value = false;
     }
+};
+
+// Watch for occurrenceId changes and fetch initial data
+watch(() => props.occurrenceId, fetchHistory, { immediate: true });
+// onMounted(fetchHistory); // immediate: true in watch handles initial load
+
+// --- Formatting and Icon Helpers ---
+
+const formatRelativeTime = (date: Date): string => {
+    if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+        return 'Invalid date';
+    }
+    return formatDistanceToNow(date, { addSuffix: true });
+};
+
+const getIcon = (logType: OccurrenceHistoryLog['logType']) => {
+    switch (logType) {
+        case 'comment': return ChatAltIcon;
+        case 'status_change':
+            // Could refine based on newValue (e.g., completed, skipped)
+            return CheckCircleIcon; // Default status change icon
+        case 'assignment_change': return UserGroupIcon;
+        case 'date_change': return CalendarIcon;
+        // Add case for initial creation if logged that way
+        // case 'created': return PlusCircleIcon;
+        default: return PencilIcon; // Generic change
+    }
+};
+
+const getIconBackground = (logType: OccurrenceHistoryLog['logType']) => {
+    switch (logType) {
+        case 'comment': return 'bg-gray-400';
+        case 'status_change': return 'bg-blue-500'; // Example: blue for status
+        case 'assignment_change': return 'bg-yellow-500'; // Example: yellow for assignment
+        case 'date_change': return 'bg-purple-500'; // Example: purple for date
+        default: return 'bg-gray-400';
+    }
+};
+
+// Expose the fetchHistory method so parent components can call it
+defineExpose({
+    fetchHistory
 });
 
-// Helper Functions
-const formatDate = (date: Date | string): string => {
-    if (!date) return '';
-    return new Date(date).toLocaleString('en-US', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    });
-};
-
-const getIconComponent = (logType: string) => {
-    switch (logType) {
-        case 'comment': return ChatBubbleLeftEllipsisIcon;
-        case 'status_change': return ArrowPathIcon;
-        case 'date_change': return CalendarDaysIcon;
-        case 'assignment_change': return UserGroupIcon;
-        default: return PencilIcon; // Generic edit/change icon
-    }
-};
-
 const formatLogMessage = (log: OccurrenceHistoryLog): string => {
-    switch (log.log_type) {
+    switch (log.logType) {
         case 'comment':
-            return `commented: "${log.comment}"`;
+            return 'commented';
         case 'status_change':
-            return `changed status from '${log.old_value || 'N/A'}' to '${log.new_value || 'N/A'}'`;
-        case 'date_change':
-            const oldDate = log.old_value ? new Date(log.old_value).toLocaleDateString() : 'N/A';
-            const newDate = log.new_value ? new Date(log.new_value).toLocaleDateString() : 'N/A';
-            return `changed due date from ${oldDate} to ${newDate}`;
+            if (log.oldValue && log.newValue) {
+                return `changed status from ${log.oldValue} to ${log.newValue}`;
+            } else if (log.newValue) {
+                // Handle initial creation log
+                if (log.newValue === 'created' || log.newValue === 'assigned') {
+                    return `created occurrence (status: ${log.newValue})`;
+                }
+                return `changed status to ${log.newValue}`;
+            }
+            return 'changed status'; // Fallback
         case 'assignment_change':
-            // TODO: Enhance this to show user names instead of just count/JSON
-            const oldAssignees = log.old_value ? JSON.parse(log.old_value).length : 0;
-            const newAssignees = log.new_value ? JSON.parse(log.new_value).length : 0;
-            return `changed assignees (from ${oldAssignees} to ${newAssignees})`;
+            // Could potentially parse oldValue/newValue JSON for better message
+            return 'changed assignees';
+        case 'date_change':
+            return `changed due date from ${log.oldValue ? new Date(log.oldValue).toLocaleDateString() : '?'} to ${log.newValue ? new Date(log.newValue).toLocaleDateString() : '?'}`;
         default:
-            return `made an update (${log.log_type})`;
+            return `made an update`;
     }
 };
+
 </script>

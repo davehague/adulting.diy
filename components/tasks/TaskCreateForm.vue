@@ -54,6 +54,13 @@
                 </select>
             </div>
 
+            <!-- Due Date for 'Once' Type -->
+            <div v-if="formData.scheduleConfig.type === 'once'" class="mb-4">
+                <label for="onceDueDate" class="block text-sm font-medium text-gray-700">Due Date*</label>
+                <input id="onceDueDate" v-model="formData.scheduleConfig.dueDate" type="date" required
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+            </div>
+
             <!-- Fixed Interval Options -->
             <div v-if="formData.scheduleConfig.type === 'fixed_interval'" class="mb-4 grid grid-cols-2 gap-4">
                 <div>
@@ -204,9 +211,18 @@
         </div>
 
         <!-- Default Assignees -->
-        <div>
-            <!-- Add Default Assignee functionality here if user list is available -->
-            <!-- This would require fetching household users and allowing selections -->
+        <div class="border rounded-md p-4 bg-gray-50">
+            <h3 class="text-lg font-medium text-gray-700 mb-4">Default Assignees (Optional)</h3>
+            <div v-if="householdUsers.length > 0" class="space-y-2 max-h-40 overflow-y-auto">
+                <div v-for="user in householdUsers" :key="user.id">
+                    <label class="inline-flex items-center">
+                        <input type="checkbox" :value="user.id" v-model="formData.defaultAssigneeIds"
+                            class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" />
+                        <span class="ml-2">{{ user.name }} ({{ user.email }})</span>
+                    </label>
+                </div>
+            </div>
+            <p v-else class="text-sm text-gray-500">Loading users or no other users found in the household.</p>
         </div>
 
         <!-- Form Buttons -->
@@ -230,14 +246,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted } from 'vue'; // Removed computed as it wasn't used
 import { useApi } from '@/utils/api';
 import type {
     Category,
     ScheduleConfig,
     ReminderConfig,
-    DaysOfWeek, // Import DaysOfWeek
-    SpecificDaysScheduleConfig // Import for casting
+    DaysOfWeek,
+    SpecificDaysScheduleConfig,
+    User,
+    OnceScheduleConfig, // Import OnceScheduleConfig
+    EndCondition // Import EndCondition
 } from '@/types';
 
 // Props
@@ -260,50 +279,67 @@ const emit = defineEmits<{
 // Setup
 const api = useApi();
 const categories = ref<Category[]>([]);
+const householdUsers = ref<Pick<User, 'id' | 'name' | 'email'>[]>([]);
 const isSubmitting = ref(false);
 const validationError = ref('');
 
+// Define a simpler interface for form data, making all schedule-specific props optional
+// This allows easier handling with v-model and type narrowing in templates/validation
+interface TaskFormData {
+    name: string;
+    categoryId: string;
+    description: string;
+    instructions: string;
+    scheduleConfig: {
+        type: ScheduleConfig['type'];
+        // All possible properties from ScheduleConfig variants, optional
+        dueDate?: string; // string for input
+        interval?: number;
+        intervalUnit?: ScheduleConfig extends { intervalUnit: any } ? ScheduleConfig['intervalUnit'] : 'day'; // Provide default for init
+        daysOfWeek?: DaysOfWeek;
+        dayOfMonth?: number;
+        weekdayOfMonth?: ScheduleConfig extends { weekdayOfMonth: any } ? ScheduleConfig['weekdayOfMonth'] : { weekday: 'monday', occurrence: 'first' }; // Provide default for init
+        variableInterval?: ScheduleConfig extends { variableInterval: any } ? ScheduleConfig['variableInterval'] : { interval: 1, unit: 'day' }; // Provide default for init
+        endCondition: {
+            type: EndCondition['type'];
+            times?: number;
+            date?: string; // string for input
+        };
+    };
+    reminderConfig: ReminderConfig;
+    defaultAssigneeIds: string[];
+}
+
 // Form data structure (default values for creation)
-const formData = reactive({
+// Initialize with defaults matching the 'once' type initially
+const formData = reactive<TaskFormData>({
     name: '',
     categoryId: '',
     description: '',
     instructions: '',
     scheduleConfig: {
-        type: 'once' as const,
+        type: 'once',
+        dueDate: new Date().toISOString().split('T')[0], // Default string date
         interval: 1,
-        intervalUnit: 'week' as const,
-        daysOfWeek: {
-            monday: false,
-            tuesday: false,
-            wednesday: false,
-            thursday: false,
-            friday: false,
-            saturday: false,
-            sunday: false
-        },
+        intervalUnit: 'day', // Default value matching interface fallback
+        daysOfWeek: { monday: false, tuesday: false, wednesday: false, thursday: false, friday: false, saturday: false, sunday: false },
         dayOfMonth: 1,
-        weekdayOfMonth: {
-            weekday: 'monday' as const,
-            occurrence: 'first' as const
-        },
-        variableInterval: {
-            interval: 1,
-            unit: 'week' as const
-        },
+        weekdayOfMonth: { weekday: 'monday', occurrence: 'first' }, // Default value
+        variableInterval: { interval: 1, unit: 'day' }, // Default value matching interface fallback
         endCondition: {
-            type: 'never' as const,
+            type: 'never',
             times: undefined,
-            date: undefined
+            date: undefined // Default string date
         }
-    } as ScheduleConfig,
+    },
     reminderConfig: {
         initialReminder: undefined,
         followUpReminder: undefined,
         overdueReminder: undefined
-    } as ReminderConfig,
-    defaultAssigneeIds: [] as string[]
+    },
+    defaultAssigneeIds: []
 });
+
 
 // Days of week options for form
 const daysOfWeek = [
@@ -317,15 +353,12 @@ const daysOfWeek = [
 ];
 
 // Type alias for day keys
-type DayKey = keyof DaysOfWeek; // Use the imported DaysOfWeek type
+type DayKey = keyof DaysOfWeek;
 
 // Helper function to check if a day is checked
 const isDayChecked = (dayValue: string): boolean => {
-    // Ensure schedule type is correct and daysOfWeek exists
-    if (formData.scheduleConfig.type === 'specific_days_of_week') {
-        // Explicitly cast after checking the type
-        const config = formData.scheduleConfig as SpecificDaysScheduleConfig;
-        return !!config.daysOfWeek[dayValue as DayKey];
+    if (formData.scheduleConfig.type === 'specific_days_of_week' && formData.scheduleConfig.daysOfWeek) {
+        return !!formData.scheduleConfig.daysOfWeek[dayValue as DayKey];
     }
     return false;
 };
@@ -333,9 +366,11 @@ const isDayChecked = (dayValue: string): boolean => {
 // Helper function to update the checked state of a day
 const updateDayChecked = (dayValue: string, checked: boolean) => {
     if (formData.scheduleConfig.type === 'specific_days_of_week') {
-        // Explicitly cast after checking the type
-        const config = formData.scheduleConfig as SpecificDaysScheduleConfig;
-        config.daysOfWeek[dayValue as DayKey] = checked;
+        // Ensure daysOfWeek object exists before assigning
+        if (!formData.scheduleConfig.daysOfWeek) {
+            formData.scheduleConfig.daysOfWeek = { monday: false, tuesday: false, wednesday: false, thursday: false, friday: false, saturday: false, sunday: false };
+        }
+        formData.scheduleConfig.daysOfWeek[dayValue as DayKey] = checked;
     }
 };
 
@@ -345,110 +380,72 @@ onMounted(async () => {
         // Fetch categories
         const categoriesData = await api.get<Category[]>('/api/categories');
         categories.value = categoriesData;
-        // Set default category if available
-        if (categoriesData.length > 0) {
-            // Optionally set a default category, e.g., the first one
-            // formData.categoryId = categoriesData[0].id; 
-        }
     } catch (err) {
-        console.error('Error initializing form:', err);
+        console.error('Error fetching categories:', err);
         validationError.value = 'Failed to load categories. Please try refreshing the page.';
+    }
+
+    try {
+        // Fetch household users
+        const usersData = await api.get<Pick<User, 'id' | 'name' | 'email'>[]>('/api/household/users');
+        householdUsers.value = usersData;
+    } catch (err) {
+        console.error('Error fetching household users:', err);
+        // Non-critical error, form can still function
     }
 });
 
 // Form validation
 const validateForm = () => {
-    // Reset validation error
     validationError.value = '';
-
-    // Basic required field validation
-    if (!formData.name.trim()) {
-        validationError.value = 'Task name is required.';
-        return false;
-    }
-
-    if (!formData.categoryId) {
-        validationError.value = 'Category is required.';
-        return false;
-    }
-
-    // Schedule validation
     const sc = formData.scheduleConfig;
 
-    if (sc.type === 'fixed_interval') {
-        if (!sc.interval || sc.interval < 1) {
-            validationError.value = 'Interval must be at least 1.';
-            return false;
-        }
-        if (!sc.intervalUnit) {
-            validationError.value = 'Interval unit is required.';
-            return false;
-        }
+    if (!formData.name.trim()) {
+        validationError.value = 'Task name is required.'; return false;
     }
-    else if (sc.type === 'specific_days_of_week') {
-        const selectedDays = Object.values(sc.daysOfWeek || {}).filter(Boolean);
-        if (selectedDays.length === 0) {
-            validationError.value = 'At least one day must be selected for weekly schedule.';
-            return false;
-        }
+    if (!formData.categoryId) {
+        validationError.value = 'Category is required.'; return false;
     }
-    else if (sc.type === 'specific_day_of_month') {
-        if (!sc.dayOfMonth || sc.dayOfMonth < 1 || sc.dayOfMonth > 31) {
-            validationError.value = 'Day of month must be between 1 and 31.';
-            return false;
+
+    // Schedule validation based on type
+    if (sc.type === 'once') {
+        if (!sc.dueDate || !/^\d{4}-\d{2}-\d{2}$/.test(sc.dueDate)) {
+            validationError.value = 'Due date (YYYY-MM-DD) is required for one-time tasks.'; return false;
         }
-    }
-    else if (sc.type === 'specific_weekday_of_month') {
-        if (!sc.weekdayOfMonth?.occurrence || !sc.weekdayOfMonth?.weekday) {
-            validationError.value = 'Both occurrence and weekday are required for this schedule type.';
-            return false;
-        }
-    }
-    else if (sc.type === 'variable_interval') {
-        if (!sc.variableInterval?.interval || sc.variableInterval.interval < 1) {
-            validationError.value = 'Variable interval must be at least 1.';
-            return false;
-        }
-        if (!sc.variableInterval?.unit) {
-            validationError.value = 'Variable interval unit is required.';
-            return false;
-        }
+    } else if (sc.type === 'fixed_interval') {
+        // Use type assertion here as TS can now narrow based on sc.type check
+        const fixedConfig = sc as TaskFormData['scheduleConfig'] & { type: 'fixed_interval' };
+        if (!fixedConfig.interval || fixedConfig.interval < 1) { validationError.value = 'Interval must be at least 1.'; return false; }
+        if (!fixedConfig.intervalUnit) { validationError.value = 'Interval unit is required.'; return false; }
+    } else if (sc.type === 'specific_days_of_week') {
+        const daysConfig = sc as TaskFormData['scheduleConfig'] & { type: 'specific_days_of_week' };
+        const selectedDays = Object.values(daysConfig.daysOfWeek || {}).filter(Boolean);
+        if (selectedDays.length === 0) { validationError.value = 'At least one day must be selected for weekly schedule.'; return false; }
+    } else if (sc.type === 'specific_day_of_month') {
+        const dayMonthConfig = sc as TaskFormData['scheduleConfig'] & { type: 'specific_day_of_month' };
+        if (!dayMonthConfig.dayOfMonth || dayMonthConfig.dayOfMonth < 1 || dayMonthConfig.dayOfMonth > 31) { validationError.value = 'Day of month must be between 1 and 31.'; return false; }
+    } else if (sc.type === 'specific_weekday_of_month') {
+        const weekdayMonthConfig = sc as TaskFormData['scheduleConfig'] & { type: 'specific_weekday_of_month' };
+        if (!weekdayMonthConfig.weekdayOfMonth?.occurrence || !weekdayMonthConfig.weekdayOfMonth?.weekday) { validationError.value = 'Both occurrence and weekday are required for this schedule type.'; return false; }
+    } else if (sc.type === 'variable_interval') {
+        const variableConfig = sc as TaskFormData['scheduleConfig'] & { type: 'variable_interval' };
+        if (!variableConfig.variableInterval?.interval || variableConfig.variableInterval.interval < 1) { validationError.value = 'Variable interval must be at least 1.'; return false; }
+        if (!variableConfig.variableInterval?.unit) { validationError.value = 'Variable interval unit is required.'; return false; }
     }
 
     // End condition validation
     const ec = sc.endCondition;
     if (ec.type === 'times') {
-        if (!ec.times || ec.times < 1) {
-            validationError.value = 'Number of times must be at least 1.';
-            return false;
-        }
-    }
-    else if (ec.type === 'date') {
-        if (!ec.date) {
-            validationError.value = 'End date is required.';
-            return false;
-        }
-        // Basic date format check (YYYY-MM-DD) - ensure it's a string
-        if (typeof ec.date === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(ec.date)) {
-            validationError.value = 'End date must be in YYYY-MM-DD format.';
-            return false;
-        }
+        if (!ec.times || ec.times < 1) { validationError.value = 'Number of times must be at least 1.'; return false; }
+    } else if (ec.type === 'date') {
+        if (!ec.date || !/^\d{4}-\d{2}-\d{2}$/.test(ec.date)) { validationError.value = 'End date (YYYY-MM-DD) is required.'; return false; }
     }
 
-    // Reminder validation (optional fields, just check if numbers if provided)
+    // Reminder validation
     const rc = formData.reminderConfig;
-    if (rc.initialReminder !== undefined && (typeof rc.initialReminder !== 'number' || rc.initialReminder < 0)) {
-        validationError.value = 'Initial reminder must be a non-negative number.';
-        return false;
-    }
-    if (rc.followUpReminder !== undefined && (typeof rc.followUpReminder !== 'number' || rc.followUpReminder < 0)) {
-        validationError.value = 'Follow-up reminder must be a non-negative number.';
-        return false;
-    }
-    if (rc.overdueReminder !== undefined && (typeof rc.overdueReminder !== 'number' || rc.overdueReminder < 0)) {
-        validationError.value = 'Overdue reminder must be a non-negative number.';
-        return false;
-    }
+    if (rc.initialReminder !== undefined && (typeof rc.initialReminder !== 'number' || rc.initialReminder < 0)) { validationError.value = 'Initial reminder must be a non-negative number.'; return false; }
+    if (rc.followUpReminder !== undefined && (typeof rc.followUpReminder !== 'number' || rc.followUpReminder < 0)) { validationError.value = 'Follow-up reminder must be a non-negative number.'; return false; }
+    if (rc.overdueReminder !== undefined && (typeof rc.overdueReminder !== 'number' || rc.overdueReminder < 0)) { validationError.value = 'Overdue reminder must be a non-negative number.'; return false; }
 
     return true; // Form is valid
 };
@@ -460,86 +457,96 @@ const handleSubmit = () => {
     }
 
     isSubmitting.value = true;
-    validationError.value = ''; // Clear previous errors
+    validationError.value = '';
 
-    // Prepare data to emit (clean up potentially unused schedule parts)
-    const dataToSubmit = { ...formData };
-
-    // Construct the correct scheduleConfig based on type for submission
+    // Prepare data to submit, ensuring correct types for ScheduleConfig
     let finalScheduleConfig: ScheduleConfig;
-    const baseConfig = { endCondition: { ...formData.scheduleConfig.endCondition } };
 
-    // Clean up end condition
-    if (baseConfig.endCondition.type !== 'times') {
-        delete baseConfig.endCondition.times;
-    }
-    if (baseConfig.endCondition.type !== 'date') {
-        delete baseConfig.endCondition.date;
-    }
+    // Base end condition handling (convert date string to Date object)
+    const baseEndCondition: EndCondition = {
+        type: formData.scheduleConfig.endCondition.type,
+        times: formData.scheduleConfig.endCondition.times,
+        // Convert date string to Date object only if type is 'date' and date is provided
+        date: (formData.scheduleConfig.endCondition.type === 'date' && formData.scheduleConfig.endCondition.date)
+            ? new Date(formData.scheduleConfig.endCondition.date + 'T00:00:00') // Use T00:00:00 for consistency
+            : undefined
+    };
+    // Clean up unused end condition properties
+    if (baseEndCondition.type !== 'times') delete baseEndCondition.times;
+    if (baseEndCondition.type !== 'date') delete baseEndCondition.date;
 
+
+    // Construct the specific schedule config based on type
     switch (formData.scheduleConfig.type) {
         case 'once':
-            finalScheduleConfig = { ...baseConfig, type: 'once' };
+            finalScheduleConfig = {
+                type: 'once',
+                dueDate: new Date(formData.scheduleConfig.dueDate! + 'T00:00:00'), // Convert string to Date
+                endCondition: baseEndCondition
+            };
             break;
         case 'fixed_interval':
             finalScheduleConfig = {
-                ...baseConfig,
                 type: 'fixed_interval',
-                interval: formData.scheduleConfig.interval,
-                intervalUnit: formData.scheduleConfig.intervalUnit
+                interval: formData.scheduleConfig.interval!,
+                intervalUnit: formData.scheduleConfig.intervalUnit!,
+                endCondition: baseEndCondition
             };
             break;
         case 'specific_days_of_week':
             finalScheduleConfig = {
-                ...baseConfig,
                 type: 'specific_days_of_week',
-                daysOfWeek: { ...formData.scheduleConfig.daysOfWeek }
+                daysOfWeek: formData.scheduleConfig.daysOfWeek!,
+                endCondition: baseEndCondition
             };
             break;
         case 'specific_day_of_month':
             finalScheduleConfig = {
-                ...baseConfig,
                 type: 'specific_day_of_month',
-                dayOfMonth: formData.scheduleConfig.dayOfMonth
+                dayOfMonth: formData.scheduleConfig.dayOfMonth!,
+                endCondition: baseEndCondition
             };
             break;
         case 'specific_weekday_of_month':
             finalScheduleConfig = {
-                ...baseConfig,
                 type: 'specific_weekday_of_month',
-                weekdayOfMonth: { ...formData.scheduleConfig.weekdayOfMonth }
+                weekdayOfMonth: formData.scheduleConfig.weekdayOfMonth!,
+                endCondition: baseEndCondition
             };
             break;
         case 'variable_interval':
             finalScheduleConfig = {
-                ...baseConfig,
                 type: 'variable_interval',
-                variableInterval: { ...formData.scheduleConfig.variableInterval }
+                variableInterval: formData.scheduleConfig.variableInterval!,
+                endCondition: baseEndCondition
             };
             break;
         default:
-            // Should not happen with proper typing, but handle defensively
-            validationError.value = "Invalid schedule type selected.";
+            // Should not happen with proper validation
+            console.error('Invalid schedule type during submission');
             isSubmitting.value = false;
+            validationError.value = 'Invalid schedule configuration.';
             return;
     }
 
-    dataToSubmit.scheduleConfig = finalScheduleConfig;
+    // Prepare the final data object to emit
+    const dataToSubmit = {
+        name: formData.name,
+        categoryId: formData.categoryId,
+        description: formData.description,
+        instructions: formData.instructions,
+        scheduleConfig: finalScheduleConfig, // Use the correctly typed and processed config
+        reminderConfig: { ...formData.reminderConfig }, // Clone reminder config
+        defaultAssigneeIds: [...formData.defaultAssigneeIds] // Clone assignees array
+    };
 
-    // Clean up reminder config (remove undefined values)
-    const rc = dataToSubmit.reminderConfig;
-    if (rc.initialReminder === undefined || rc.initialReminder === null) delete rc.initialReminder;
-    if (rc.followUpReminder === undefined || rc.followUpReminder === null) delete rc.followUpReminder;
-    if (rc.overdueReminder === undefined || rc.overdueReminder === null) delete rc.overdueReminder;
-
+    // Emit the submit event
     emit('submit', dataToSubmit);
 
-    // Reset submitting state (parent component handles actual API call and state)
-    // isSubmitting.value = false; // Let parent control this
+    // Reset submitting state (assuming parent component handles actual API call and success/error)
+    // If this component were making the API call directly, you'd handle the promise here.
+    // For now, we assume the parent handles the async logic.
+    // isSubmitting.value = false; // Potentially reset later by parent or on success/error event
 };
 
-// Expose isSubmitting state if needed by parent
-defineExpose({
-    isSubmitting
-});
 </script>

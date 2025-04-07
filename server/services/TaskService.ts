@@ -32,20 +32,20 @@ export function mapPrismaTaskToDefinition( // Add export keyword
     ...rest, // Spread required fields (id, name)
     description: description ?? undefined, // Map null to undefined
     instructions: instructions ?? undefined, // Map null to undefined
-    household_id: householdId,
-    category_id: categoryId,
-    meta_status: metaStatus as TaskMetaStatus, // Assert type
+    householdId: householdId, // Use camelCase
+    categoryId: categoryId, // Use camelCase
+    metaStatus: metaStatus as TaskMetaStatus, // Use camelCase
     // Prisma stores JSON, assume it matches ScheduleConfig structure
     // Assert structure; Prisma returns JsonValue, needs casting
-    schedule_config: scheduleConfig as unknown as ScheduleConfig,
+    scheduleConfig: scheduleConfig as unknown as ScheduleConfig, // Use camelCase
     // Assert structure or undefined; Prisma returns JsonValue | null
-    reminder_config: reminderConfig
+    reminderConfig: reminderConfig // Use camelCase
       ? (reminderConfig as unknown as ReminderConfig)
       : undefined,
-    created_at: createdAt,
-    updated_at: updatedAt,
-    created_by_user_id: createdByUserId,
-    default_assignee_ids: defaultAssigneeIds ?? undefined, // Handle null from DB
+    createdAt: createdAt, // Use camelCase
+    updatedAt: updatedAt, // Use camelCase
+    createdByUserId: createdByUserId, // Use camelCase
+    defaultAssigneeIds: defaultAssigneeIds ?? [], // Use camelCase, default to empty array
     category: category, // Assign the included category object
   };
 }
@@ -164,29 +164,37 @@ export class TaskService {
       });
 
       // Map the result (which includes the category) back to our TaskDefinition type
-      const taskDefinition = mapPrismaTaskToDefinition(
-        task as PrismaTaskDefinition & { category: Category } // Cast needed because include adds category
-      );
+      // Use the corrected mapping function
+      const taskDefinition = mapPrismaTaskToDefinition(task);
 
-      // After successful task creation, generate initial occurrences
-      // Use the mapped TaskDefinition (taskDefinition) which has snake_case properties
+      // After successful task creation, create the initial occurrence
+      // Use the mapped TaskDefinition (taskDefinition) which has camelCase properties
       try {
         const occurrenceService = new OccurrenceService();
         console.log(
-          `[TaskService] Attempting to generate occurrences for task ${taskDefinition.id}...`
+          `[TaskService] Attempting to create initial occurrence for task ${taskDefinition.id}...`
         );
-        const generated = await occurrenceService.generateAndCreateOccurrences(
-          taskDefinition
-        );
-        console.log(
-          `[TaskService] ${generated.length} occurrences generated for task ${taskDefinition.id}.`
-        );
-      } catch (genError) {
+        // Pass the created task definition and the user ID who created it
+        const initialOccurrence =
+          await occurrenceService.createInitialOccurrence(
+            taskDefinition,
+            taskDefinition.createdByUserId // Pass the creator's ID
+          );
+        if (initialOccurrence) {
+          console.log(
+            `[TaskService] Initial occurrence ${initialOccurrence.id} created for task ${taskDefinition.id}.`
+          );
+        } else {
+          console.log(
+            `[TaskService] No initial occurrence created for task ${taskDefinition.id} (likely due to schedule).`
+          );
+        }
+      } catch (occError) {
         // Log the error but allow task creation to succeed for now.
-        // Consider if this should throw an error to fail the whole task creation.
+        // This prevents the entire task creation from failing if occurrence generation has an issue.
         console.error(
-          `[TaskService] CRITICAL: Failed to generate initial occurrences for task ${taskDefinition.id}:`,
-          genError
+          `[TaskService] CRITICAL: Failed to create initial occurrence for task ${taskDefinition.id}:`,
+          occError
         );
       }
 
@@ -202,7 +210,7 @@ export class TaskService {
    */
   async update(
     id: string,
-    // Input data uses our TaskDefinition structure (snake_case, optional category object)
+    // Input data uses our TaskDefinition structure (camelCase, optional category object)
     data: Partial<TaskDefinition>
   ): Promise<TaskDefinition> {
     try {
@@ -211,20 +219,23 @@ export class TaskService {
         updatedAt: new Date(),
       };
 
-      // Map snake_case fields from TaskDefinition to camelCase for Prisma
+      // Map camelCase fields from TaskDefinition to camelCase for Prisma (already matching)
       if (data.name !== undefined) prismaUpdateData.name = data.name;
       if (data.description !== undefined)
         prismaUpdateData.description = data.description; // Prisma handles null
       if (data.instructions !== undefined)
         prismaUpdateData.instructions = data.instructions; // Prisma handles null
-      if (data.meta_status !== undefined)
-        prismaUpdateData.metaStatus = data.meta_status;
-      if (data.default_assignee_ids !== undefined)
-        prismaUpdateData.defaultAssigneeIds = data.default_assignee_ids;
+      if (data.metaStatus !== undefined)
+        // Use camelCase
+        prismaUpdateData.metaStatus = data.metaStatus;
+      if (data.defaultAssigneeIds !== undefined)
+        // Use camelCase
+        prismaUpdateData.defaultAssigneeIds = data.defaultAssigneeIds;
 
       // Handle relation updates via connect
-      if (data.category_id !== undefined) {
-        prismaUpdateData.category = { connect: { id: data.category_id } };
+      if (data.categoryId !== undefined) {
+        // Use camelCase
+        prismaUpdateData.category = { connect: { id: data.categoryId } };
       }
       // Note: Updating household_id might require similar logic if allowed
       // if (data.household_id !== undefined) {
@@ -232,18 +243,21 @@ export class TaskService {
       // }
 
       // Handle JSON fields
-      if (data.schedule_config !== undefined) {
+      if (data.scheduleConfig !== undefined) {
+        // Use camelCase
         prismaUpdateData.scheduleConfig =
-          data.schedule_config as unknown as Prisma.InputJsonValue;
+          data.scheduleConfig as unknown as Prisma.InputJsonValue;
       }
-      if (data.reminder_config !== undefined) {
+      if (data.reminderConfig !== undefined) {
+        // Use camelCase
         // Handle potential undefined for optional reminder_config
-        prismaUpdateData.reminderConfig = data.reminder_config
-          ? (data.reminder_config as unknown as Prisma.InputJsonValue)
+        prismaUpdateData.reminderConfig = data.reminderConfig
+          ? (data.reminderConfig as unknown as Prisma.InputJsonValue)
           : Prisma.JsonNull;
       } else if (
-        data.hasOwnProperty("reminder_config") &&
-        data.reminder_config === undefined
+        // Use camelCase
+        data.hasOwnProperty("reminderConfig") &&
+        data.reminderConfig === undefined
       ) {
         // Explicitly set to null if undefined was passed
         prismaUpdateData.reminderConfig = Prisma.JsonNull;
@@ -258,9 +272,8 @@ export class TaskService {
       });
 
       // Map the result (which includes the category) back to our TaskDefinition type
-      return mapPrismaTaskToDefinition(
-        task as PrismaTaskDefinition & { category: Category }
-      );
+      // Use the corrected mapping function
+      return mapPrismaTaskToDefinition(task);
     } catch (error) {
       console.error(`[TaskService] Unexpected error in update:`, error);
       throw error;
@@ -303,6 +316,7 @@ export class TaskService {
           },
         });
 
+        // Use the corrected mapping function
         return mapPrismaTaskToDefinition(task);
       });
     } catch (error) {
@@ -327,6 +341,7 @@ export class TaskService {
         },
       });
 
+      // Use the corrected mapping function
       return mapPrismaTaskToDefinition(task);
     } catch (error) {
       console.error(`[TaskService] Unexpected error in unpause:`, error);
@@ -370,6 +385,7 @@ export class TaskService {
           },
         });
 
+        // Use the corrected mapping function
         return mapPrismaTaskToDefinition(task);
       });
     } catch (error) {

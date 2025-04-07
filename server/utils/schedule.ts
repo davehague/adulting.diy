@@ -1,109 +1,102 @@
-import { ScheduleConfig } from "@/types";
-import { addDays, addMonths, addYears } from "date-fns";
+import type { ScheduleConfig, OnceScheduleConfig } from "@/types";
+import { addDays, addWeeks, addMonths, addYears, startOfDay } from "date-fns"; // Using date-fns for date manipulation
 
 /**
- * Calculates the next due date based on the schedule config and the last due date.
- * Returns null if the schedule type is unsupported or invalid.
+ * Calculates the next due date based on the schedule configuration and the last completion date.
+ *
+ * @param config The schedule configuration object.
+ * @param lastCompletedDate Optional. The date the task was last completed or skipped. Used for variable intervals.
+ * @returns The calculated next due date, or null if the schedule cannot determine a next date (e.g., completed end condition).
  */
 export function calculateNextDueDate(
-  scheduleConfig: ScheduleConfig,
-  lastDueDate: Date | null // Use null for the very first calculation
+  config: ScheduleConfig,
+  lastCompletedDate?: Date | null
 ): Date | null {
-  const startDate = lastDueDate || new Date(); // Start from today if no previous date
+  const now = new Date();
+  const today = startOfDay(now); // Use start of day for consistent date comparisons
 
-  switch (scheduleConfig.type) {
-    case "fixed_interval":
-      if (!scheduleConfig.interval || !scheduleConfig.intervalUnit) {
-        console.error(
-          "[Schedule] Invalid fixed_interval config:",
-          scheduleConfig
-        );
-        return null;
-      }
-      const interval = scheduleConfig.interval;
-      switch (scheduleConfig.intervalUnit) {
-        case "day":
-          return addDays(startDate, interval);
-        case "week":
-          return addDays(startDate, interval * 7);
-        case "month":
-          return addMonths(startDate, interval);
-        case "year":
-          return addYears(startDate, interval);
-        default:
-          console.error(
-            "[Schedule] Invalid intervalUnit:",
-            scheduleConfig.intervalUnit
-          );
-          return null;
-      }
-
-    // TODO: Implement other schedule types (once, specific_days_of_week, etc.)
+  switch (config.type) {
     case "once":
-      // 'once' schedules typically don't generate recurring occurrences automatically
-      // Or might have a specific date set elsewhere. For now, return null.
-      return null;
+      // For 'once' tasks, the due date should be explicitly set in the config.
+      // If it's missing or in the past, it might be considered immediately due or invalid.
+      // Let's assume 'once' requires a 'dueDate' property.
+      // Type guard ensures config is OnceScheduleConfig here
+      // The dueDate is required and should be a Date object from the API layer
+      if (config.dueDate instanceof Date && !isNaN(config.dueDate.getTime())) {
+        // Ensure we use the start of the day for consistency
+        return startOfDay(config.dueDate);
+      } else {
+        // This case should ideally not happen if validation is correct upstream
+        console.error(
+          "Invalid or missing 'dueDate' for schedule type 'once'.",
+          config
+        );
+        // Fallback to today, but this indicates an issue elsewhere
+        return today;
+      }
+
+    case "fixed_interval":
+      // TODO: Implement fixed interval logic
+      console.warn("Fixed interval scheduling not yet implemented.");
+      return null; // Placeholder
 
     case "specific_days_of_week":
+      // TODO: Implement specific days of week logic
+      console.warn("Specific days of week scheduling not yet implemented.");
+      return null; // Placeholder
+
     case "specific_day_of_month":
+      // TODO: Implement specific day of month logic
+      console.warn("Specific day of month scheduling not yet implemented.");
+      return null; // Placeholder
+
     case "specific_weekday_of_month":
+      // TODO: Implement specific weekday of month logic
+      console.warn("Specific weekday of month scheduling not yet implemented.");
+      return null; // Placeholder
+
     case "variable_interval":
-      console.warn(
-        `[Schedule] Schedule type "${scheduleConfig.type}" not yet implemented for automatic generation.`
-      );
-      return null;
+      // TODO: Implement variable interval logic
+      console.warn("Variable interval scheduling not yet implemented.");
+      return null; // Placeholder
 
     default:
-      console.error(
-        "[Schedule] Unknown or unexpected schedule configuration received:",
-        scheduleConfig
-      );
+      console.error(`Unknown schedule type: ${(config as any).type}`);
       return null;
   }
+
+  // TODO: Consider end conditions (times, date) after calculating the potential next date.
 }
 
-/**
- * Generates a specified number of future due dates based on the schedule.
- */
-export function generateFutureDueDates(
-  scheduleConfig: ScheduleConfig,
-  count: number = 5, // Generate next 5 occurrences by default
-  startDate: Date = new Date() // Start generating from today
-): Date[] {
-  const dueDates: Date[] = [];
-  let lastDueDate: Date | null = null; // Start with no previous date for the first calculation
-
-  // Handle 'once' schedule type specifically
-  if (scheduleConfig.type === "once") {
-    // Check if the end condition specifies a date
+// Helper function to check end conditions (implementation needed)
+function checkEndCondition(
+  config: ScheduleConfig,
+  occurrenceCount: number
+): boolean {
+  if (!config.endCondition || config.endCondition.type === "never") {
+    return false; // Not ended
+  }
+  if (config.endCondition.type === "times") {
+    return occurrenceCount >= (config.endCondition.times ?? Infinity);
+  }
+  if (config.endCondition.type === "date") {
+    // Ensure date exists and is a valid Date object before using it
     if (
-      scheduleConfig.endCondition?.type === "date" &&
-      scheduleConfig.endCondition.date
+      !config.endCondition.date ||
+      !(config.endCondition.date instanceof Date) ||
+      isNaN(config.endCondition.date.getTime())
     ) {
-      const specificDate = new Date(scheduleConfig.endCondition.date);
-      // Only return the date if it's on or after the generation start date
-      if (specificDate >= startDate) {
-        return [specificDate];
-      }
+      console.error("Invalid end condition date:", config.endCondition.date);
+      return false; // Cannot check condition if date is invalid
     }
-    // If 'once' schedule has no specific date or it's in the past, return empty
-    return [];
+    const endDate = startOfDay(config.endCondition.date);
+    // This check needs to happen *after* calculating the potential next due date.
+    // If the *next* potential due date is after the end date, the task has ended.
+    // This function might need refactoring to incorporate this check correctly.
+    console.warn(
+      "End condition date check needs refinement in scheduling logic."
+    );
+    return false; // Placeholder
   }
-
-  // For recurring schedules, generate based on calculateNextDueDate
-
-  for (let i = 0; i < count; i++) {
-    const nextDate = calculateNextDueDate(
-      scheduleConfig,
-      lastDueDate || startDate
-    ); // Pass startDate if lastDueDate is null
-    if (nextDate) {
-      dueDates.push(nextDate);
-      lastDueDate = nextDate; // Update lastDueDate for the next iteration
-    } else {
-      // Stop if we can't calculate the next date (e.g., unsupported type, end of 'once')
-      break;
-    }
-  }
-  return dueDates;
+  return false;
 }
