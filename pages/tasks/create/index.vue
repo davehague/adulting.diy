@@ -41,11 +41,6 @@ const handleSubmit = async (formData: any) => {
     submitting.value = true;
     error.value = ''; // Clear previous errors
 
-    // Access the isSubmitting state from the child component if needed
-    if (taskFormRef.value) {
-      taskFormRef.value.isSubmitting = true;
-    }
-
     // Use the store action to create the task
     const newTask = await taskStore.createTask(formData);
 
@@ -62,15 +57,6 @@ const handleSubmit = async (formData: any) => {
     error.value = taskStore.error || 'Failed to create task. Please check the details and try again.';
   } finally {
     submitting.value = false;
-    // Access the isSubmitting state from the child component if needed
-    if (taskFormRef.value) {
-      taskFormRef.value.isSubmitting = false;
-    }
   }
 };
-
-// Page metadata
-definePageMeta({
-  // Middleware 'auth' is global and runs automatically
-});
 </script>

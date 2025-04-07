@@ -20,7 +20,6 @@ export default defineHouseholdProtectedEventHandler(
       const body = await readBody(event);
 
       // Validate input data (basic check)
-      // Use camelCase consistent with Prisma schema expected by the service
       const updateData: Partial<
         Pick<TaskOccurrence, "dueDate" | "assigneeIds">
       > = {};

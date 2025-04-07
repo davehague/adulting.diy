@@ -247,8 +247,4 @@ if (isClient) {
     }
   });
 }
-
-// Page metadata
-definePageMeta({
-});
 </script>

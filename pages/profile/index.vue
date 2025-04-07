@@ -1,22 +1,16 @@
 <template>
   <div class="container mx-auto px-4 py-8 max-w-2xl">
     <h1 class="text-2xl font-bold mb-6">Your Profile</h1>
-    
+
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
       <!-- Profile Header -->
       <div class="p-6 bg-blue-500 text-white">
         <div class="flex items-center">
           <div class="flex-shrink-0">
-            <img 
-              v-if="authStore.user?.picture" 
-              :src="authStore.user.picture" 
-              alt="Profile" 
-              class="h-20 w-20 rounded-full border-4 border-white"
-            >
-            <div 
-              v-else 
-              class="h-20 w-20 rounded-full bg-blue-700 flex items-center justify-center text-white text-2xl border-4 border-white"
-            >
+            <img v-if="authStore.user?.picture" :src="authStore.user.picture" alt="Profile"
+              class="h-20 w-20 rounded-full border-4 border-white">
+            <div v-else
+              class="h-20 w-20 rounded-full bg-blue-700 flex items-center justify-center text-white text-2xl border-4 border-white">
               {{ userInitials }}
             </div>
           </div>
@@ -26,7 +20,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Profile Details -->
       <div class="p-6 space-y-6">
         <div>
@@ -50,19 +44,17 @@
             </div>
           </div>
         </div>
-        
+
         <div>
           <h3 class="text-lg font-medium text-gray-900 mb-2">Household</h3>
           <div v-if="authStore.user?.householdId" class="bg-gray-50 rounded p-4">
             <p>
               You are currently a member of a household.
-              <span v-if="authStore.user.isAdmin" class="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Admin</span>
+              <span v-if="authStore.user.isAdmin"
+                class="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">Admin</span>
             </p>
             <div class="mt-2">
-              <NuxtLink 
-                to="/household" 
-                class="text-blue-600 hover:text-blue-800 text-sm"
-              >
+              <NuxtLink to="/household" class="text-blue-600 hover:text-blue-800 text-sm">
                 Manage Household Settings
               </NuxtLink>
             </div>
@@ -70,16 +62,13 @@
           <div v-else class="bg-yellow-50 rounded p-4">
             <p class="text-yellow-800">You are not currently a member of any household.</p>
             <div class="mt-2">
-              <NuxtLink 
-                to="/setup-household" 
-                class="text-blue-600 hover:text-blue-800 text-sm"
-              >
+              <NuxtLink to="/setup-household" class="text-blue-600 hover:text-blue-800 text-sm">
                 Set Up or Join a Household
               </NuxtLink>
             </div>
           </div>
         </div>
-        
+
         <div>
           <h3 class="text-lg font-medium text-gray-900 mb-2">Notification Preferences</h3>
           <div class="bg-gray-50 rounded p-4">
@@ -87,18 +76,15 @@
             <p class="text-gray-500 italic">Notification preference settings will be available soon.</p>
           </div>
         </div>
-        
+
         <div class="pt-4 border-t border-gray-200">
-          <NuxtLink 
-            to="/home" 
-            class="text-blue-600 hover:text-blue-800"
-          >
+          <NuxtLink to="/home" class="text-blue-600 hover:text-blue-800">
             &larr; Back to Dashboard
           </NuxtLink>
         </div>
       </div>
     </div>
-    
+
     <!-- Debug section -->
     <div v-if="debugMode" class="mt-6 p-4 bg-gray-100 rounded-md">
       <h3 class="font-medium mb-2">Debug Info:</h3>
@@ -119,12 +105,12 @@ const debugMode = ref(false);
 // User initials for avatar
 const userInitials = computed(() => {
   if (!authStore.user?.name) return '?';
-  
+
   const nameParts = authStore.user.name.split(' ');
   if (nameParts.length > 1) {
     return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
   }
-  
+
   return nameParts[0][0].toUpperCase();
 });
 
@@ -136,7 +122,7 @@ const debugInfo = computed(() => {
 // Date formatting helper
 const formatDate = (date: string | Date | undefined): string => {
   if (!date) return 'Unknown';
-  
+
   const dateObj = new Date(date);
   return dateObj.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -156,9 +142,4 @@ if (typeof window !== 'undefined') {
     }
   });
 }
-
-// Page metadata
-definePageMeta({
-  middleware: 'auth'
-});
 </script>

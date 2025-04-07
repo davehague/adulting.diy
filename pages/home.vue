@@ -122,9 +122,4 @@ if (typeof window !== 'undefined') {
     }
   });
 }
-
-// Page metadata
-definePageMeta({
-  // middleware: 'auth' // Removed redundant named middleware
-});
 </script>
