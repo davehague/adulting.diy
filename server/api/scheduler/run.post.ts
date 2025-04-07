@@ -30,18 +30,18 @@ function mapPrismaTaskToDefinitionTemp(
     ...rest,
     description: description ?? undefined,
     instructions: instructions ?? undefined,
-    household_id: householdId,
-    category_id: categoryId,
-    meta_status: metaStatus as import("@/types").TaskMetaStatus,
-    schedule_config:
+    householdId: householdId,
+    categoryId: categoryId,
+    metaStatus: metaStatus as import("@/types").TaskMetaStatus,
+    scheduleConfig:
       scheduleConfig as unknown as import("@/types").ScheduleConfig,
-    reminder_config: reminderConfig
+    reminderConfig: reminderConfig
       ? (reminderConfig as unknown as import("@/types").ReminderConfig)
       : undefined,
-    created_at: createdAt,
-    updated_at: updatedAt,
-    created_by_user_id: createdByUserId,
-    default_assignee_ids: defaultAssigneeIds ?? undefined,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+    createdByUserId: createdByUserId,
+    defaultAssigneeIds: defaultAssigneeIds ?? undefined,
     category: category,
   };
 }
@@ -95,12 +95,14 @@ export default defineEventHandler(async (event) => {
 
       // 5. Generate and create occurrences (using the service method)
       //    Pass the mapped task definition
-      const newOccurrences =
-        await occurrenceService.generateAndCreateOccurrences(
-          task,
-          5 // Keep default 5 for now, needs refinement for horizon logic
-          // We might need to pass lastDueDate or startDate to generateFutureDueDates eventually
-        );
+      // TODO: Implement occurrence generation logic in OccurrenceService
+      // const newOccurrences =
+      //   await occurrenceService.generateAndCreateOccurrences( // This method doesn't exist yet
+      //     task,
+      //     5 // Keep default 5 for now, needs refinement for horizon logic
+      //     // We might need to pass lastDueDate or startDate to generateFutureDueDates eventually
+      //   );
+      const newOccurrences = []; // Placeholder
       occurrencesGenerated += newOccurrences.length;
     }
 

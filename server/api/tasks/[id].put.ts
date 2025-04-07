@@ -31,8 +31,8 @@ export default defineHouseholdProtectedEventHandler(
         });
       }
 
-      if (existingTask.household_id !== householdId) {
-        // Use snake_case property from TaskDefinition type
+      if (existingTask.householdId !== householdId) {
+        // Use camelCase property from Prisma model
         throw createError({
           statusCode: 403,
           message: "You do not have permission to update this task",
@@ -45,10 +45,10 @@ export default defineHouseholdProtectedEventHandler(
         name: body.name,
         description: body.description,
         instructions: body.instructions,
-        category_id: body.categoryId, // Use snake_case
-        schedule_config: body.scheduleConfig, // Use snake_case
-        reminder_config: body.reminderConfig, // Use snake_case
-        default_assignee_ids: body.defaultAssigneeIds, // Use snake_case
+        categoryId: body.categoryId, // Use camelCase
+        scheduleConfig: body.scheduleConfig, // Use camelCase
+        reminderConfig: body.reminderConfig, // Use camelCase
+        defaultAssigneeIds: body.defaultAssigneeIds, // Use camelCase
       });
 
       return task;

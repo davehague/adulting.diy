@@ -11,18 +11,19 @@ export interface User {
   picture?: string;
   householdId?: string; // Match DB schema/Prisma model
   isAdmin?: boolean; // Match DB schema/Prisma model
-  notification_preferences: NotificationPreferences;
-  created_at: Date;
-  updated_at: Date;
-  last_login: Date;
+  notificationPreferences: NotificationPreferences; // Keep snake_case keys inside JSON
+  createdAt: Date;
+  updatedAt: Date;
+  lastLogin: Date;
 }
 
-export interface GoogleUser {
+export interface UserRegistrationData {
+  // Renamed from GoogleUser
   email: string;
-  email_verified: boolean;
+  emailVerified: boolean;
   name: string;
   picture?: string;
-  given_name: string;
-  family_name: string;
+  givenName: string;
+  familyName: string;
   locale: string;
 }

@@ -69,11 +69,11 @@ const handleLoginSuccess = async (response: CredentialResponse) => {
                 // Create new user
                 const userData = await api.post<User>('/api/user/register', {
                     email: payload.email,
-                    email_verified: payload.email_verified,
+                    emailVerified: payload.email_verified, // Map from snake_case payload
                     name: payload.name,
                     picture: payload.picture,
-                    given_name: payload.given_name,
-                    family_name: payload.family_name,
+                    givenName: payload.given_name, // Map from snake_case payload
+                    familyName: payload.family_name, // Map from snake_case payload
                     locale: payload.locale
                 });
                 authStore.setUser(userData);

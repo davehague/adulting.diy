@@ -28,7 +28,7 @@ export default defineHouseholdProtectedEventHandler(
         });
       }
 
-      if (existingTask.household_id !== householdId) {
+      if (existingTask.householdId !== householdId) {
         throw createError({
           statusCode: 403,
           message: "You do not have permission to pause this task",
@@ -37,12 +37,12 @@ export default defineHouseholdProtectedEventHandler(
 
       // Check if task is already paused or deleted
       if (
-        existingTask.meta_status === "paused" ||
-        existingTask.meta_status === "soft-deleted"
+        existingTask.metaStatus === "paused" ||
+        existingTask.metaStatus === "soft-deleted"
       ) {
         throw createError({
           statusCode: 400,
-          message: `Task is already ${existingTask.meta_status}`,
+          message: `Task is already ${existingTask.metaStatus}`,
         });
       }
 
