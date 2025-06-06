@@ -57,11 +57,11 @@ This checklist outlines the steps for building the Adulting.DIY application base
 
 ## Phase 5: Advanced Task Logic
 
-- [ ] **5.1: Implement Task Pause API:** `POST /api/tasks/:id/pause` (auth, set Task `metaStatus`='Paused', update future Occurrences `status`='Deleted').
-- [ ] **5.2: Implement Task Unpause API:** `POST /api/tasks/:id/unpause` (auth, set Task `metaStatus`='Active').
-- [ ] **5.3: Implement Task Delete API:** `DELETE /api/tasks/:id` (auth, set Task `metaStatus`='Soft-deleted', update future Occurrences `status`='Deleted').
-- [ ] **5.4: Add Task Action Buttons & Connect:** Add Pause/Unpause/Delete buttons on Task List/View, wire to APIs (5.1, 5.2, 5.3). Update UI state.
-- [ ] **5.5: Update Task APIs/Forms for Schedule:** Update Create/Edit APIs (3.2, 3.10) & Forms (3.5, 3.11) to handle `scheduleConfig` input (basic structure, 'Once' type).
+- [x] **5.1: Implement Task Pause API:** `POST /api/tasks/:id/pause` (auth, set Task `metaStatus`='Paused', update future Occurrences `status`='Deleted').
+- [x] **5.2: Implement Task Unpause API:** `POST /api/tasks/:id/unpause` (auth, set Task `metaStatus`='Active').
+- [x] **5.3: Implement Task Delete API:** `DELETE /api/tasks/:id` (auth, set Task `metaStatus`='Soft-deleted', update future Occurrences `status`='Deleted').
+- [x] **5.4: Add Task Action Buttons & Connect:** Add Pause/Unpause/Delete buttons on Task List/View, wire to APIs (5.1, 5.2, 5.3). Update UI state.
+- [x] **5.5: Update Task APIs/Forms for Schedule:** Update Create/Edit APIs (3.2, 3.10) & Forms (3.5, 3.11) to handle `scheduleConfig` input (basic structure, 'Once' type).
 - [ ] **5.6: Implement Basic Scheduler Logic:** Create background task/job. Handle 'Once' tasks on creation.
 - [ ] **5.7: Implement Fixed Interval Recurrence:** Update Scheduler/APIs.
 - [ ] **5.8: Implement Specific Days of Week Recurrence:** Update Scheduler/APIs.
@@ -69,7 +69,7 @@ This checklist outlines the steps for building the Adulting.DIY application base
 - [ ] **5.10: Implement Specific Weekday of Month Recurrence:** Update Scheduler/APIs.
 - [ ] **5.11: Implement End Conditions:** Update Scheduler/APIs (N times, Until Date). Check on Execute/Skip.
 - [ ] **5.12: Implement Variable Interval Recurrence:** Update Scheduler/APIs (trigger post-Execute/Skip, use correct dates, handle Unpause).
-- [ ] **5.13: Update Task Forms for Recurrence UI:** Enhance Task Create/Edit forms to support defining all recurrence options.
+- [x] **5.13: Update Task Forms for Recurrence UI:** Enhance Task Create/Edit forms to support defining all recurrence options.
 - [ ] **5.14: Remove Temporary Occurrence Creation:** Remove Step 4.1. Ensure scheduler handles initial generation.
 
 ## Phase 6: Notifications
