@@ -8,6 +8,7 @@ import type {
 } from "@/types";
 import { TaskDefinition as PrismaTaskDefinition, Prisma } from "@prisma/client"; // Import Prisma namespace
 import { OccurrenceService } from "./OccurrenceService"; // Import OccurrenceService
+import { NotificationService } from "./NotificationService"; // Import NotificationService
 // Helper function to map Prisma Task object (with included category) to our TaskDefinition type
 export function mapPrismaTaskToDefinition( // Add export keyword
   prismaTask: PrismaTaskDefinition & { category: Category }
@@ -198,6 +199,37 @@ export class TaskService {
         );
       }
 
+      // Send task creation notification
+      try {
+        const notificationService = new NotificationService();
+        
+        // Get the user who created the task for notification context
+        const createdByUser = await prisma.user.findUnique({
+          where: { id: taskDefinition.createdByUserId },
+          select: { id: true, name: true, email: true },
+        });
+
+        if (createdByUser) {
+          await notificationService.sendNotification(
+            taskDefinition.householdId,
+            "task_created",
+            {
+              user: createdByUser as any,
+              task: taskDefinition,
+              actionUser: createdByUser as any,
+              household: { id: taskDefinition.householdId, name: "" },
+            },
+            taskDefinition.createdByUserId // Don't notify the creator
+          );
+        }
+      } catch (notificationError) {
+        // Log notification errors but don't fail task creation
+        console.error(
+          `[TaskService] Failed to send task creation notification for task ${taskDefinition.id}:`,
+          notificationError
+        );
+      }
+
       return taskDefinition; // Return the mapped task definition
     } catch (error) {
       console.error(`[TaskService] Unexpected error in create:`, error);
@@ -283,10 +315,10 @@ export class TaskService {
   /**
    * Pause a task
    */
-  async pause(id: string): Promise<TaskDefinition> {
+  async pause(id: string, userId?: string): Promise<TaskDefinition> {
     try {
       // Start a transaction to ensure all related operations succeed or fail together
-      return await prisma.$transaction(async (tx) => {
+      const pausedTask = await prisma.$transaction(async (tx) => {
         // Update task status
         const task = await tx.taskDefinition.update({
           where: { id },
@@ -319,6 +351,39 @@ export class TaskService {
         // Use the corrected mapping function
         return mapPrismaTaskToDefinition(task);
       });
+
+      // Send task paused notification
+      if (userId) {
+        try {
+          const notificationService = new NotificationService();
+          
+          // Get the user who paused the task
+          const actionUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, name: true, email: true },
+          });
+
+          if (actionUser) {
+            await notificationService.sendNotification(
+              pausedTask.householdId,
+              "task_paused",
+              {
+                user: actionUser as any,
+                task: pausedTask,
+                actionUser: actionUser as any,
+                household: { id: pausedTask.householdId, name: "" },
+              }
+            );
+          }
+        } catch (notificationError) {
+          console.error(
+            `[TaskService] Failed to send task paused notification for task ${id}:`,
+            notificationError
+          );
+        }
+      }
+
+      return pausedTask;
     } catch (error) {
       console.error(`[TaskService] Unexpected error in pause:`, error);
       throw error;
@@ -352,10 +417,10 @@ export class TaskService {
   /**
    * Soft delete a task
    */
-  async softDelete(id: string): Promise<TaskDefinition> {
+  async softDelete(id: string, userId?: string): Promise<TaskDefinition> {
     try {
       // Start a transaction to ensure all related operations succeed or fail together
-      return await prisma.$transaction(async (tx) => {
+      const deletedTask = await prisma.$transaction(async (tx) => {
         // Update task status
         const task = await tx.taskDefinition.update({
           where: { id },
@@ -388,6 +453,39 @@ export class TaskService {
         // Use the corrected mapping function
         return mapPrismaTaskToDefinition(task);
       });
+
+      // Send task deleted notification
+      if (userId) {
+        try {
+          const notificationService = new NotificationService();
+          
+          // Get the user who deleted the task
+          const actionUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, name: true, email: true },
+          });
+
+          if (actionUser) {
+            await notificationService.sendNotification(
+              deletedTask.householdId,
+              "task_deleted",
+              {
+                user: actionUser as any,
+                task: deletedTask,
+                actionUser: actionUser as any,
+                household: { id: deletedTask.householdId, name: "" },
+              }
+            );
+          }
+        } catch (notificationError) {
+          console.error(
+            `[TaskService] Failed to send task deleted notification for task ${id}:`,
+            notificationError
+          );
+        }
+      }
+
+      return deletedTask;
     } catch (error) {
       console.error(`[TaskService] Unexpected error in softDelete:`, error);
       throw error;

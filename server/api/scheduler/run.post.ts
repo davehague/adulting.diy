@@ -93,16 +93,12 @@ export default defineEventHandler(async (event) => {
         `[Scheduler API] Generating occurrences for task ${task.id} (Last Due: ${lastDueDate})`
       );
 
-      // 5. Generate and create occurrences (using the service method)
-      //    Pass the mapped task definition
-      // TODO: Implement occurrence generation logic in OccurrenceService
-      // const newOccurrences =
-      //   await occurrenceService.generateAndCreateOccurrences( // This method doesn't exist yet
-      //     task,
-      //     5 // Keep default 5 for now, needs refinement for horizon logic
-      //     // We might need to pass lastDueDate or startDate to generateFutureDueDates eventually
-      //   );
-      const newOccurrences = []; // Placeholder
+      // 5. Generate and create occurrences using the service method
+      const newOccurrences = await occurrenceService.generateAndCreateOccurrences(
+        task,
+        horizonDate,
+        'system' // Use 'system' as userId for scheduler-generated occurrences
+      );
       occurrencesGenerated += newOccurrences.length;
     }
 
