@@ -28,3 +28,6 @@ localhost-key.pem
 localhost.pem
 
 .roo/mcp.json
+
+# Project specific files
+scripts/imports
