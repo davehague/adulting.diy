@@ -271,3 +271,30 @@ The project documentation mentions several post-MVP features:
 - CockroachDB is used but treated as PostgreSQL for most purposes
 - Email notifications are the only notification method currently
 - All times are stored in UTC in the database
+
+# Business logic details
+  Task-Occurrence Relationship
+
+  TaskDefinition is the template/blueprint that defines:
+  - What the task is (name, description, instructions)
+  - How often it recurs (scheduleConfig)
+  - Who normally does it (defaultAssigneeIds)
+  - When to send reminders (reminderConfig)
+
+  TaskOccurrence is a specific instance of that task that needs to be done:
+  - Links back to the TaskDefinition (taskId)
+  - Has a specific due date
+  - Can be assigned to specific people (assigneeIds)
+  - Has a status (Created, Assigned, Completed, Skipped, Deleted)
+  - Tracks completion/skip timestamps
+
+  Key Correlation Points:
+
+  1. One-to-Many: One TaskDefinition generates many TaskOccurrences over time based on its schedule
+  2. Generation: The scheduler creates future occurrences automatically (3 months ahead) based on the task's recurrence rules
+  3. Inheritance: New occurrences inherit default assignees from the parent task
+  4. Variable Recurrence: For "X days after completion" tasks, the next occurrence is generated using the completion/skip date
+  5. End Conditions: Task can stop generating occurrences after N completions or a specific date
+  6. Lifecycle Management: When a task is paused/deleted, future occurrences are marked as 'Deleted'
+
+  The system separates the "what/how" (TaskDefinition) from the "when/who" (TaskOccurrence), allowing flexible scheduling while maintaining the core task template.
