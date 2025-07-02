@@ -71,10 +71,7 @@
 
         <div>
           <h3 class="text-lg font-medium text-gray-900 mb-2">Notification Preferences</h3>
-          <div class="bg-gray-50 rounded p-4">
-            <!-- This would be replaced with actual notification preferences form -->
-            <p class="text-gray-500 italic">Notification preference settings will be available soon.</p>
-          </div>
+          <NotificationPreferences />
         </div>
 
         <div class="pt-4 border-t border-gray-200">

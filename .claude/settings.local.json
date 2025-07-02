@@ -28,7 +28,8 @@
       "Bash(venv:*)",
       "Bash(pytest:*)",
       "Bash(node:*)",
-      "mcp__postgres__query"
+      "mcp__postgres__query",
+      "Bash(rg:*)"
     ]
   },
   "defaultMode": "default"
