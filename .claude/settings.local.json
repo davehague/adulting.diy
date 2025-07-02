@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(*)",
+      "Grep(*)",
+      "LS(*)",
+      "Glob(*)",
+      "WebSearch(*)",
+      "WebFetch(*)",
+      "Bash(curl:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(npm:*)",
+      "Bash(node:*)",
+      "Bash(npx:*)",
+      "Bash(pnpm:*)",
+      "Bash(yarn:*)",
+      "Bash(tsc:*)",
+      "Bash(jest:*)",
+      "Bash(vitest:*)",
+      "Bash(eslint:*)",
+      "Bash(prettier:*)",
+      "Bash(pip:*)",
+      "Bash(python:*)",
+      "Bash(virtualenv:*)",
+      "Bash(venv:*)",
+      "Bash(pytest:*)",
+      "Bash(node:*)",
+      "mcp__postgres__query"
+    ]
+  },
+  "defaultMode": "default"
+}
