@@ -2,6 +2,16 @@
 export default defineNuxtConfig({
   compatibilityDate: "2024-09-20",
   devtools: { enabled: true },
+  runtimeConfig: {
+    // Server-only
+    devBypassEnabled: process.env.NODE_ENV === 'development' && process.env.DEV_LOGIN_BYPASS === 'true',
+    
+    public: {
+      // Available on both server and client
+      isDevMode: process.env.NODE_ENV === 'development',
+      devBypassEnabled: process.env.NODE_ENV === 'development' && process.env.DEV_LOGIN_BYPASS === 'true'
+    }
+  },
   devServer: {
     https: {
       key: "./localhost-key.pem",

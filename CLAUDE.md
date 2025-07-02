@@ -170,6 +170,15 @@ const tasks = await taskService.findForHousehold(householdId, filters);
 5. Generate local SSL certificates (if needed)
 6. Start development server: `npm run dev`
 
+### Development Login Bypass
+
+The project includes a development-only login bypass system for faster testing:
+
+- **Enable**: Set `DEV_LOGIN_BYPASS=true` in `.env`
+- **Usage**: Click the red "🧪 Dev" button in the top-right corner to switch users
+- **Security**: Only works when `NODE_ENV=development` and `DEV_LOGIN_BYPASS=true`
+- **Implementation**: See `/docs/development-login-bypass-guide.md` for details
+
 ## Testing Framework
 
 The project includes a comprehensive testing framework using **Vitest** with **@nuxt/test-utils**:

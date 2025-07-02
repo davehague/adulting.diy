@@ -134,6 +134,19 @@ npm run test:ui
 
 The test suite includes 41+ tests covering critical functionality and edge cases to ensure reliability.
 
+## Development Features
+
+### Development Login Bypass
+
+For faster development, you can bypass Google OAuth and switch between users instantly:
+
+1. Enable the feature by setting `DEV_LOGIN_BYPASS=true` in your `.env` file
+2. Run the development server: `npm run dev`
+3. Look for the red "🧪 Dev" button in the top-right corner
+4. Click to see all users in your database and switch between them instantly
+
+**Security Note**: This feature ONLY works in development mode and automatically disables in production.
+
 ## Environment Variables
 
 Ensure your `.env` file contains the necessary variables:
@@ -150,4 +163,7 @@ GOOGLE_CLIENT_SECRET="your-google-client-secret"
 MAILJET_API_KEY="your-mailjet-api-key"
 MAILJET_SECRET_KEY="your-mailjet-secret-key"
 MAILJET_FROM_EMAIL="noreply@yourdomain.com"
+
+# Development features (optional)
+DEV_LOGIN_BYPASS=true  # Enable development login bypass
 ```

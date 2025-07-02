@@ -1,5 +1,8 @@
 <template>
   <div class="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <!-- Development User Switcher -->
+    <DevUserSwitcher />
+    
     <header class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
       <div class="flex justify-center">
         <h1 class="text-3xl font-bold text-blue-600">Adulting.DIY</h1>

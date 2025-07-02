@@ -1,5 +1,8 @@
 <template>
   <div class="min-h-screen flex flex-col bg-gray-100">
+    <!-- Development User Switcher -->
+    <DevUserSwitcher />
+    
     <!-- Header/Navbar -->
     <header class="bg-white shadow-sm" v-if="authStore.isAuthenticated">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

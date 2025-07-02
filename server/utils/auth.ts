@@ -1,6 +1,7 @@
-import { H3Event, createError, getHeader } from "h3";
+import { H3Event, createError, getHeader, getCookie } from "h3";
 import { OAuth2Client } from "google-auth-library";
 import { UserService } from "@/server/services/UserService";
+import { devAuthService } from "@/server/utils/dev-auth";
 
 const client = new OAuth2Client(process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID);
 
@@ -13,6 +14,26 @@ interface AuthenticatedUser {
 const userService = new UserService();
 
 export async function verifyAuth(event: H3Event): Promise<AuthenticatedUser> {
+  // Check for development bypass first
+  if (devAuthService.isDevBypassEnabled()) {
+    const devUserId = getCookie(event, 'dev-user-id') || getHeader(event, 'x-dev-user-id');
+    
+    if (devUserId) {
+      console.log(`[DEV BYPASS] 🧪 Using development user: ${devUserId}`);
+      const devUser = await devAuthService.getUserById(devUserId);
+      
+      if (devUser) {
+        return {
+          email: devUser.email,
+          userId: devUser.id,
+          householdId: devUser.householdId || null,
+        };
+      } else {
+        console.log(`[DEV BYPASS] ⚠️ Development user not found: ${devUserId}`);
+      }
+    }
+  }
+
   const authHeader = getHeader(event, "Authorization");
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {

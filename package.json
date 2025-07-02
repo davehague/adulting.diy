@@ -30,6 +30,7 @@
     "dotenv": "^16.4.5",
     "google-auth-library": "^9.15.1",
     "lucide-vue-next": "^0.475.0",
+    "node-fetch": "^3.3.2",
     "node-mailjet": "^6.0.6",
     "nuxt": "^3.15.4",
     "nuxt-vue3-google-signin": "^0.0.11",
