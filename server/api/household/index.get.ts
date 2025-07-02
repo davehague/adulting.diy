@@ -20,7 +20,7 @@ export default defineHouseholdProtectedEventHandler(async (event, authUser, hous
     const memberCount = await householdService.getMemberCount(householdId);
 
     // Check if current user is admin
-    const isAdmin = await householdService.isUserAdmin(authUser.id, householdId);
+    const isAdmin = await householdService.isUserAdmin(authUser.userId, householdId);
 
     return {
       id: household.id,

@@ -72,28 +72,65 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Created</label>
                 <span class="text-gray-600">{{ formatDate(householdInfo.createdAt) }}</span>
               </div>
+              <div v-if="!householdInfo.isCurrentUserAdmin" class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Your Role</label>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  Member
+                </span>
+              </div>
             </div>
 
             <!-- Invite System -->
             <div>
-              <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Invite Code</label>
-                <div class="flex items-center space-x-2">
-                  <code class="bg-gray-100 px-3 py-2 rounded-md font-mono text-lg">{{ householdInfo.inviteCode }}</code>
-                  <button @click="copyInviteCode" 
-                          class="bg-blue-500 text-white px-3 py-2 rounded-md hover:bg-blue-600 text-sm">
-                    {{ copiedInviteCode ? 'Copied!' : 'Copy' }}
-                  </button>
+              <!-- Admin View: Full invite controls -->
+              <div v-if="householdInfo.isCurrentUserAdmin">
+                <div class="mb-4">
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Invite Code</label>
+                  <div class="flex items-center space-x-2">
+                    <code class="bg-gray-100 px-3 py-2 rounded-md font-mono text-lg">{{ householdInfo.inviteCode }}</code>
+                    <button @click="copyInviteCode" 
+                            class="bg-blue-500 text-white px-3 py-2 rounded-md hover:bg-blue-600 text-sm">
+                      {{ copiedInviteCode ? 'Copied!' : 'Copy' }}
+                    </button>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">Share this code with others to invite them to your household</p>
                 </div>
-                <p class="text-xs text-gray-500 mt-1">Share this code with others to invite them to your household</p>
+                
+                <div class="space-y-2">
+                  <button @click="regenerateInviteCode" 
+                          class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 text-sm">
+                    Generate New Code
+                  </button>
+                  <p class="text-xs text-gray-500">This will invalidate the current invite code</p>
+                </div>
               </div>
               
-              <div v-if="householdInfo.isCurrentUserAdmin" class="space-y-2">
-                <button @click="regenerateInviteCode" 
-                        class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 text-sm">
-                  Generate New Code
-                </button>
-                <p class="text-xs text-gray-500">This will invalidate the current invite code</p>
+              <!-- Member View: Share household info only -->
+              <div v-else>
+                <div class="mb-4">
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Share Household</label>
+                  <div class="space-y-3">
+                    <button @click="copyHouseholdInfo" 
+                            class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                      <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                      </svg>
+                      {{ copiedHouseholdInfo ? 'Copied!' : 'Copy Invitation' }}
+                    </button>
+                    <p class="text-xs text-gray-500">Share household invitation with others</p>
+                  </div>
+                </div>
+                
+                <div class="mb-4">
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Contact Admin</label>
+                  <p class="text-xs text-gray-500 mb-2">For household settings changes, contact an admin:</p>
+                  <div class="flex flex-wrap gap-1">
+                    <span v-for="admin in admins" :key="admin.id" 
+                          class="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-100 text-purple-800">
+                      {{ admin.name }}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -103,7 +140,12 @@
       <!-- Members Management -->
       <div class="bg-white rounded-lg shadow-md overflow-hidden">
         <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Household Members</h2>
+          <div class="flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-gray-900">Household Members</h2>
+            <span v-if="!householdInfo.isCurrentUserAdmin" class="text-xs text-gray-500">
+              View only - Contact admin for changes
+            </span>
+          </div>
         </div>
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
@@ -125,18 +167,20 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="member in members" :key="member.id">
+              <tr v-for="member in members" :key="member.id" 
+                  :class="member.id === currentUserId ? 'bg-blue-50' : ''">
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center">
                     <div class="flex-shrink-0 h-10 w-10">
-                      <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
+                      <div class="h-10 w-10 rounded-full flex items-center justify-center"
+                           :class="member.id === currentUserId ? 'bg-blue-600' : 'bg-blue-500'">
                         <span class="text-white font-medium text-sm">{{ getInitials(member.name) }}</span>
                       </div>
                     </div>
                     <div class="ml-4">
                       <div class="text-sm font-medium text-gray-900">
                         {{ member.name }}
-                        <span v-if="member.id === currentUserId" class="text-xs text-blue-600 ml-1">(You)</span>
+                        <span v-if="member.id === currentUserId" class="text-xs text-blue-600 ml-1 font-semibold">(You)</span>
                       </div>
                       <div class="text-sm text-gray-500">{{ member.email }}</div>
                     </div>
@@ -262,7 +306,9 @@
       <!-- Danger Zone -->
       <div class="bg-white rounded-lg shadow-md overflow-hidden border-l-4 border-red-500">
         <div class="px-6 py-4 bg-red-50 border-b border-red-200">
-          <h2 class="text-lg font-semibold text-red-800">Danger Zone</h2>
+          <h2 class="text-lg font-semibold text-red-800">
+            {{ householdInfo.isCurrentUserAdmin ? 'Admin Settings' : 'Account Settings' }}
+          </h2>
         </div>
         <div class="p-6">
           <div class="space-y-4">
@@ -271,7 +317,10 @@
               <p class="text-sm text-gray-600 mb-3">
                 Once you leave, you'll lose access to all household tasks and data. 
                 <span v-if="householdInfo.isCurrentUserAdmin">
-                  As an admin, you may need to transfer admin privileges first.
+                  As an admin, you may need to transfer admin privileges to another member first.
+                </span>
+                <span v-else>
+                  You can rejoin using the household invite code if needed.
                 </span>
               </p>
               <button @click="leaveHousehold" 
@@ -326,6 +375,10 @@ const currentUserId = authStore.user?.id;
 // Computed properties
 const adminCount = computed(() => {
   return members.value.filter(member => member.isAdmin).length;
+});
+
+const admins = computed(() => {
+  return members.value.filter(member => member.isAdmin);
 });
 
 const daysSinceCreated = computed(() => {

@@ -51,7 +51,8 @@ export default defineEventHandler(async (event) => {
         email: user.email,
         name: user.name,
         picture: user.picture,
-        householdId: user.householdId
+        householdId: user.householdId,
+        isAdmin: user.isAdmin
       }
     };
   } catch (error) {
