@@ -47,6 +47,7 @@ export class OccurrenceService {
     householdId: string,
     filters: {
       status?: string;
+      statusIn?: string;
       categoryId?: string;
       assigneeId?: string;
       dueDateFrom?: Date;
@@ -58,6 +59,10 @@ export class OccurrenceService {
       // Build the where clause for tasks
       const taskWhere: any = {
         householdId,
+        // Exclude occurrences from soft-deleted tasks
+        metaStatus: {
+          not: "soft-deleted"
+        }
       };
 
       // Add category filter if provided
@@ -71,6 +76,12 @@ export class OccurrenceService {
       // Add status filter if provided
       if (filters.status) {
         occurrenceWhere.status = filters.status;
+      } else if (filters.statusIn) {
+        // Handle multiple status values (e.g., "created,assigned")
+        const statusValues = filters.statusIn.split(',').map(s => s.trim());
+        occurrenceWhere.status = {
+          in: statusValues
+        };
       }
 
       // Add assignee filter if provided

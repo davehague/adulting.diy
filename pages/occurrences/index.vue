@@ -16,6 +16,7 @@
           <select id="statusFilter" v-model="filters.status"
             class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
             <option value="">All Statuses</option>
+            <option value="pending">Pending (Created/Assigned)</option>
             <option value="created">Created</option>
             <option value="assigned">Assigned</option>
             <option value="completed">Completed</option>
@@ -204,9 +205,9 @@ const categories = ref<Category[]>([]);
 const householdUsers = ref<User[]>([]);
 const sortBy = ref('dueDate');
 
-// Filters
+// Filters - Default to showing only pending occurrences (created/assigned)
 const filters = reactive({
-  status: '',
+  status: 'pending', // Default to pending (will be converted to created,assigned in API)
   categoryId: '',
   assigneeId: '',
   search: '',
@@ -288,7 +289,13 @@ const fetchOccurrences = async () => {
   try {
     const params = new URLSearchParams();
     
-    if (filters.status) params.append('status', filters.status);
+    // Handle special "pending" status filter
+    if (filters.status === 'pending') {
+      params.append('statusIn', 'created,assigned');
+    } else if (filters.status) {
+      params.append('status', filters.status);
+    }
+    
     if (filters.categoryId) params.append('categoryId', filters.categoryId);
     if (filters.assigneeId) params.append('assigneeId', filters.assigneeId);
     if (filters.search) params.append('search', filters.search);

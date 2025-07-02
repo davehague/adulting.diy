@@ -164,4 +164,83 @@ export class HouseholdService {
       throw error;
     }
   }
+
+  /**
+   * Regenerate invite code for a household
+   */
+  async regenerateInviteCode(householdId: string): Promise<string> {
+    try {
+      const newInviteCode = this.generateInviteCode();
+      
+      await prisma.household.update({
+        where: { id: householdId },
+        data: {
+          inviteCode: newInviteCode,
+          updatedAt: new Date()
+        }
+      });
+
+      return newInviteCode;
+    } catch (error) {
+      console.error(`[HouseholdService] Unexpected error in regenerateInviteCode:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update user admin status
+   */
+  async updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<void> {
+    try {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          isAdmin,
+          updatedAt: new Date()
+        }
+      });
+    } catch (error) {
+      console.error(`[HouseholdService] Unexpected error in updateUserAdminStatus:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get household member count
+   */
+  async getMemberCount(householdId: string): Promise<number> {
+    try {
+      const count = await prisma.user.count({
+        where: {
+          householdId
+        }
+      });
+
+      return count;
+    } catch (error) {
+      console.error(`[HouseholdService] Unexpected error in getMemberCount:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if user is the only admin in household
+   */
+  async isOnlyAdmin(userId: string, householdId: string): Promise<boolean> {
+    try {
+      const adminCount = await prisma.user.count({
+        where: {
+          householdId,
+          isAdmin: true
+        }
+      });
+
+      const userIsAdmin = await this.isUserAdmin(userId, householdId);
+      
+      return userIsAdmin && adminCount === 1;
+    } catch (error) {
+      console.error(`[HouseholdService] Unexpected error in isOnlyAdmin:`, error);
+      throw error;
+    }
+  }
 }

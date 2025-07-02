@@ -22,6 +22,7 @@ export default defineHouseholdProtectedEventHandler(async (event, authUser, hous
     // Build filters object
     const filters = {
       status: query.status as string,
+      statusIn: query.statusIn as string, // For multiple status values like "created,assigned"
       categoryId: query.categoryId as string,
       assigneeId: query.assigneeId as string,
       dueDateFrom,
