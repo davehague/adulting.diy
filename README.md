@@ -98,6 +98,42 @@ The project includes [Lucide](https://lucide.dev/) for icons.
 
 To change the title and favicon, update `nuxt.config.ts`. Create your own favicon at https://favicon.io/ and replace the files in the `public` folder.
 
+## Testing
+
+The project includes a comprehensive testing framework built with Vitest:
+
+### Running Tests
+
+```bash
+# Run all tests
+npm run test
+
+# Run tests in watch mode (auto-rerun on file changes)
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
+
+# Run tests with interactive UI
+npm run test:ui
+```
+
+### Test Structure
+
+- **Unit Tests**: Core business logic (scheduling, notifications)
+- **Integration Tests**: API endpoints and service interactions
+- **Fixtures**: Shared test data and mocks
+
+### Coverage Areas
+
+- ✅ Task scheduling algorithms (all 6 recurrence patterns)
+- ✅ Notification preference logic
+- ✅ Date calculations and edge cases
+- ✅ Scheduler integration and horizon calculations
+- ✅ Business rule validation
+
+The test suite includes 41+ tests covering critical functionality and edge cases to ensure reliability.
+
 ## Environment Variables
 
 Ensure your `.env` file contains the necessary variables:
@@ -106,5 +142,12 @@ Ensure your `.env` file contains the necessary variables:
 # Example .env file
 DATABASE_URL="postgresql://user:password@host:port/adulting?sslmode=verify-full"
 
-# Add other environment variables as needed (e.g., for email services, etc.)
+# Google OAuth (for authentication)
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+
+# Email service (Mailjet for notifications)
+MAILJET_API_KEY="your-mailjet-api-key"
+MAILJET_SECRET_KEY="your-mailjet-secret-key"
+MAILJET_FROM_EMAIL="noreply@yourdomain.com"
 ```

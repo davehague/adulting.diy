@@ -170,14 +170,41 @@ const tasks = await taskService.findForHousehold(householdId, filters);
 5. Generate local SSL certificates (if needed)
 6. Start development server: `npm run dev`
 
-## Testing Approach
+## Testing Framework
 
-Currently, the project doesn't have a formal test suite. When implementing tests:
+The project includes a comprehensive testing framework using **Vitest** with **@nuxt/test-utils**:
 
-1. **Unit Tests**: Test services and utilities
-2. **Integration Tests**: Test API endpoints
-3. **E2E Tests**: Test critical user workflows
-4. **Type Tests**: Ensure TypeScript types are correct
+### Test Structure
+```
+tests/
+├── unit/                    # Unit tests for business logic
+│   ├── utils/              # Date calculations, scheduling algorithms
+│   └── logic/              # Notification preferences, business rules
+├── integration/            # Integration tests for system components
+├── fixtures/               # Shared test data and mocks
+└── setup.ts               # Global test configuration
+```
+
+### Coverage Areas
+- **Schedule Logic**: All 6 recurrence patterns, date calculations, edge cases
+- **Notification Logic**: User preferences, email templates, reminder timing
+- **Integration**: Scheduler endpoints, business rule validation
+- **Edge Cases**: Timezone handling, month boundaries, leap years
+
+### Running Tests
+```bash
+npm run test              # Run all tests
+npm run test:watch        # Watch mode
+npm run test:coverage     # Coverage report
+```
+
+### Test Philosophy
+1. **Unit Tests**: Core business logic (services, utilities, algorithms)
+2. **Integration Tests**: API endpoints and service interactions  
+3. **E2E Tests**: Critical user workflows (planned)
+4. **Type Tests**: TypeScript type validation
+
+The test suite includes 41+ tests ensuring reliability of critical functionality including task scheduling, notification systems, and occurrence management.
 
 ## Common Tasks
 

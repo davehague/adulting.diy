@@ -29,7 +29,8 @@
       "Bash(pytest:*)",
       "Bash(node:*)",
       "mcp__postgres__query",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(mkdir:*)"
     ]
   },
   "defaultMode": "default"
