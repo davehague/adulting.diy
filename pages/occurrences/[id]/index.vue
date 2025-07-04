@@ -140,7 +140,52 @@
             </div>
         </div>
 
-        <!-- TODO: Implement Skip Modal -->
+        <!-- Skip Modal -->
+        <div v-if="showSkipModal"
+            class="fixed inset-0 z-10 overflow-y-auto bg-gray-500 bg-opacity-75 transition-opacity"
+            aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                <div
+                    class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+                    <div>
+                        <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Skip Occurrence</h3>
+                        <div class="mt-4">
+                            <p class="text-sm text-gray-500 mb-4">
+                                Please provide a reason for skipping this task occurrence.
+                            </p>
+                            <div>
+                                <label for="skip-reason" class="block text-sm font-medium text-gray-700">Reason</label>
+                                <textarea
+                                    id="skip-reason"
+                                    v-model="skipReason"
+                                    rows="3"
+                                    required
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                    placeholder="Enter the reason for skipping..."
+                                />
+                            </div>
+                            <p v-if="skipError" class="mt-2 text-sm text-red-600">{{ skipError }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+                        <button
+                            type="button"
+                            @click="skipOccurrence"
+                            :disabled="isSubmittingSkip || !skipReason.trim()"
+                            class="inline-flex w-full justify-center rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600 disabled:opacity-50 sm:col-start-2">
+                            {{ isSubmittingSkip ? 'Skipping...' : 'Skip' }}
+                        </button>
+                        <button
+                            type="button"
+                            @click="handleSkipCancel"
+                            :disabled="isSubmittingSkip"
+                            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0 disabled:opacity-50">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     </div>
 </template>
@@ -172,11 +217,14 @@ const isSubmittingComment = ref(false);
 const commentError = ref<string | null>(null);
 const timelineComponent = ref<InstanceType<typeof OccurrenceTimeline> | null>(null); // Ref for timeline
 
-// Modals State (placeholders)
+// Modals State
 const showSkipModal = ref(false);
 const showEditModal = ref(false);
-const isSubmittingEdit = ref(false); // Add state for edit submission
-const editError = ref<string | null>(null); // Add state for edit error
+const isSubmittingEdit = ref(false);
+const editError = ref<string | null>(null);
+const isSubmittingSkip = ref(false);
+const skipError = ref<string | null>(null);
+const skipReason = ref('');
 
 // Fetch Occurrence Data
 const fetchOccurrence = async () => {
@@ -363,7 +411,36 @@ const handleEditCancel = () => {
     editError.value = null; // Clear error on cancel
 };
 
-// TODO: Implement skipOccurrence (needs modal for reason)
+// --- Skip Occurrence Logic ---
+const skipOccurrence = async () => {
+    if (!occurrenceId.value || !skipReason.value.trim() || isActionDisabled.value) return;
+    isSubmittingSkip.value = true;
+    skipError.value = null;
+    try {
+        await api.post(`/api/occurrences/${occurrenceId.value}/skip`, {
+            reason: skipReason.value.trim()
+        });
+        showSkipModal.value = false;
+        skipReason.value = '';
+        // Refresh data after successful skip
+        fetchOccurrence();
+        if (timelineComponent.value) {
+            timelineComponent.value.fetchHistory();
+        }
+    } catch (err: any) {
+        console.error("Error skipping occurrence:", err);
+        skipError.value = err.data?.message || 'Failed to skip occurrence';
+        // Keep modal open to show error
+    } finally {
+        isSubmittingSkip.value = false;
+    }
+};
+
+const handleSkipCancel = () => {
+    showSkipModal.value = false;
+    skipReason.value = '';
+    skipError.value = null;
+};
 
 
 // Fetch data on component mount
