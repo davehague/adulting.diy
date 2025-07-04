@@ -10,47 +10,45 @@
                 <div class="min-w-0 flex-1">
                     <NuxtLink :to="`/tasks/${occurrence.taskId}`"
                         class="text-sm font-medium text-blue-600 hover:text-blue-800">
-                        &larr; Back to Task: {{ occurrence.task?.name || 'Task Details' }}
+                        &larr; Back to Task Details
                     </NuxtLink>
                     <h2 class="mt-2 text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl">
-                        Occurrence Details
+                        {{ occurrence.task?.name || 'Task' }} ({{ formatDate(occurrence.dueDate) }})
                     </h2>
-                    <p class="mt-1 text-sm text-gray-500">
-                        Due: {{ formatDate(occurrence.dueDate) }}
-                    </p>
-                </div>
-                <div class="mt-4 flex md:ml-4 md:mt-0 space-x-3">
-                    <!-- Action Buttons Placeholder -->
-                    <button type="button" @click="showEditModal = true"
-                        class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                        Edit
-                    </button>
-                    <button type="button" @click="showSkipModal = true" :disabled="isActionDisabled"
-                        class="inline-flex items-center rounded-md bg-yellow-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600 disabled:opacity-50">
-                        Skip
-                    </button>
-                    <button type="button" @click="executeOccurrence" :disabled="isActionDisabled"
-                        class="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700 disabled:opacity-50">
-                        Complete
-                    </button>
                 </div>
             </div>
 
+            <!-- Task Details -->
+            <TaskDetails 
+                v-if="fullTask" 
+                :task="fullTask" 
+                :categories="categories"
+                :household-users="householdUsers"
+                :collapsible="true"
+                :default-expanded="true"
+            />
+
             <!-- Occurrence Details -->
             <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-                <div class="px-4 py-5 sm:px-6">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900">Information</h3>
+                <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Occurrence Details</h3>
+                    <div class="flex space-x-3">
+                        <button type="button" @click="showEditModal = true"
+                            class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                            Edit
+                        </button>
+                        <button type="button" @click="showSkipModal = true" :disabled="isActionDisabled"
+                            class="inline-flex items-center rounded-md bg-yellow-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600 disabled:opacity-50">
+                            Skip
+                        </button>
+                        <button type="button" @click="executeOccurrence" :disabled="isActionDisabled"
+                            class="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700 disabled:opacity-50">
+                            Complete
+                        </button>
+                    </div>
                 </div>
                 <div class="border-t border-gray-200 px-4 py-5 sm:p-0">
                     <dl class="sm:divide-y sm:divide-gray-200">
-                        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                            <dt class="text-sm font-medium text-gray-500">Task</dt>
-                            <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-                                <NuxtLink :to="`/tasks/${occurrence.taskId}`" class="text-blue-600 hover:underline">
-                                    {{ occurrence.task?.name || 'N/A' }}
-                                </NuxtLink>
-                            </dd>
-                        </div>
                         <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                             <dt class="text-sm font-medium text-gray-500">Category</dt>
                             <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
@@ -99,7 +97,7 @@
                     <div>
                         <label for="comment" class="sr-only">Comment</label>
                         <textarea id="comment" v-model="newComment" rows="3" required
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3"
                             placeholder="Add your comment..."></textarea>
                     </div>
                     <div class="mt-3 flex justify-end">
@@ -151,7 +149,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/utils/api';
-import type { TaskOccurrence, User } from '@/types';
+import type { TaskOccurrence, User, Category, TaskDefinition } from '@/types';
 import OccurrenceTimeline from '@/components/occurrences/OccurrenceTimeline.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue'; // Import edit form
 import { format } from 'date-fns';
@@ -164,7 +162,9 @@ const occurrenceId = computed(() => route.params.id as string);
 
 // State
 const occurrence = ref<TaskOccurrence | null>(null);
+const fullTask = ref<TaskDefinition | null>(null); // Full task details for TaskDetails component
 const householdUsers = ref<Pick<User, 'id' | 'name'>[]>([]); // For assignee formatting
+const categories = ref<Category[]>([]); // For category names
 const loading = ref(false);
 const error = ref<string | null>(null);
 const newComment = ref('');
@@ -196,6 +196,11 @@ const fetchOccurrence = async () => {
             ...(data.skippedAt && { skippedAt: new Date(data.skippedAt) }),
         };
 
+        // Fetch full task details for TaskDetails component
+        if (data.taskId) {
+            fetchFullTask(data.taskId);
+        }
+
         // Fetch household users if needed for formatting assignees (can be optimized)
         if (data.assigneeIds?.length > 0) {
             fetchHouseholdUsers();
@@ -218,6 +223,28 @@ const fetchHouseholdUsers = async () => {
     } catch (err) {
         console.error('Error fetching household users for formatting:', err);
         // Non-critical, assignee IDs will be shown instead of names
+    }
+};
+
+// Fetch Categories (for task details)
+const fetchCategories = async () => {
+    try {
+        const categoriesData = await api.get<Category[]>('/api/categories');
+        categories.value = categoriesData;
+    } catch (err) {
+        console.error('Error fetching categories:', err);
+        // Non-critical, category will show as 'Unknown'
+    }
+};
+
+// Fetch Full Task Details (for TaskDetails component)
+const fetchFullTask = async (taskId: string) => {
+    try {
+        const taskData = await api.get<TaskDefinition>(`/api/tasks/${taskId}`);
+        fullTask.value = taskData;
+    } catch (err) {
+        console.error('Error fetching full task details:', err);
+        // Non-critical, will fall back to basic task info from occurrence
     }
 };
 
@@ -340,6 +367,11 @@ const handleEditCancel = () => {
 
 
 // Fetch data on component mount
-onMounted(fetchOccurrence);
+onMounted(async () => {
+    await Promise.all([
+        fetchOccurrence(),
+        fetchCategories()
+    ]);
+});
 
 </script>

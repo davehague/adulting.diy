@@ -129,7 +129,9 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="occurrence in occurrences" :key="occurrence.id">
+            <tr v-for="occurrence in occurrences" :key="occurrence.id"
+                @click="navigateToOccurrence(occurrence.id)"
+                class="cursor-pointer hover:bg-gray-50 transition-colors">
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm font-medium text-gray-900">{{ occurrence.task?.name || 'Unknown Task' }}</div>
                 <div v-if="occurrence.task?.description" class="text-sm text-gray-500 truncate max-w-xs">
@@ -164,22 +166,52 @@
                   {{ occurrence.status.charAt(0).toUpperCase() + occurrence.status.slice(1) }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                <NuxtLink :to="`/occurrences/${occurrence.id}`" class="text-blue-600 hover:text-blue-900">
-                  View
-                </NuxtLink>
-
-                <button v-if="['created', 'assigned'].includes(occurrence.status)" 
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
+                  @click.stop>
+                <div class="relative inline-block text-left">
+                  <button 
+                    @click="toggleDropdown(occurrence.id)"
+                    class="text-gray-400 hover:text-gray-600 focus:outline-none"
+                    title="Actions"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                  </button>
+                  
+                  <div 
+                    v-if="openDropdownId === occurrence.id"
+                    class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10"
+                  >
+                    <div class="py-1">
+                      <button
+                        v-if="['created', 'assigned'].includes(occurrence.status)"
                         @click="executeOccurrence(occurrence.id)"
-                        class="text-green-600 hover:text-green-900">
-                  Complete
-                </button>
-
-                <button v-if="['created', 'assigned'].includes(occurrence.status)" 
+                        class="group flex items-center w-full px-4 py-2 text-sm text-green-600 hover:bg-gray-100"
+                      >
+                        <svg class="mr-3 h-4 w-4 text-green-400 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Complete
+                      </button>
+                      
+                      <button
+                        v-if="['created', 'assigned'].includes(occurrence.status)"
                         @click="skipOccurrence(occurrence.id)"
-                        class="text-yellow-600 hover:text-yellow-900">
-                  Skip
-                </button>
+                        class="group flex items-center w-full px-4 py-2 text-sm text-yellow-600 hover:bg-gray-100"
+                      >
+                        <svg class="mr-3 h-4 w-4 text-yellow-400 group-hover:text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Skip
+                      </button>
+                      
+                      <div v-if="!['created', 'assigned'].includes(occurrence.status)" class="px-4 py-2 text-sm text-gray-500">
+                        No actions available
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -191,12 +223,14 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { useApi } from '@/utils/api';
 import { useAuthStore } from '@/stores/auth';
 import type { TaskOccurrence, Category, User } from '@/types';
 
 const api = useApi();
 const authStore = useAuthStore();
+const router = useRouter();
 
 // State
 const loading = ref(false);
@@ -204,6 +238,9 @@ const rawOccurrences = ref<TaskOccurrence[]>([]);
 const categories = ref<Category[]>([]);
 const householdUsers = ref<User[]>([]);
 const sortBy = ref('dueDate');
+
+// Dropdown state
+const openDropdownId = ref<string | null>(null);
 
 // Filters - Default to showing only pending occurrences (created/assigned)
 const filters = reactive({
@@ -260,6 +297,14 @@ onMounted(async () => {
   } catch (err) {
     console.error('Error loading household users:', err);
   }
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest('.relative')) {
+      openDropdownId.value = null;
+    }
+  });
 
   // Fetch initial occurrences only after auth is ready
   watch(() => authStore.isReady, (ready) => {
@@ -364,8 +409,23 @@ const getStatusClass = (status: string): string => {
   }
 };
 
+// Navigation
+const navigateToOccurrence = (occurrenceId: string) => {
+  router.push(`/occurrences/${occurrenceId}`);
+};
+
+// Dropdown management
+const toggleDropdown = (occurrenceId: string) => {
+  openDropdownId.value = openDropdownId.value === occurrenceId ? null : occurrenceId;
+};
+
+const closeDropdown = () => {
+  openDropdownId.value = null;
+};
+
 // Occurrence actions
 const executeOccurrence = async (occurrenceId: string) => {
+  closeDropdown();
   try {
     await api.post(`/api/occurrences/${occurrenceId}/execute`, {});
     await fetchOccurrences(); // Refresh the list
@@ -376,6 +436,7 @@ const executeOccurrence = async (occurrenceId: string) => {
 };
 
 const skipOccurrence = async (occurrenceId: string) => {
+  closeDropdown();
   const reason = prompt('Please provide a reason for skipping this task:');
   if (!reason || reason.trim() === '') {
     return; // User cancelled or didn't provide a reason

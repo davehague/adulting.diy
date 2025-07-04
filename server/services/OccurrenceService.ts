@@ -638,7 +638,7 @@ export class OccurrenceService {
           user: true,
         },
         orderBy: {
-          createdAt: "asc",
+          createdAt: "desc",
         },
       });
 

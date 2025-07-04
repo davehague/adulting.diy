@@ -1,0 +1,3 @@
+- Test execution
+- Test pausing
+- Implement reminder emails

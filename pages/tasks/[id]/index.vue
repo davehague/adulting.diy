@@ -19,14 +19,6 @@
       <div class="flex justify-between items-start mb-6">
         <div>
           <h1 class="text-2xl font-bold text-gray-900">{{ task.name }}</h1>
-          <div class="flex items-center mt-2">
-            <span class="px-2 py-1 text-xs font-semibold rounded-full mr-2" :class="getStatusClass(task.metaStatus)">
-              {{ formatStatus(task.metaStatus) }}
-            </span>
-            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-              {{ getCategoryName(task.categoryId) }}
-            </span>
-          </div>
         </div>
         <div class="flex space-x-2">
           <NuxtLink :to="`/tasks/${task.id}/edit`"
@@ -49,64 +41,12 @@
       </div>
 
       <!-- Task Content -->
-      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h2 class="text-lg font-semibold mb-3">Task Details</h2>
-
-            <div v-if="task.description" class="mb-4">
-              <h3 class="text-sm font-medium text-gray-500 mb-1">Description</h3>
-              <p class="text-gray-800">{{ task.description }}</p>
-            </div>
-
-            <div v-if="task.instructions" class="mb-4">
-              <h3 class="text-sm font-medium text-gray-500 mb-1">Instructions</h3>
-              <p class="text-gray-800 whitespace-pre-line">{{ task.instructions }}</p>
-            </div>
-
-            <div class="mb-4">
-              <h3 class="text-sm font-medium text-gray-500 mb-1">Default Assignees</h3>
-              <p class="text-gray-800">
-                {{ task.defaultAssigneeIds?.length ? 'Has default assignees' : 'No default assignees' }}
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <h2 class="text-lg font-semibold mb-3">Schedule</h2>
-
-            <div class="mb-4">
-              <h3 class="text-sm font-medium text-gray-500 mb-1">Schedule Type</h3>
-              <p class="text-gray-800">{{ formatSchedule(task.scheduleConfig) }}</p>
-            </div>
-
-            <div v-if="task.reminderConfig" class="mb-4">
-              <h3 class="text-sm font-medium text-gray-500 mb-1">Reminders</h3>
-              <ul class="list-disc pl-5 text-gray-800">
-                <li v-if="task.reminderConfig.initialReminder">
-                  Initial: {{ task.reminderConfig.initialReminder }} days before due date
-                </li>
-                <li v-if="task.reminderConfig.followUpReminder">
-                  Follow-up: {{ task.reminderConfig.followUpReminder }} days before due date
-                </li>
-                <li v-if="task.reminderConfig.overdueReminder">
-                  Overdue: {{ task.reminderConfig.overdueReminder }} days after due date
-                </li>
-              </ul>
-            </div>
-
-            <div class="mb-4">
-              <h3 class="text-sm font-medium text-gray-500 mb-1">Created</h3>
-              <p class="text-gray-800">{{ formatDate(task.createdAt) }}</p>
-            </div>
-
-            <div class="mb-4">
-              <h3 class="text-sm font-medium text-gray-500 mb-1">Last Updated</h3>
-              <p class="text-gray-800">{{ formatDate(task.updatedAt) }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <TaskDetails 
+        :task="task" 
+        :categories="categories" 
+        :household-users="householdUsers"
+        class="mb-6"
+      />
 
       <!-- Occurrences Section -->
       <div class="mb-6">
@@ -154,7 +94,9 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="occurrence in occurrences.slice(0, 5)" :key="occurrence.id">
+              <tr v-for="occurrence in occurrences.slice(0, 5)" :key="occurrence.id"
+                  @click="navigateToOccurrence(occurrence.id)"
+                  class="cursor-pointer hover:bg-gray-50 transition-colors">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {{ formatDate(occurrence.dueDate) }}
                 </td>
@@ -167,9 +109,13 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {{ getAssigneeNames(occurrence.assigneeIds) }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                  <NuxtLink :to="`/occurrences/${occurrence.id}`" class="text-blue-600 hover:text-blue-900">
-                    View
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2"
+                    @click.stop>
+                  <NuxtLink :to="`/occurrences/${occurrence.id}`" class="text-blue-600 hover:text-blue-900" title="View">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
                   </NuxtLink>
                 </td>
               </tr>
@@ -332,6 +278,11 @@ const getCategoryName = (categoryId: string): string => {
   return category ? category.name : 'Unknown';
 };
 
+// Navigation
+const navigateToOccurrence = (occurrenceId: string) => {
+  router.push(`/occurrences/${occurrenceId}`);
+};
+
 const formatDate = (date: Date | string): string => {
   if (!date) return 'Unknown';
   return new Date(date).toLocaleDateString('en-US', {
@@ -344,7 +295,7 @@ const formatDate = (date: Date | string): string => {
 };
 
 const formatStatus = (status: string | undefined | null): string => {
-  if (!status) return 'Unknown'; // Handle null/undefined
+  if (!status) return 'Unknown';
   return status.charAt(0).toUpperCase() + status.slice(1).replace(/-/g, ' ');
 };
 
@@ -384,38 +335,6 @@ const getOccurrenceStatusClass = (status: string): string => {
   }
 };
 
-const formatSchedule = (scheduleConfig: any): string => {
-  if (!scheduleConfig) return 'No schedule';
-
-  switch (scheduleConfig.type) {
-    case 'once':
-      return 'One time';
-    case 'fixed_interval':
-      return `Every ${scheduleConfig.interval} ${scheduleConfig.intervalUnit}${scheduleConfig.interval > 1 ? 's' : ''}`;
-    case 'specific_days_of_week':
-      const days = Object.entries(scheduleConfig.daysOfWeek || {})
-        .filter(([_, enabled]) => enabled)
-        .map(([day]) => day.charAt(0).toUpperCase() + day.slice(1))
-        .join(', ');
-      return `Weekly on ${days}`;
-    case 'specific_day_of_month':
-      return `Monthly on day ${scheduleConfig.dayOfMonth}`;
-    case 'specific_weekday_of_month':
-      if (scheduleConfig.weekdayOfMonth) {
-        const { occurrence, weekday } = scheduleConfig.weekdayOfMonth;
-        return `${occurrence.charAt(0).toUpperCase() + occurrence.slice(1)} ${weekday.charAt(0).toUpperCase() + weekday.slice(1)} of each month`;
-      }
-      return 'Monthly';
-    case 'variable_interval':
-      if (scheduleConfig.variableInterval) {
-        const { interval, unit } = scheduleConfig.variableInterval;
-        return `${interval} ${unit}${interval > 1 ? 's' : ''} after completion`;
-      }
-      return 'Variable schedule';
-    default:
-      return 'Custom schedule';
-  }
-};
 
 // Helper to get assignee names
 const getAssigneeNames = (assigneeIds: string[] | undefined): string => {

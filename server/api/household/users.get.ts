@@ -8,11 +8,13 @@ export default defineHouseholdProtectedEventHandler(
       const householdService = new HouseholdService();
       const users = await householdService.getUsers(householdId);
 
-      // Return only necessary user info (id, name, email)
+      // Return necessary user info including admin status and created date
       const simplifiedUsers = users.map((user) => ({
         id: user.id,
         name: user.name,
         email: user.email,
+        isAdmin: user.isAdmin,
+        createdAt: user.createdAt,
       }));
 
       return simplifiedUsers;

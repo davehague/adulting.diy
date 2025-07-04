@@ -101,7 +101,7 @@ onMounted(() => {
 <style scoped>
 .dev-user-switcher {
   position: fixed;
-  top: 10px;
+  bottom: 10px;
   right: 10px;
   z-index: 9999;
   font-family: monospace;
@@ -141,7 +141,7 @@ onMounted(() => {
 
 .dev-panel {
   position: absolute;
-  top: 100%;
+  bottom: 100%;
   right: 0;
   background: white;
   color: black;
@@ -153,7 +153,7 @@ onMounted(() => {
   max-height: 500px;
   overflow-y: auto;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-  margin-top: 4px;
+  margin-bottom: 4px;
 }
 
 .dev-panel-header h3 {

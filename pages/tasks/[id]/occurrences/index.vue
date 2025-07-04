@@ -59,7 +59,9 @@
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="occurrence in occurrences" :key="occurrence.id">
+          <tr v-for="occurrence in occurrences" :key="occurrence.id"
+              @click="navigateToOccurrence(occurrence.id)"
+              class="cursor-pointer hover:bg-gray-50 transition-colors">
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
               {{ formatDate(occurrence.dueDate) }}
             </td>
@@ -72,22 +74,52 @@
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
               {{ getAssigneeNames(occurrence.assigneeIds) }}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-              <a href="#" @click.prevent="navigateToOccurrence(occurrence.id)"
-                class="text-blue-600 hover:text-blue-900 cursor-pointer">
-                View
-              </a>
-              <!-- Execute/Skip Buttons (visible based on status) -->
-              <button v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
-                @click="handleExecute(occurrence.id)" class="text-green-600 hover:text-green-900 ml-2"
-                title="Mark as Completed">
-                Execute
-              </button>
-              <button v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
-                @click="handleSkip(occurrence.id)" class="text-yellow-600 hover:text-yellow-900 ml-2"
-                title="Skip this Occurrence">
-                Skip
-              </button>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
+                @click.stop>
+              <div class="relative inline-block text-left">
+                <button 
+                  @click="toggleDropdown(occurrence.id)"
+                  class="text-gray-400 hover:text-gray-600 focus:outline-none"
+                  title="Actions"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                  </svg>
+                </button>
+                
+                <div 
+                  v-if="openDropdownId === occurrence.id"
+                  class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10"
+                >
+                  <div class="py-1">
+                    <button
+                      v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
+                      @click="handleExecute(occurrence.id)"
+                      class="group flex items-center w-full px-4 py-2 text-sm text-green-600 hover:bg-gray-100"
+                    >
+                      <svg class="mr-3 h-4 w-4 text-green-400 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Complete
+                    </button>
+                    
+                    <button
+                      v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
+                      @click="handleSkip(occurrence.id)"
+                      class="group flex items-center w-full px-4 py-2 text-sm text-yellow-600 hover:bg-gray-100"
+                    >
+                      <svg class="mr-3 h-4 w-4 text-yellow-400 group-hover:text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Skip
+                    </button>
+                    
+                    <div v-if="!(occurrence.status === 'assigned' || occurrence.status === 'created')" class="px-4 py-2 text-sm text-gray-500">
+                      No actions available
+                    </div>
+                  </div>
+                </div>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -121,6 +153,9 @@ const loadingUsers = ref(false);
 const errorUsers = ref('');
 const errorOccurrences = ref('');
 
+// Dropdown state
+const openDropdownId = ref<string | null>(null);
+
 // Fetch parent task details (for name/category display)
 const task = computed(() => taskStore.selectedTask);
 
@@ -152,6 +187,14 @@ onMounted(async () => {
   } finally {
     loadingTask.value = false;
   }
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest('.relative')) {
+      openDropdownId.value = null;
+    }
+  });
 
   // Removed the separate if block, fetch is now attempted within the try block above
 });
@@ -188,8 +231,18 @@ const fetchHouseholdUsers = async () => {
   }
 };
 
+// Dropdown management
+const toggleDropdown = (occurrenceId: string) => {
+  openDropdownId.value = openDropdownId.value === occurrenceId ? null : occurrenceId;
+};
+
+const closeDropdown = () => {
+  openDropdownId.value = null;
+};
+
 // Action handlers using the store
 const handleExecute = async (occurrenceId: string) => {
+  closeDropdown();
   try {
     await taskStore.executeOccurrence(occurrenceId);
     // Refetch occurrences after successful execution
@@ -203,6 +256,7 @@ const handleExecute = async (occurrenceId: string) => {
 };
 
 const handleSkip = async (occurrenceId: string) => {
+  closeDropdown();
   // Basic prompt for reason - replace with modal later
   const reason = prompt('Please enter a reason for skipping this occurrence:');
   if (reason && reason.trim() !== '') {
