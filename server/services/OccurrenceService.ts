@@ -349,6 +349,17 @@ export class OccurrenceService {
     try {
       // Start a transaction to log the change and potentially generate next occurrence
       const updatedOccurrence = await prisma.$transaction(async (tx) => {
+        // First, get the current occurrence to capture its current status
+        const currentOccurrence = await tx.taskOccurrence.findUnique({
+          where: { id },
+        });
+
+        if (!currentOccurrence) {
+          throw new Error("Occurrence not found");
+        }
+
+        const oldStatus = currentOccurrence.status;
+
         // Update occurrence
         const occurrence = await tx.taskOccurrence.update({
           where: { id },
@@ -366,13 +377,13 @@ export class OccurrenceService {
           },
         });
 
-        // Log status change
+        // Log status change with actual old status
         await tx.occurrenceHistoryLog.create({
           data: {
             occurrenceId: id,
             userId,
             logType: "status_change",
-            oldValue: "assigned",
+            oldValue: oldStatus,
             newValue: "completed",
           },
         });
@@ -450,6 +461,17 @@ export class OccurrenceService {
     try {
       // Start a transaction to log the change
       const skippedOccurrence = await prisma.$transaction(async (tx) => {
+        // First, get the current occurrence to capture its current status
+        const currentOccurrence = await tx.taskOccurrence.findUnique({
+          where: { id },
+        });
+
+        if (!currentOccurrence) {
+          throw new Error("Occurrence not found");
+        }
+
+        const oldStatus = currentOccurrence.status;
+
         // Update occurrence
         const occurrence = await tx.taskOccurrence.update({
           where: { id },
@@ -467,13 +489,13 @@ export class OccurrenceService {
           },
         });
 
-        // Log status change
+        // Log status change with actual old status
         await tx.occurrenceHistoryLog.create({
           data: {
             occurrenceId: id,
             userId,
             logType: "status_change",
-            oldValue: "assigned",
+            oldValue: oldStatus,
             newValue: "skipped",
           },
         });
