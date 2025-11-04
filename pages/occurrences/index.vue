@@ -197,7 +197,7 @@
                       
                       <button
                         v-if="['created', 'assigned'].includes(occurrence.status)"
-                        @click="skipOccurrence(occurrence.id)"
+                        @click="openSkipModal(occurrence.id)"
                         class="group flex items-center w-full px-4 py-2 text-sm text-yellow-600 hover:bg-gray-100"
                       >
                         <svg class="mr-3 h-4 w-4 text-yellow-400 group-hover:text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,6 +216,53 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Skip Modal -->
+    <div v-if="showSkipModal"
+      class="fixed inset-0 z-10 overflow-y-auto bg-gray-500 bg-opacity-75 transition-opacity"
+      aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+        <div
+          class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+          <div>
+            <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Skip Occurrence</h3>
+            <div class="mt-4">
+              <p class="text-sm text-gray-500 mb-4">
+                Please provide a reason for skipping this task occurrence.
+              </p>
+              <div>
+                <label for="skip-reason" class="block text-sm font-medium text-gray-700">Reason</label>
+                <textarea
+                  id="skip-reason"
+                  v-model="skipReason"
+                  rows="3"
+                  required
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  placeholder="Enter the reason for skipping..."
+                />
+              </div>
+              <p v-if="skipError" class="mt-2 text-sm text-red-600">{{ skipError }}</p>
+            </div>
+          </div>
+          <div class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+            <button
+              type="button"
+              @click="skipOccurrence"
+              :disabled="isSubmittingSkip || !skipReason.trim()"
+              class="inline-flex w-full justify-center rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600 disabled:opacity-50 sm:col-start-2">
+              {{ isSubmittingSkip ? 'Skipping...' : 'Skip' }}
+            </button>
+            <button
+              type="button"
+              @click="handleSkipCancel"
+              :disabled="isSubmittingSkip"
+              class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0 disabled:opacity-50">
+              Cancel
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -241,6 +288,13 @@ const sortBy = ref('dueDate');
 
 // Dropdown state
 const openDropdownId = ref<string | null>(null);
+
+// Skip Modal state
+const showSkipModal = ref(false);
+const skipOccurrenceId = ref<string | null>(null);
+const skipReason = ref('');
+const isSubmittingSkip = ref(false);
+const skipError = ref<string | null>(null);
 
 // Filters - Default to showing only pending occurrences (created/assigned)
 const filters = reactive({
@@ -435,23 +489,48 @@ const executeOccurrence = async (occurrenceId: string) => {
   }
 };
 
-const skipOccurrence = async (occurrenceId: string) => {
+const openSkipModal = (occurrenceId: string) => {
   closeDropdown();
-  const reason = prompt('Please provide a reason for skipping this task:');
-  if (!reason || reason.trim() === '') {
-    console.log('[Occurrences Grid] Skip cancelled - no reason provided');
-    return; // User cancelled or didn't provide a reason
-  }
+  skipOccurrenceId.value = occurrenceId;
+  skipReason.value = '';
+  skipError.value = null;
+  showSkipModal.value = true;
+};
 
-  console.log(`[Occurrences Grid] Skipping occurrence ${occurrenceId} with reason: "${reason.trim()}"`);
+const skipOccurrence = async () => {
+  if (!skipOccurrenceId.value || !skipReason.value.trim()) return;
+
+  isSubmittingSkip.value = true;
+  skipError.value = null;
+
+  console.log(`[Occurrences Grid] Skipping occurrence ${skipOccurrenceId.value} with reason: "${skipReason.value.trim()}"`);
+
   try {
-    const response = await api.post(`/api/occurrences/${occurrenceId}/skip`, { reason: reason.trim() });
+    const response = await api.post(`/api/occurrences/${skipOccurrenceId.value}/skip`, {
+      reason: skipReason.value.trim()
+    });
     console.log('[Occurrences Grid] Skip response:', response);
-    await fetchOccurrences(); // Refresh the list
-  } catch (err) {
+
+    // Close modal and reset
+    showSkipModal.value = false;
+    skipOccurrenceId.value = null;
+    skipReason.value = '';
+
+    // Refresh the list
+    await fetchOccurrences();
+  } catch (err: any) {
     console.error('Error skipping occurrence:', err);
-    alert('Failed to skip occurrence. Please try again.');
+    skipError.value = err.data?.message || 'Failed to skip occurrence. Please try again.';
+  } finally {
+    isSubmittingSkip.value = false;
   }
+};
+
+const handleSkipCancel = () => {
+  showSkipModal.value = false;
+  skipOccurrenceId.value = null;
+  skipReason.value = '';
+  skipError.value = null;
 };
 
 // Page metadata
