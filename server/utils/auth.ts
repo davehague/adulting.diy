@@ -2,6 +2,7 @@ import { H3Event, createError, getHeader, getCookie } from "h3";
 import { OAuth2Client } from "google-auth-library";
 import { UserService } from "@/server/services/UserService";
 import { devAuthService } from "@/server/utils/dev-auth";
+import { verifyToken } from "@/server/utils/jwt";
 
 const client = new OAuth2Client(process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID);
 
@@ -46,7 +47,27 @@ export async function verifyAuth(event: H3Event): Promise<AuthenticatedUser> {
   const token = authHeader.replace("Bearer ", "");
 
   try {
-    // Verify Google token
+    // Try to verify as JWT token first (for email authentication)
+    const jwtPayload = verifyToken(token);
+
+    if (jwtPayload && jwtPayload.authProvider === 'email') {
+      // Email authentication flow
+      const user = await userService.findByEmail(jwtPayload.email);
+      if (!user) {
+        throw createError({
+          statusCode: 404,
+          message: "User not found",
+        });
+      }
+
+      return {
+        email: jwtPayload.email,
+        userId: user.id,
+        householdId: user.householdId || null,
+      };
+    }
+
+    // If not a valid JWT, try to verify as Google token
     const ticket = await client.verifyIdToken({
       idToken: token,
       audience: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID,
