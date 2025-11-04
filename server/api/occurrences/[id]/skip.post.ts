@@ -19,7 +19,10 @@ export default defineHouseholdProtectedEventHandler(
       const body = await readBody(event);
       const reason = body.reason as string;
 
+      console.log(`[API Skip] Received skip request for occurrence ${occurrenceId} with reason: "${reason}"`);
+
       if (!reason || typeof reason !== "string" || reason.trim() === "") {
+        console.log(`[API Skip] Validation failed - reason is empty or invalid`);
         throw createError({
           statusCode: 400,
           message: "A non-empty reason is required to skip an occurrence",
@@ -62,12 +65,14 @@ export default defineHouseholdProtectedEventHandler(
       }
 
       // Skip the occurrence using the service
+      console.log(`[API Skip] Calling OccurrenceService.skip for occurrence ${occurrenceId}, user ${authUser.userId}`);
       const updatedOccurrence = await occurrenceService.skip(
         occurrenceId,
         authUser.userId,
         reason.trim()
       );
 
+      console.log(`[API Skip] Successfully skipped occurrence ${occurrenceId}, new status: ${updatedOccurrence.status}`);
       return updatedOccurrence;
     } catch (error) {
       console.error("[API] Error skipping occurrence:", error);

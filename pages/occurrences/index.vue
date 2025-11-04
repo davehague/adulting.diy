@@ -439,11 +439,14 @@ const skipOccurrence = async (occurrenceId: string) => {
   closeDropdown();
   const reason = prompt('Please provide a reason for skipping this task:');
   if (!reason || reason.trim() === '') {
+    console.log('[Occurrences Grid] Skip cancelled - no reason provided');
     return; // User cancelled or didn't provide a reason
   }
 
+  console.log(`[Occurrences Grid] Skipping occurrence ${occurrenceId} with reason: "${reason.trim()}"`);
   try {
-    await api.post(`/api/occurrences/${occurrenceId}/skip`, { reason: reason.trim() });
+    const response = await api.post(`/api/occurrences/${occurrenceId}/skip`, { reason: reason.trim() });
+    console.log('[Occurrences Grid] Skip response:', response);
     await fetchOccurrences(); // Refresh the list
   } catch (err) {
     console.error('Error skipping occurrence:', err);
