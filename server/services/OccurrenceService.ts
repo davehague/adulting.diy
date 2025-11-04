@@ -490,7 +490,7 @@ export class OccurrenceService {
         });
 
         // Log status change with actual old status
-        await tx.occurrenceHistoryLog.create({
+        const statusLog = await tx.occurrenceHistoryLog.create({
           data: {
             occurrenceId: id,
             userId,
@@ -499,9 +499,10 @@ export class OccurrenceService {
             newValue: "skipped",
           },
         });
+        console.log(`[OccurrenceService] Created status_change log ${statusLog.id} for occurrence ${id}: ${oldStatus} -> skipped`);
 
         // Log skip reason as a comment
-        await tx.occurrenceHistoryLog.create({
+        const commentLog = await tx.occurrenceHistoryLog.create({
           data: {
             occurrenceId: id,
             userId,
@@ -509,6 +510,7 @@ export class OccurrenceService {
             comment: `Skipped: ${reason}`,
           },
         });
+        console.log(`[OccurrenceService] Created comment log ${commentLog.id} for occurrence ${id}: Skipped: ${reason}`);
 
         return occurrence as unknown as TaskOccurrence; // Ensure cast is here
       });

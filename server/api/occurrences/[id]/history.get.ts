@@ -39,6 +39,10 @@ export default defineHouseholdProtectedEventHandler(
 
       // If authorized, fetch the history logs
       const historyLogs = await occurrenceService.getHistory(occurrenceId);
+      console.log(`[API] Fetched ${historyLogs.length} history logs for occurrence ${occurrenceId}`);
+      if (historyLogs.length > 0) {
+        console.log('[API] Sample log:', JSON.stringify(historyLogs[0], null, 2));
+      }
       return historyLogs;
     } catch (error) {
       console.error("[API] Error fetching occurrence history:", error);

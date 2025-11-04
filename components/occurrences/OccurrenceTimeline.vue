@@ -82,11 +82,13 @@ const fetchHistory = async () => {
     error.value = null;
     try {
         const data = await api.get<OccurrenceHistoryLog[]>(`/api/occurrences/${props.occurrenceId}/history`);
+        console.log(`[OccurrenceTimeline] Fetched ${data.length} history logs for occurrence ${props.occurrenceId}`);
         // Ensure dates are Date objects
         historyLogs.value = data.map(log => ({
             ...log,
             createdAt: new Date(log.createdAt) // Convert string date from API to Date object
         }));
+        console.log('[OccurrenceTimeline] Processed history logs:', historyLogs.value);
     } catch (err: any) {
         console.error("Error fetching occurrence history:", err);
         error.value = err.data?.message || err.message || 'Failed to load history';
