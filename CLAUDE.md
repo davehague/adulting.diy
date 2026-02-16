@@ -18,6 +18,8 @@ Adulting.DIY is a household task management system designed to help families and
 - **Database**: CockroachDB (PostgreSQL-compatible)
 - **ORM**: Prisma
 - **Email Service**: Mailjet (for notifications)
+- **Validation**: Zod (schema validation)
+- **Dates**: date-fns (date manipulation)
 
 ### Development & Deployment
 - **Hosting**: Vercel
@@ -69,29 +71,76 @@ adulting.diy/
 ├── components/            # Vue components
 │   ├── AppHeader.vue
 │   ├── AppFooter.vue
+│   ├── DevUserSwitcher.vue       # Dev login bypass UI
+│   ├── DevUserSwitcherDebug.vue  # Dev login debug panel
+│   ├── NotificationPreferences.vue
+│   ├── TaskDetails.vue
 │   ├── occurrences/      # Occurrence-related components
+│   │   ├── OccurrenceEditForm.vue
+│   │   └── OccurrenceTimeline.vue
 │   └── tasks/            # Task-related components
+│       ├── TaskCreateForm.vue
+│       └── TaskEditForm.vue
 ├── composables/          # Vue composables
+│   └── onClickOutside.ts
 ├── docs/                 # Project documentation
-│   └── llm-workflow/     # Development planning docs
+│   ├── api-endpoints.md
+│   ├── development-login-bypass-guide.md
+│   ├── next-up.md
+│   ├── plans/            # Implementation plans
+│   └── specs/            # Project specs (idea, functional spec, blueprint)
 ├── layouts/              # Nuxt layouts
+│   ├── default.vue
+│   └── landing.vue
 ├── middleware/           # Route middleware
+│   └── auth.global.ts   # Global authentication middleware
 ├── pages/                # Nuxt pages (file-based routing)
+│   ├── index.vue         # Root landing page
 │   ├── home.vue
 │   ├── login.vue
-│   ├── tasks/           # Task management pages
-│   └── occurrences/     # Occurrence management pages
+│   ├── setup-household.vue
+│   ├── household/        # Household management
+│   ├── profile/          # User profile
+│   ├── tasks/            # Task management pages
+│   └── occurrences/      # Occurrence management pages
 ├── plugins/              # Nuxt plugins
+│   ├── auth-ready.client.ts
+│   └── dev-auth.client.ts  # Dev login bypass plugin
 ├── prisma/              # Database schema and migrations
 ├── public/              # Static assets
 ├── scripts/             # Utility scripts
+│   ├── seed.js
+│   ├── setup-database.js
+│   ├── clear-db.js
+│   └── reset-completed-occurrences.js
 ├── server/              # Backend code
 │   ├── api/            # API endpoints
 │   ├── services/       # Business logic services
+│   │   ├── CategoryService.ts
+│   │   ├── HouseholdService.ts
+│   │   ├── NotificationService.ts
+│   │   ├── OccurrenceService.ts
+│   │   ├── TaskService.ts
+│   │   └── UserService.ts
 │   └── utils/          # Server utilities
+│       ├── auth.ts
+│       ├── dev-auth.ts
+│       ├── prisma/client.ts
+│       └── schedule.ts
 ├── stores/              # Pinia stores
+│   ├── auth.ts
+│   ├── dev-auth.ts       # Dev login bypass store
+│   └── tasks.ts
 ├── types/               # TypeScript type definitions
+│   ├── index.ts
+│   ├── category.ts
+│   ├── heroicons.d.ts
+│   ├── household.ts
+│   ├── notification.ts
+│   ├── task.ts
+│   └── user.ts
 └── utils/               # Shared utilities
+    └── api.ts
 ```
 
 ## Development Guidelines
@@ -190,7 +239,10 @@ tests/
 │   ├── utils/              # Date calculations, scheduling algorithms
 │   └── logic/              # Notification preferences, business rules
 ├── integration/            # Integration tests for system components
+├── e2e/                    # End-to-end tests (excluded from default test run)
+│   └── task-lifecycle.test.ts
 ├── fixtures/               # Shared test data and mocks
+│   └── test-data.ts
 └── setup.ts               # Global test configuration
 ```
 
@@ -198,19 +250,20 @@ tests/
 - **Schedule Logic**: All 6 recurrence patterns, date calculations, edge cases
 - **Notification Logic**: User preferences, email templates, reminder timing
 - **Integration**: Scheduler endpoints, business rule validation
+- **E2E**: Task lifecycle (excluded from default vitest run)
 - **Edge Cases**: Timezone handling, month boundaries, leap years
 
 ### Running Tests
 ```bash
-npm run test              # Run all tests
+npm run test              # Run all tests (excludes e2e)
 npm run test:watch        # Watch mode
 npm run test:coverage     # Coverage report
 ```
 
 ### Test Philosophy
 1. **Unit Tests**: Core business logic (services, utilities, algorithms)
-2. **Integration Tests**: API endpoints and service interactions  
-3. **E2E Tests**: Critical user workflows (planned)
+2. **Integration Tests**: API endpoints and service interactions
+3. **E2E Tests**: Task lifecycle workflows (exist but excluded from default run via vitest.config.ts)
 4. **Type Tests**: TypeScript type validation
 
 The test suite includes 41+ tests ensuring reliability of critical functionality including task scheduling, notification systems, and occurrence management.
@@ -253,6 +306,60 @@ The test suite includes 41+ tests ensuring reliability of critical functionality
 - Minimal data fetching (use includes wisely)
 - Client-side state caching with Pinia
 - Optimistic UI updates where appropriate
+
+## API Endpoints Overview
+
+### Categories
+- `GET /api/categories` - List categories
+- `POST /api/categories/create` - Create category
+
+### Household
+- `POST /api/household/create` - Create household
+- `GET /api/household` - Get household details
+- `PUT /api/household` - Update household
+- `POST /api/household/join` - Join via invite code
+- `POST /api/household/leave` - Leave household
+- `GET /api/household/users` - List household members
+- `DELETE /api/household/users/[userId]` - Remove member
+- `PUT /api/household/users/[userId]/admin` - Toggle admin
+- `POST /api/household/invite-code/regenerate` - Regenerate invite code
+
+### Tasks
+- `GET /api/tasks` - List tasks
+- `POST /api/tasks` - Create task
+- `GET /api/tasks/[id]` - Get task
+- `PUT /api/tasks/[id]` - Update task
+- `DELETE /api/tasks/[id]` - Soft-delete task
+- `POST /api/tasks/[id]/pause` - Pause task
+- `POST /api/tasks/[id]/unpause` - Unpause task
+- `GET /api/tasks/[id]/occurrences` - List task occurrences
+
+### Occurrences
+- `GET /api/occurrences` - List occurrences
+- `GET /api/occurrences/[id]` - Get occurrence
+- `PUT /api/occurrences/[id]` - Update occurrence
+- `POST /api/occurrences/[id]/execute` - Complete occurrence
+- `POST /api/occurrences/[id]/skip` - Skip occurrence
+- `POST /api/occurrences/[id]/comments` - Add comment
+- `GET /api/occurrences/[id]/history` - Get history log
+
+### User
+- `POST /api/user/register` - Register user
+- `GET /api/user/profile` - Get profile
+- `GET /api/user/notifications` - Get notification preferences
+- `PUT /api/user/notifications` - Update notification preferences
+
+### Scheduler
+- `POST /api/scheduler/run` - Generate occurrences
+- `POST /api/scheduler/reminders` - Send reminders
+
+### Dev (development only)
+- `POST /api/dev/login` - Dev login bypass
+- `POST /api/dev/logout` - Dev logout
+- `GET /api/dev/users` - List dev users
+
+### Other
+- `POST /api/sendEmail` - Send email
 
 ## Future Enhancements
 
