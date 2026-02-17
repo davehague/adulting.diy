@@ -14,6 +14,9 @@ const allAnyPrefs: NotificationPreferences = {
   occurrence_executed: 'any',
   occurrence_skipped: 'any',
   occurrence_commented: 'any',
+  reminder_initial: 'any',
+  reminder_followup: 'any',
+  reminder_overdue: 'any',
 }
 
 const allNonePrefs: NotificationPreferences = {
@@ -25,6 +28,9 @@ const allNonePrefs: NotificationPreferences = {
   occurrence_executed: 'none',
   occurrence_skipped: 'none',
   occurrence_commented: 'none',
+  reminder_initial: 'none',
+  reminder_followup: 'none',
+  reminder_overdue: 'none',
 }
 
 const minePrefs: NotificationPreferences = {
@@ -36,6 +42,9 @@ const minePrefs: NotificationPreferences = {
   occurrence_executed: 'mine',
   occurrence_skipped: 'mine',
   occurrence_commented: 'mine',
+  reminder_initial: 'any',
+  reminder_followup: 'any',
+  reminder_overdue: 'any',
 }
 
 const userId = 'user-1'
@@ -113,12 +122,35 @@ describe('NotificationService.shouldSendNotification', () => {
     })
   })
 
-  // --- Reminders always send ---
+  // --- Reminders respect reminder-specific preferences ---
   describe('reminder notifications', () => {
     it.each([
-      'task_reminder_initial', 'task_reminder_followup', 'task_reminder_overdue',
-    ] as NotificationEventType[])('always sends %s regardless of preferences', (eventType) => {
-      expect(service.shouldSendNotification(eventType, allNonePrefs, baseContext, userId)).toBe(true)
+      ['task_reminder_initial', 'reminder_initial'],
+      ['task_reminder_followup', 'reminder_followup'],
+      ['task_reminder_overdue', 'reminder_overdue'],
+    ] as [NotificationEventType, string][])('%s sends when preference is "any"', (eventType, prefKey) => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, [prefKey]: 'any' }
+      expect(service.shouldSendNotification(eventType, prefs, baseContext, userId)).toBe(true)
+    })
+
+    it.each([
+      ['task_reminder_initial', 'reminder_initial'],
+      ['task_reminder_followup', 'reminder_followup'],
+      ['task_reminder_overdue', 'reminder_overdue'],
+    ] as [NotificationEventType, string][])('%s blocks when preference is "none"', (eventType, prefKey) => {
+      const prefs: NotificationPreferences = { ...allAnyPrefs, [prefKey]: 'none' }
+      expect(service.shouldSendNotification(eventType, prefs, baseContext, userId)).toBe(false)
+    })
+
+    it('defaults to sending when preference fields are missing (backward compat)', () => {
+      // Simulate old stored prefs without reminder_* fields
+      const legacyPrefs = { ...allAnyPrefs } as any
+      delete legacyPrefs.reminder_initial
+      delete legacyPrefs.reminder_followup
+      delete legacyPrefs.reminder_overdue
+      expect(service.shouldSendNotification('task_reminder_initial', legacyPrefs, baseContext, userId)).toBe(true)
+      expect(service.shouldSendNotification('task_reminder_followup', legacyPrefs, baseContext, userId)).toBe(true)
+      expect(service.shouldSendNotification('task_reminder_overdue', legacyPrefs, baseContext, userId)).toBe(true)
     })
   })
 
@@ -361,11 +393,15 @@ describe('Notification preferences vs reminder config interaction', () => {
     expect(result).toBe(false)
   })
 
-  // NOTE: "reminder notification ignores user preferences" skipped — already covered
-  // in the "reminder notifications" describe block above.
-
-  // NOTE: "checkAndSendTaskReminders returns 0 for null reminderConfig" skipped —
-  // already covered in the "checkAndSendTaskReminders" describe block above.
+  it('reminder notification respects reminder-specific preferences', () => {
+    const prefsWithRemindersOff: NotificationPreferences = {
+      ...allAnyPrefs,
+      reminder_initial: 'none',
+    }
+    expect(service.shouldSendNotification(
+      'task_reminder_initial', prefsWithRemindersOff, baseContext, userId
+    )).toBe(false)
+  })
 
   it('"mine" occurrence preference sends only when user is assignee', () => {
     const prefs: NotificationPreferences = {

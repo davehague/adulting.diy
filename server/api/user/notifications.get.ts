@@ -22,8 +22,9 @@ export default defineHouseholdProtectedEventHandler(
         });
       }
 
-      // Return the notification preferences or defaults
-      const preferences = user.notificationPreferences as NotificationPreferences || { ...defaultNotificationPreferences };
+      // Return the notification preferences, merging with defaults so missing fields are filled
+      const stored = user.notificationPreferences as NotificationPreferences;
+      const preferences = stored ? { ...defaultNotificationPreferences, ...stored } : { ...defaultNotificationPreferences };
 
       return preferences;
     } catch (error) {

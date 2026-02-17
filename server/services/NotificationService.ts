@@ -150,11 +150,12 @@ export class NotificationService {
         return preferences.occurrence_commented === "any" ||
                (preferences.occurrence_commented === "mine" && isMine);
       
-      // Reminder notifications are always sent if configured
       case "task_reminder_initial":
+        return (preferences.reminder_initial || 'any') === 'any';
       case "task_reminder_followup":
+        return (preferences.reminder_followup || 'any') === 'any';
       case "task_reminder_overdue":
-        return true;
+        return (preferences.reminder_overdue || 'any') === 'any';
       
       default:
         return false;
