@@ -8,6 +8,7 @@ vi.stubEnv('MAILJET_API_KEY', 'test-mailjet-key')
 vi.stubEnv('MAILJET_SECRET_KEY', 'test-mailjet-secret')
 vi.stubEnv('MAILJET_FROM_EMAIL', 'test@example.com')
 vi.stubEnv('DATABASE_URL', 'postgresql://test:test@localhost:5432/test')
+vi.stubEnv('SCHEDULER_API_KEY', 'test-scheduler-key')
 
 // Mock Google Sign-In plugin
 vi.mock('nuxt-vue3-google-signin', () => ({

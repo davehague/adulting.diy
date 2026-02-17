@@ -143,3 +143,34 @@ export function defineHouseholdProtectedEventHandler(
     return handler(event, authenticatedUser, householdId);
   });
 }
+
+/**
+ * Protect scheduler/internal endpoints with API key authentication.
+ * Checks x-scheduler-key header or Authorization Bearer token against SCHEDULER_API_KEY env var.
+ */
+export function defineSchedulerProtectedEventHandler(
+  handler: (event: H3Event) => Promise<any>
+) {
+  return defineEventHandler(async (event: H3Event) => {
+    const apiKey = getHeader(event, 'x-scheduler-key') ||
+                   getHeader(event, 'authorization')?.replace('Bearer ', '');
+    const expectedKey = process.env.SCHEDULER_API_KEY;
+
+    if (!expectedKey) {
+      console.error('[Auth] SCHEDULER_API_KEY not configured');
+      throw createError({
+        statusCode: 500,
+        message: 'Server configuration error',
+      });
+    }
+
+    if (!apiKey || apiKey !== expectedKey) {
+      throw createError({
+        statusCode: 401,
+        message: 'Unauthorized: Invalid or missing API key',
+      });
+    }
+
+    return handler(event);
+  });
+}
