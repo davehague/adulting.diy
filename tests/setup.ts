@@ -15,38 +15,50 @@ vi.mock('nuxt-vue3-google-signin', () => ({
 }))
 
 // Mock Prisma client for unit tests
+// The $transaction mock calls the callback with the prisma mock itself,
+// so transactional code uses the same mocked methods.
+const prismaMock = {
+  user: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+  },
+  household: {
+    findFirst: vi.fn(),
+    create: vi.fn(),
+  },
+  taskDefinition: {
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+  },
+  taskOccurrence: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
+    count: vi.fn(),
+  },
+  userNotificationPreferences: {
+    findUnique: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+  },
+  occurrenceHistoryLog: {
+    create: vi.fn(),
+    findMany: vi.fn(),
+  },
+  $transaction: vi.fn((cb: (tx: any) => any) => cb(prismaMock)),
+}
+
 vi.mock('@/server/utils/prisma/client', () => ({
-  default: {
-    user: {
-      findFirst: vi.fn(),
-      findMany: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-    },
-    household: {
-      findFirst: vi.fn(),
-      create: vi.fn(),
-    },
-    taskDefinition: {
-      findMany: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-    },
-    taskOccurrence: {
-      findMany: vi.fn(),
-      findFirst: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-    },
-    userNotificationPreferences: {
-      findUnique: vi.fn(),
-      create: vi.fn(),
-      update: vi.fn(),
-    },
-    occurrenceHistoryLog: {
-      create: vi.fn(),
-    },
-  }
+  default: prismaMock,
 }))
 
 // Mock authentication helpers
