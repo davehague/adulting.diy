@@ -1,18 +1,18 @@
 <template>
     <div class="container mx-auto p-4 md:p-6">
-        <div v-if="loading" class="text-center py-10 text-gray-500">Loading occurrence details...</div>
+        <div v-if="loading" class="text-center py-10 text-stone-500">Loading occurrence details...</div>
         <div v-else-if="error" class="text-center py-10 text-red-600">
             Error loading occurrence: {{ error }}
         </div>
         <div v-else-if="occurrence" class="space-y-6">
             <!-- Header -->
-            <div class="md:flex md:items-center md:justify-between pb-4 border-b border-gray-200">
+            <div class="md:flex md:items-center md:justify-between pb-4 border-b border-stone-200">
                 <div class="min-w-0 flex-1">
                     <NuxtLink :to="`/tasks/${occurrence.taskId}`"
-                        class="text-sm font-medium text-blue-600 hover:text-blue-800">
+                        class="text-sm font-medium text-amber-700 hover:text-amber-800">
                         &larr; Back to Task Details
                     </NuxtLink>
-                    <h2 class="mt-2 text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl">
+                    <h2 class="mt-2 text-2xl font-bold leading-7 text-stone-900 sm:truncate sm:text-3xl font-heading">
                         {{ occurrence.task?.name || 'Task' }} ({{ formatDate(occurrence.dueDate) }})
                     </h2>
                 </div>
@@ -29,61 +29,61 @@
             />
 
             <!-- Occurrence Details -->
-            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div class="bg-white shadow-sm border border-stone-200 overflow-hidden sm:rounded-xl">
                 <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900">Occurrence Details</h3>
+                    <h3 class="text-lg leading-6 font-medium text-stone-900 font-heading">Occurrence Details</h3>
                     <div class="flex space-x-3">
                         <button type="button" @click="showEditModal = true"
-                            class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                            class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-stone-900 shadow-sm ring-1 ring-inset ring-stone-300 hover:bg-stone-50 transition-colors duration-150">
                             Edit
                         </button>
                         <button type="button" @click="showSkipModal = true" :disabled="isActionDisabled"
-                            class="inline-flex items-center rounded-md bg-yellow-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600 disabled:opacity-50">
+                            class="inline-flex items-center rounded-md bg-yellow-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600 disabled:opacity-50 transition-colors duration-150">
                             Skip
                         </button>
                         <button type="button" @click="executeOccurrence" :disabled="isActionDisabled"
-                            class="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700 disabled:opacity-50">
+                            class="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700 disabled:opacity-50 transition-colors duration-150">
                             Complete
                         </button>
                     </div>
                 </div>
-                <div class="border-t border-gray-200 px-4 py-5 sm:p-0">
-                    <dl class="sm:divide-y sm:divide-gray-200">
+                <div class="border-t border-stone-200 px-4 py-5 sm:p-0">
+                    <dl class="sm:divide-y sm:divide-stone-200">
                         <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                            <dt class="text-sm font-medium text-gray-500">Category</dt>
-                            <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                            <dt class="text-sm font-medium text-stone-500">Category</dt>
+                            <dd class="mt-1 text-sm text-stone-900 sm:col-span-2 sm:mt-0">
                                 {{ occurrence.task?.category?.name || 'N/A' }}
                             </dd>
                         </div>
                         <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                            <dt class="text-sm font-medium text-gray-500">Status</dt>
-                            <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0 capitalize">
+                            <dt class="text-sm font-medium text-stone-500">Status</dt>
+                            <dd class="mt-1 text-sm text-stone-900 sm:col-span-2 sm:mt-0 capitalize">
                                 <span :class="getStatusClass(occurrence.status)">
                                     {{ occurrence.status }}
                                 </span>
                             </dd>
                         </div>
                         <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                            <dt class="text-sm font-medium text-gray-500">Due Date</dt>
-                            <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">{{
+                            <dt class="text-sm font-medium text-stone-500">Due Date</dt>
+                            <dd class="mt-1 text-sm text-stone-900 sm:col-span-2 sm:mt-0">{{
                                 formatDate(occurrence.dueDate) }}</dd>
                         </div>
                         <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                            <dt class="text-sm font-medium text-gray-500">Assignees</dt>
-                            <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+                            <dt class="text-sm font-medium text-stone-500">Assignees</dt>
+                            <dd class="mt-1 text-sm text-stone-900 sm:col-span-2 sm:mt-0">
                                 {{ formatAssignees(occurrence.assigneeIds) || 'Unassigned' }}
                             </dd>
                         </div>
                         <div v-if="occurrence.status === 'completed'"
                             class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                            <dt class="text-sm font-medium text-gray-500">Completed At</dt>
-                            <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">{{
+                            <dt class="text-sm font-medium text-stone-500">Completed At</dt>
+                            <dd class="mt-1 text-sm text-stone-900 sm:col-span-2 sm:mt-0">{{
                                 formatDateTime(occurrence.completedAt) }}</dd>
                         </div>
                         <div v-if="occurrence.status === 'skipped'"
                             class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                            <dt class="text-sm font-medium text-gray-500">Skipped At</dt>
-                            <dd class="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">{{
+                            <dt class="text-sm font-medium text-stone-500">Skipped At</dt>
+                            <dd class="mt-1 text-sm text-stone-900 sm:col-span-2 sm:mt-0">{{
                                 formatDateTime(occurrence.skippedAt) }}</dd>
                         </div>
                     </dl>
@@ -92,17 +92,17 @@
 
             <!-- Comment Form Placeholder -->
             <div class="mt-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-2">Add Comment</h3>
+                <h3 class="text-lg font-medium text-stone-900 mb-2 font-heading">Add Comment</h3>
                 <form @submit.prevent="addComment">
                     <div>
                         <label for="comment" class="sr-only">Comment</label>
                         <textarea id="comment" v-model="newComment" rows="3" required
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-3"
+                            class="block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm p-3"
                             placeholder="Add your comment..."></textarea>
                     </div>
                     <div class="mt-3 flex justify-end">
                         <button type="submit" :disabled="isSubmittingComment"
-                            class="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50">
+                            class="inline-flex items-center rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 disabled:opacity-50 transition-colors duration-150">
                             {{ isSubmittingComment ? 'Adding...' : 'Add Comment' }}
                         </button>
                     </div>
@@ -115,19 +115,19 @@
             <OccurrenceTimeline :occurrence-id="occurrenceId" ref="timelineComponent" />
 
         </div>
-        <div v-else class="text-center py-10 text-gray-500">
+        <div v-else class="text-center py-10 text-stone-500">
             Occurrence not found.
         </div>
 
         <!-- Edit Modal -->
         <div v-if="showEditModal"
-            class="fixed inset-0 z-10 overflow-y-auto bg-gray-500 bg-opacity-75 transition-opacity"
+            class="fixed inset-0 z-10 overflow-y-auto bg-stone-500 bg-opacity-75 transition-opacity"
             aria-labelledby="modal-title" role="dialog" aria-modal="true">
             <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
                 <div
                     class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
                     <div>
-                        <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Edit Occurrence</h3>
+                        <h3 class="text-lg font-medium leading-6 text-stone-900 font-heading" id="modal-title">Edit Occurrence</h3>
                         <div class="mt-4">
                             <OccurrenceEditForm v-if="occurrence" :occurrence="occurrence" @submit="handleEditSubmit"
                                 @cancel="handleEditCancel" :disabled="isSubmittingEdit" />
@@ -303,9 +303,9 @@ const getStatusClass = (status: string): string => {
         case 'completed': return 'inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800';
         case 'skipped': return 'inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800';
         case 'deleted': return 'inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800';
-        case 'assigned': return 'inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800';
-        case 'created': return 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800';
-        default: return 'inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800';
+        case 'assigned': return 'inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800';
+        case 'created': return 'inline-flex items-center rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-800';
+        default: return 'inline-flex items-center rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-800';
     }
 };
 

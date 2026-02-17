@@ -2,8 +2,8 @@
   <div class="container mx-auto px-4 py-8">
     <!-- Page Header -->
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Create New Task</h1>
-      <p class="text-gray-600 mt-1">Define a new task for your household.</p>
+      <h1 class="font-heading text-2xl font-bold text-stone-900">Create New Task</h1>
+      <p class="text-stone-600 mt-1">Define a new task for your household.</p>
     </div>
 
     <!-- Error State -->
@@ -12,7 +12,7 @@
     </div>
 
     <!-- Create Form -->
-    <div class="bg-white rounded-lg shadow-md p-6">
+    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
       <TaskCreateForm ref="taskFormRef" submit-button-text="Create Task" cancel-url="/tasks" @submit="handleSubmit" />
     </div>
   </div>

@@ -18,6 +18,7 @@ export default defineNuxtConfig({
       cert: "./localhost.pem",
     },
   },
+  css: ["~/assets/css/main.css"],
   modules: [
     "@pinia/nuxt",
     "pinia-plugin-persistedstate/nuxt",
@@ -39,10 +40,16 @@ export default defineNuxtConfig({
       meta: [
         { charset: "utf-8" },
         { name: "viewport", content: "width=device-width, initial-scale=1" },
-        { name: "msapplication-TileColor", content: "#2b5797" },
-        { name: "theme-color", content: "#ffffff" },
+        { name: "msapplication-TileColor", content: "#D97706" },
+        { name: "theme-color", content: "#FAFAF9" },
       ],
       link: [
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
+        {
+          rel: "stylesheet",
+          href: "https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap",
+        },
         {
           rel: "apple-touch-icon",
           sizes: "180x180",

@@ -2,26 +2,26 @@
   <div class="container mx-auto px-4 py-8">
     <!-- Page Header -->
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Edit Task</h1>
-      <p class="text-gray-600 mt-1">Update task details and schedule</p>
+      <h1 class="font-heading text-2xl font-bold text-stone-900">Edit Task</h1>
+      <p class="text-stone-600 mt-1">Update task details and schedule</p>
     </div>
 
     <!-- Loading and Error States -->
     <div v-if="loading" class="text-center py-8">
-      <p class="text-gray-600">Loading task details...</p>
+      <p class="text-stone-600">Loading task details...</p>
     </div>
 
     <div v-else-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
       <p>{{ error }}</p>
       <div class="mt-2">
-        <NuxtLink to="/tasks" class="text-blue-600 hover:text-blue-800">
+        <NuxtLink to="/tasks" class="text-amber-700 hover:text-amber-800">
           Return to task list
         </NuxtLink>
       </div>
     </div>
 
     <!-- Edit Form -->
-    <div v-else class="bg-white rounded-lg shadow-md p-6">
+    <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
       <TaskEditForm :task="task" submit-button-text="Update Task" :cancel-url="`/tasks/${taskId}`"
         @submit="handleSubmit" />
     </div>

@@ -8,7 +8,7 @@
         <button @click="logout" class="text-red-500 hover:text-red-700">Logout</button>
       </div>
       <NuxtLink v-else to="/login"
-        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition duration-300">Login</NuxtLink>
+        class="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 font-semibold text-sm transition-colors duration-150">Login</NuxtLink>
     </div>
   </header>
 </template>

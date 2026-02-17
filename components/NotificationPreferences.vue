@@ -1,41 +1,41 @@
 <template>
-  <div class="bg-gray-50 rounded p-4">
+  <div class="bg-stone-50 rounded p-4">
     <div v-if="loading" class="text-center py-4">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
     </div>
     
     <form v-else @submit.prevent="savePreferences" class="space-y-6">
       <!-- Task Notifications -->
       <div>
-        <h4 class="text-sm font-medium text-gray-900 mb-3">Task Notifications</h4>
+        <h4 class="text-sm font-medium text-stone-900 mb-3">Task Notifications</h4>
         <div class="space-y-3">
           <div class="flex items-center justify-between">
-            <label class="text-sm text-gray-700">Task Created</label>
-            <select v-model="preferences.task_created" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+            <label class="text-sm text-stone-700">Task Created</label>
+            <select v-model="preferences.task_created" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
               <option value="any">Any task</option>
               <option value="none">None</option>
             </select>
           </div>
           
           <div class="flex items-center justify-between">
-            <label class="text-sm text-gray-700">Task Paused</label>
-            <select v-model="preferences.task_paused" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+            <label class="text-sm text-stone-700">Task Paused</label>
+            <select v-model="preferences.task_paused" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
               <option value="any">Any task</option>
               <option value="none">None</option>
             </select>
           </div>
           
           <div class="flex items-center justify-between">
-            <label class="text-sm text-gray-700">Task Completed</label>
-            <select v-model="preferences.task_completed" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+            <label class="text-sm text-stone-700">Task Completed</label>
+            <select v-model="preferences.task_completed" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
               <option value="any">Any task</option>
               <option value="none">None</option>
             </select>
           </div>
           
           <div class="flex items-center justify-between">
-            <label class="text-sm text-gray-700">Task Deleted</label>
-            <select v-model="preferences.task_deleted" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+            <label class="text-sm text-stone-700">Task Deleted</label>
+            <select v-model="preferences.task_deleted" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
               <option value="any">Any task</option>
               <option value="none">None</option>
             </select>
@@ -45,11 +45,11 @@
       
       <!-- Occurrence Notifications -->
       <div>
-        <h4 class="text-sm font-medium text-gray-900 mb-3">Occurrence Notifications</h4>
+        <h4 class="text-sm font-medium text-stone-900 mb-3">Occurrence Notifications</h4>
         <div class="space-y-3">
           <div class="flex items-center justify-between">
-            <label class="text-sm text-gray-700">Occurrence Assigned</label>
-            <select v-model="preferences.occurrence_assigned" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+            <label class="text-sm text-stone-700">Occurrence Assigned</label>
+            <select v-model="preferences.occurrence_assigned" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
               <option value="any">Any occurrence</option>
               <option value="mine">My occurrences only</option>
               <option value="none">None</option>
@@ -57,8 +57,8 @@
           </div>
           
           <div class="flex items-center justify-between">
-            <label class="text-sm text-gray-700">Occurrence Completed</label>
-            <select v-model="preferences.occurrence_executed" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+            <label class="text-sm text-stone-700">Occurrence Completed</label>
+            <select v-model="preferences.occurrence_executed" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
               <option value="any">Any occurrence</option>
               <option value="mine">My occurrences only</option>
               <option value="none">None</option>
@@ -66,8 +66,8 @@
           </div>
           
           <div class="flex items-center justify-between">
-            <label class="text-sm text-gray-700">Occurrence Skipped</label>
-            <select v-model="preferences.occurrence_skipped" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+            <label class="text-sm text-stone-700">Occurrence Skipped</label>
+            <select v-model="preferences.occurrence_skipped" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
               <option value="any">Any occurrence</option>
               <option value="mine">My occurrences only</option>
               <option value="none">None</option>
@@ -75,8 +75,8 @@
           </div>
           
           <div class="flex items-center justify-between">
-            <label class="text-sm text-gray-700">Occurrence Commented</label>
-            <select v-model="preferences.occurrence_commented" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+            <label class="text-sm text-stone-700">Occurrence Commented</label>
+            <select v-model="preferences.occurrence_commented" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
               <option value="any">Any occurrence</option>
               <option value="mine">My occurrences only</option>
               <option value="none">None</option>
@@ -87,27 +87,27 @@
       
       <!-- Reminder Notifications -->
       <div>
-        <h4 class="text-sm font-medium text-gray-900 mb-3">Reminder Notifications</h4>
+        <h4 class="text-sm font-medium text-stone-900 mb-3">Reminder Notifications</h4>
         <div class="space-y-3">
           <div class="flex items-center justify-between">
-            <label class="text-sm text-gray-700">Initial Reminder</label>
-            <select v-model="preferences.reminder_initial" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+            <label class="text-sm text-stone-700">Initial Reminder</label>
+            <select v-model="preferences.reminder_initial" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
               <option value="any">Enabled</option>
               <option value="none">Disabled</option>
             </select>
           </div>
 
           <div class="flex items-center justify-between">
-            <label class="text-sm text-gray-700">Follow-up Reminder</label>
-            <select v-model="preferences.reminder_followup" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+            <label class="text-sm text-stone-700">Follow-up Reminder</label>
+            <select v-model="preferences.reminder_followup" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
               <option value="any">Enabled</option>
               <option value="none">Disabled</option>
             </select>
           </div>
 
           <div class="flex items-center justify-between">
-            <label class="text-sm text-gray-700">Overdue Reminder</label>
-            <select v-model="preferences.reminder_overdue" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+            <label class="text-sm text-stone-700">Overdue Reminder</label>
+            <select v-model="preferences.reminder_overdue" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
               <option value="any">Enabled</option>
               <option value="none">Disabled</option>
             </select>
@@ -116,11 +116,11 @@
       </div>
 
       <!-- Save Button -->
-      <div class="pt-4 border-t border-gray-200">
+      <div class="pt-4 border-t border-stone-200">
         <button 
           type="submit" 
           :disabled="saving"
-          class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="w-full sm:w-auto px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
         >
           {{ saving ? 'Saving...' : 'Save Preferences' }}
         </button>

@@ -1,15 +1,15 @@
 <template>
-    <div class="flex justify-center items-center h-screen bg-gray-100">
-        <div class="bg-white p-8 rounded-lg shadow-md">
-            <h1 class="text-2xl font-bold mb-4 text-center">Login with Google</h1>
-            <p class="mb-6 text-center text-gray-600">Sign in to access your account</p>
+    <div class="flex justify-center items-center h-screen bg-stone-50">
+        <div class="bg-white p-8 rounded-xl shadow-sm border border-stone-200">
+            <h1 class="font-heading text-2xl font-bold mb-4 text-center text-stone-900">Login with Google</h1>
+            <p class="mb-6 text-center text-stone-600">Sign in to access your account</p>
             <GoogleSignInButton @success="handleLoginSuccess" @error="handleLoginError" class="w-full">
             </GoogleSignInButton>
 
             <!-- Loading indicator -->
             <div v-if="isLoading" class="mt-4 flex justify-center">
-                <div class="w-6 h-6 border-2 border-t-transparent border-blue-500 rounded-full animate-spin"></div>
-                <span class="ml-2 text-sm text-gray-600">Logging in...</span>
+                <div class="w-6 h-6 border-2 border-t-transparent border-amber-600 rounded-full animate-spin"></div>
+                <span class="ml-2 text-sm text-stone-600">Logging in...</span>
             </div>
 
             <!-- Error message -->

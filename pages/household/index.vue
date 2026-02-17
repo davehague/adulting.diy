@@ -3,14 +3,14 @@
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">Household Management</h1>
-        <p class="text-gray-600 mt-1">Manage your household members and settings</p>
+        <h1 class="text-2xl font-bold text-stone-900 font-heading">Household Management</h1>
+        <p class="text-stone-600 mt-1">Manage your household members and settings</p>
       </div>
     </div>
 
     <!-- Loading State -->
     <div v-if="loading" class="text-center py-8">
-      <p class="text-gray-600">Loading household information...</p>
+      <p class="text-stone-600">Loading household information...</p>
     </div>
 
     <!-- Error State -->
@@ -29,52 +29,52 @@
     <!-- Main Content -->
     <div v-else class="space-y-6">
       <!-- Household Info Card -->
-      <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Household Information</h2>
+      <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+        <div class="px-6 py-4 bg-stone-50 border-b border-stone-200">
+          <h2 class="text-lg font-semibold text-stone-900 font-heading">Household Information</h2>
         </div>
         <div class="p-6">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Household Details -->
             <div>
               <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Household Name</label>
+                <label class="block text-sm font-medium text-stone-700 mb-2">Household Name</label>
                 <div v-if="!editingName" class="flex items-center space-x-2">
-                  <span class="text-lg font-medium text-gray-900">{{ householdInfo.name }}</span>
+                  <span class="text-lg font-medium text-stone-900">{{ householdInfo.name }}</span>
                   <button v-if="householdInfo.isCurrentUserAdmin" 
                           @click="startEditingName"
-                          class="text-blue-600 hover:text-blue-800 text-sm">
+                          class="text-amber-700 hover:text-amber-800 text-sm">
                     Edit
                   </button>
                 </div>
                 <div v-else class="flex items-center space-x-2">
                   <input v-model="editedName" 
                          type="text" 
-                         class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                         class="flex-1 rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
                          @keyup.enter="saveHouseholdName"
                          @keyup.escape="cancelEditingName">
-                  <button @click="saveHouseholdName" 
-                          class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
+                  <button @click="saveHouseholdName"
+                          class="bg-amber-600 text-white px-3 py-1 rounded text-sm hover:bg-amber-700 transition-colors duration-150">
                     Save
                   </button>
-                  <button @click="cancelEditingName" 
-                          class="bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-400">
+                  <button @click="cancelEditingName"
+                          class="bg-stone-300 text-stone-700 px-3 py-1 rounded text-sm hover:bg-stone-400 transition-colors duration-150">
                     Cancel
                   </button>
                 </div>
               </div>
               <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Members</label>
-                <span class="text-2xl font-bold text-blue-600">{{ householdInfo.memberCount }}</span>
-                <span class="text-gray-500 ml-2">member{{ householdInfo.memberCount !== 1 ? 's' : '' }}</span>
+                <label class="block text-sm font-medium text-stone-700 mb-2">Members</label>
+                <span class="text-2xl font-bold text-amber-700">{{ householdInfo.memberCount }}</span>
+                <span class="text-stone-500 ml-2">member{{ householdInfo.memberCount !== 1 ? 's' : '' }}</span>
               </div>
               <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Created</label>
-                <span class="text-gray-600">{{ formatDate(householdInfo.createdAt) }}</span>
+                <label class="block text-sm font-medium text-stone-700 mb-2">Created</label>
+                <span class="text-stone-600">{{ formatDate(householdInfo.createdAt) }}</span>
               </div>
               <div v-if="!householdInfo.isCurrentUserAdmin" class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Your Role</label>
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                <label class="block text-sm font-medium text-stone-700 mb-2">Your Role</label>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-stone-800">
                   Member
                 </span>
               </div>
@@ -85,45 +85,45 @@
               <!-- Admin View: Full invite controls -->
               <div v-if="householdInfo.isCurrentUserAdmin">
                 <div class="mb-4">
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Invite Code</label>
+                  <label class="block text-sm font-medium text-stone-700 mb-2">Invite Code</label>
                   <div class="flex items-center space-x-2">
-                    <code class="bg-gray-100 px-3 py-2 rounded-md font-mono text-lg">{{ householdInfo.inviteCode }}</code>
-                    <button @click="copyInviteCode" 
-                            class="bg-blue-500 text-white px-3 py-2 rounded-md hover:bg-blue-600 text-sm">
+                    <code class="bg-stone-100 px-3 py-2 rounded-md font-mono text-lg">{{ householdInfo.inviteCode }}</code>
+                    <button @click="copyInviteCode"
+                            class="bg-amber-600 text-white px-3 py-2 rounded-md hover:bg-amber-700 text-sm transition-colors duration-150">
                       {{ copiedInviteCode ? 'Copied!' : 'Copy' }}
                     </button>
                   </div>
-                  <p class="text-xs text-gray-500 mt-1">Share this code with others to invite them to your household</p>
+                  <p class="text-xs text-stone-500 mt-1">Share this code with others to invite them to your household</p>
                 </div>
                 
                 <div class="space-y-2">
-                  <button @click="regenerateInviteCode" 
-                          class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 text-sm">
+                  <button @click="regenerateInviteCode"
+                          class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 text-sm transition-colors duration-150">
                     Generate New Code
                   </button>
-                  <p class="text-xs text-gray-500">This will invalidate the current invite code</p>
+                  <p class="text-xs text-stone-500">This will invalidate the current invite code</p>
                 </div>
               </div>
               
               <!-- Member View: Share household info only -->
               <div v-else>
                 <div class="mb-4">
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Share Household</label>
+                  <label class="block text-sm font-medium text-stone-700 mb-2">Share Household</label>
                   <div class="space-y-3">
                     <button @click="copyHouseholdInfo" 
-                            class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
-                      <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            class="w-full flex items-center justify-center px-4 py-2 border border-stone-300 rounded-md hover:bg-stone-50">
+                      <svg class="w-4 h-4 mr-2 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                       </svg>
                       {{ copiedHouseholdInfo ? 'Copied!' : 'Copy Invitation' }}
                     </button>
-                    <p class="text-xs text-gray-500">Share household invitation with others</p>
+                    <p class="text-xs text-stone-500">Share household invitation with others</p>
                   </div>
                 </div>
                 
                 <div class="mb-4">
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Contact Admin</label>
-                  <p class="text-xs text-gray-500 mb-2">For household settings changes, contact an admin:</p>
+                  <label class="block text-sm font-medium text-stone-700 mb-2">Contact Admin</label>
+                  <p class="text-xs text-stone-500 mb-2">For household settings changes, contact an admin:</p>
                   <div class="flex flex-wrap gap-1">
                     <span v-for="admin in admins" :key="admin.id" 
                           class="inline-flex items-center px-2 py-1 rounded text-xs bg-purple-100 text-purple-800">
@@ -138,61 +138,61 @@
       </div>
 
       <!-- Members Management -->
-      <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+      <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+        <div class="px-6 py-4 bg-stone-50 border-b border-stone-200">
           <div class="flex justify-between items-center">
-            <h2 class="text-lg font-semibold text-gray-900">Household Members</h2>
-            <span v-if="!householdInfo.isCurrentUserAdmin" class="text-xs text-gray-500">
+            <h2 class="text-lg font-semibold text-stone-900 font-heading">Household Members</h2>
+            <span v-if="!householdInfo.isCurrentUserAdmin" class="text-xs text-stone-500">
               View only - Contact admin for changes
             </span>
           </div>
         </div>
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+          <table class="min-w-full divide-y divide-stone-200">
+            <thead class="bg-stone-50">
               <tr>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                   Member
                 </th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                   Role
                 </th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                   Joined
                 </th>
                 <th v-if="householdInfo.isCurrentUserAdmin" 
-                    scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    scope="col" class="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+            <tbody class="bg-white divide-y divide-stone-200">
               <tr v-for="member in members" :key="member.id" 
-                  :class="member.id === currentUserId ? 'bg-blue-50' : ''">
+                  :class="member.id === currentUserId ? 'bg-amber-50' : ''">
                 <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center">
                     <div class="flex-shrink-0 h-10 w-10">
                       <div class="h-10 w-10 rounded-full flex items-center justify-center"
-                           :class="member.id === currentUserId ? 'bg-blue-600' : 'bg-blue-500'">
+                           :class="member.id === currentUserId ? 'bg-amber-600' : 'bg-amber-600'">
                         <span class="text-white font-medium text-sm">{{ getInitials(member.name) }}</span>
                       </div>
                     </div>
                     <div class="ml-4">
-                      <div class="text-sm font-medium text-gray-900">
+                      <div class="text-sm font-medium text-stone-900">
                         {{ member.name }}
-                        <span v-if="member.id === currentUserId" class="text-xs text-blue-600 ml-1 font-semibold">(You)</span>
+                        <span v-if="member.id === currentUserId" class="text-xs text-amber-700 ml-1 font-semibold">(You)</span>
                       </div>
-                      <div class="text-sm text-gray-500">{{ member.email }}</div>
+                      <div class="text-sm text-stone-500">{{ member.email }}</div>
                     </div>
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                        :class="member.isAdmin ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'">
+                        :class="member.isAdmin ? 'bg-purple-100 text-purple-800' : 'bg-stone-100 text-stone-800'">
                     {{ member.isAdmin ? 'Admin' : 'Member' }}
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
                   {{ formatDate(member.createdAt) }}
                 </td>
                 <td v-if="householdInfo.isCurrentUserAdmin" 
@@ -200,7 +200,7 @@
                   <template v-if="member.id !== currentUserId">
                     <button v-if="!member.isAdmin" 
                             @click="makeAdmin(member.id, member.name)"
-                            class="text-blue-600 hover:text-blue-900">
+                            class="text-amber-700 hover:text-amber-900">
                       Make Admin
                     </button>
                     <button v-else-if="!isOnlyAdmin(member.id)" 
@@ -213,7 +213,7 @@
                       Remove
                     </button>
                   </template>
-                  <span v-else class="text-gray-400 text-sm">Current User</span>
+                  <span v-else class="text-stone-400 text-sm">Current User</span>
                 </td>
               </tr>
             </tbody>
@@ -222,29 +222,29 @@
       </div>
 
       <!-- Quick Actions Panel -->
-      <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Quick Actions</h2>
+      <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+        <div class="px-6 py-4 bg-stone-50 border-b border-stone-200">
+          <h2 class="text-lg font-semibold text-stone-900 font-heading">Quick Actions</h2>
         </div>
         <div class="p-6">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <NuxtLink to="/tasks" 
-                      class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                      class="flex items-center p-4 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors">
               <div class="flex-shrink-0">
-                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
                   </svg>
                 </div>
               </div>
               <div class="ml-4">
-                <h3 class="text-sm font-medium text-gray-900">Manage Tasks</h3>
-                <p class="text-xs text-gray-500">Create and organize household tasks</p>
+                <h3 class="text-sm font-medium text-stone-900">Manage Tasks</h3>
+                <p class="text-xs text-stone-500">Create and organize household tasks</p>
               </div>
             </NuxtLink>
 
             <NuxtLink to="/occurrences" 
-                      class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                      class="flex items-center p-4 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors">
               <div class="flex-shrink-0">
                 <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                   <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,13 +253,13 @@
                 </div>
               </div>
               <div class="ml-4">
-                <h3 class="text-sm font-medium text-gray-900">View Occurrences</h3>
-                <p class="text-xs text-gray-500">See all pending and completed tasks</p>
+                <h3 class="text-sm font-medium text-stone-900">View Occurrences</h3>
+                <p class="text-xs text-stone-500">See all pending and completed tasks</p>
               </div>
             </NuxtLink>
 
             <button @click="copyHouseholdInfo" 
-                    class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                    class="flex items-center p-4 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors text-left">
               <div class="flex-shrink-0">
                 <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
                   <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -268,8 +268,8 @@
                 </div>
               </div>
               <div class="ml-4">
-                <h3 class="text-sm font-medium text-gray-900">Share Household</h3>
-                <p class="text-xs text-gray-500">{{ copiedHouseholdInfo ? 'Copied!' : 'Copy invite info to share' }}</p>
+                <h3 class="text-sm font-medium text-stone-900">Share Household</h3>
+                <p class="text-xs text-stone-500">{{ copiedHouseholdInfo ? 'Copied!' : 'Copy invite info to share' }}</p>
               </div>
             </button>
           </div>
@@ -277,44 +277,44 @@
       </div>
 
       <!-- Household Statistics -->
-      <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-900">Household Overview</h2>
+      <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+        <div class="px-6 py-4 bg-stone-50 border-b border-stone-200">
+          <h2 class="text-lg font-semibold text-stone-900 font-heading">Household Overview</h2>
         </div>
         <div class="p-6">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div class="text-center">
-              <div class="text-2xl font-bold text-blue-600">{{ householdInfo.memberCount }}</div>
-              <div class="text-sm text-gray-500">Total Members</div>
+              <div class="text-2xl font-bold text-amber-700">{{ householdInfo.memberCount }}</div>
+              <div class="text-sm text-stone-500">Total Members</div>
             </div>
             <div class="text-center">
               <div class="text-2xl font-bold text-purple-600">{{ adminCount }}</div>
-              <div class="text-sm text-gray-500">Admin{{ adminCount !== 1 ? 's' : '' }}</div>
+              <div class="text-sm text-stone-500">Admin{{ adminCount !== 1 ? 's' : '' }}</div>
             </div>
             <div class="text-center">
               <div class="text-2xl font-bold text-green-600">{{ daysSinceCreated }}</div>
-              <div class="text-sm text-gray-500">Days Active</div>
+              <div class="text-sm text-stone-500">Days Active</div>
             </div>
             <div class="text-center">
-              <div class="text-2xl font-bold text-gray-600">{{ householdInfo.inviteCode.length }}</div>
-              <div class="text-sm text-gray-500">Char Invite Code</div>
+              <div class="text-2xl font-bold text-stone-600">{{ householdInfo.inviteCode.length }}</div>
+              <div class="text-sm text-stone-500">Char Invite Code</div>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Danger Zone -->
-      <div class="bg-white rounded-lg shadow-md overflow-hidden border-l-4 border-red-500">
+      <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden border-l-4 border-red-500">
         <div class="px-6 py-4 bg-red-50 border-b border-red-200">
-          <h2 class="text-lg font-semibold text-red-800">
+          <h2 class="text-lg font-semibold text-red-800 font-heading">
             {{ householdInfo.isCurrentUserAdmin ? 'Admin Settings' : 'Account Settings' }}
           </h2>
         </div>
         <div class="p-6">
           <div class="space-y-4">
             <div>
-              <h3 class="text-sm font-medium text-gray-900 mb-2">Leave Household</h3>
-              <p class="text-sm text-gray-600 mb-3">
+              <h3 class="text-sm font-medium text-stone-900 mb-2 font-heading">Leave Household</h3>
+              <p class="text-sm text-stone-600 mb-3">
                 Once you leave, you'll lose access to all household tasks and data. 
                 <span v-if="householdInfo.isCurrentUserAdmin">
                   As an admin, you may need to transfer admin privileges to another member first.
@@ -323,8 +323,8 @@
                   You can rejoin using the household invite code if needed.
                 </span>
               </p>
-              <button @click="leaveHousehold" 
-                      class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm">
+              <button @click="leaveHousehold"
+                      class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm transition-colors duration-150">
                 Leave Household
               </button>
             </div>
