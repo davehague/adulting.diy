@@ -223,7 +223,7 @@ export const useTaskStore = defineStore(
     }
 
     // Skip an occurrence (Blueprint Step 4.5 / 4.6)
-    async function skipOccurrence(occurrenceId: string, reason: string) {
+    async function skipOccurrence(occurrenceId: string, reason: string = '') {
       isLoading.value = true;
       error.value = null;
       try {

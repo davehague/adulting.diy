@@ -507,15 +507,17 @@ export class OccurrenceService {
           },
         });
 
-        // Log skip reason as a comment
-        await tx.occurrenceHistoryLog.create({
-          data: {
-            occurrenceId: id,
-            userId,
-            logType: "comment",
-            comment: `Skipped: ${reason}`,
-          },
-        });
+        // Log skip reason as a comment (only if reason was provided)
+        if (reason && reason.trim() !== '') {
+          await tx.occurrenceHistoryLog.create({
+            data: {
+              occurrenceId: id,
+              userId,
+              logType: "comment",
+              comment: `Skipped: ${reason}`,
+            },
+          });
+        }
 
         return occurrence as unknown as TaskOccurrence; // Ensure cast is here
       });

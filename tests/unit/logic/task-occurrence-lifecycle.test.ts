@@ -503,6 +503,217 @@ describe('Occurrence skip → next occurrence generation', () => {
     const nextOccurrenceCreate = createCalls[createCalls.length - 1][0]
     expect(nextOccurrenceCreate.data.dueDate).toEqual(new Date(2024, 0, 22, 0, 0, 0, 0))
   })
+
+  it('passes skippedAt for variable_interval skip (not dueDate)', async () => {
+    const config: ScheduleConfig = {
+      type: 'variable_interval',
+      variableInterval: { interval: 14, unit: 'day' },
+      endCondition: { type: 'never' },
+    }
+    const dueDate = localDate(2024, 1, 15)
+    const skippedAt = localDate(2024, 1, 19) // Skipped 4 days late
+    const task = makeTask({ scheduleConfig: config })
+    const occ = makeOccurrence({ dueDate })
+    const skippedOcc = { ...occ, task, skippedAt, dueDate }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(skippedOcc)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+    db.taskOccurrence.count.mockResolvedValue(1)
+    db.taskOccurrence.findFirst.mockResolvedValue(null)
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-2' }))
+
+    await occurrenceService.skip(OCCURRENCE_ID, USER_ID, 'Too busy')
+
+    // Next occurrence should be based on skippedAt (Jan 19 + 14 days = Feb 2)
+    // NOT the dueDate (Jan 15 + 14 = Jan 29)
+    const createCalls = db.taskOccurrence.create.mock.calls
+    const nextOccurrenceCreate = createCalls[createCalls.length - 1][0]
+    const nextDueDate = nextOccurrenceCreate.data.dueDate
+    expect(nextDueDate).toEqual(new Date(2024, 1, 2, 0, 0, 0, 0)) // Feb 2
+  })
+
+  it('passes DUE DATE for fixed_interval skip (not skippedAt)', async () => {
+    const config: ScheduleConfig = {
+      type: 'fixed_interval',
+      interval: 2,
+      intervalUnit: 'week',
+      endCondition: { type: 'never' },
+    }
+    const dueDate = localDate(2024, 1, 15)
+    const skippedAt = localDate(2024, 1, 19) // Skipped 4 days late
+    const task = makeTask({ scheduleConfig: config })
+    const occ = makeOccurrence({ dueDate })
+    const skippedOcc = { ...occ, task, skippedAt, dueDate }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(skippedOcc)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+    db.taskOccurrence.count.mockResolvedValue(1)
+    db.taskOccurrence.findFirst.mockResolvedValue(null)
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-2' }))
+
+    await occurrenceService.skip(OCCURRENCE_ID, USER_ID, 'Away')
+
+    // Next occurrence should be based on dueDate (Jan 15 + 2 weeks = Jan 29)
+    // NOT skippedAt (Jan 19 + 2 weeks = Feb 2)
+    const createCalls = db.taskOccurrence.create.mock.calls
+    const nextOccurrenceCreate = createCalls[createCalls.length - 1][0]
+    const nextDueDate = nextOccurrenceCreate.data.dueDate
+    expect(nextDueDate).toEqual(new Date(2024, 0, 29, 0, 0, 0, 0)) // Jan 29
+  })
+
+  it('does NOT generate next occurrence for "once" task after skip', async () => {
+    const config: ScheduleConfig = {
+      type: 'once',
+      dueDate: localDate(2024, 1, 15),
+      endCondition: { type: 'never' },
+    }
+    const task = makeTask({ scheduleConfig: config })
+    const occ = makeOccurrence()
+    const skippedOcc = { ...occ, task, skippedAt: new Date() }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(skippedOcc)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+
+    await occurrenceService.skip(OCCURRENCE_ID, USER_ID, 'Not needed')
+
+    // generateNextOccurrence is skipped for "once" type
+    expect(db.taskOccurrence.count).not.toHaveBeenCalled()
+  })
+
+  it('does NOT generate next occurrence when task is paused', async () => {
+    const config: ScheduleConfig = {
+      type: 'fixed_interval',
+      interval: 1,
+      intervalUnit: 'week',
+      endCondition: { type: 'never' },
+    }
+    const task = makeTask({ scheduleConfig: config, metaStatus: 'paused' })
+    const occ = makeOccurrence()
+    const skippedOcc = { ...occ, task, skippedAt: new Date() }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(skippedOcc)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+
+    await occurrenceService.skip(OCCURRENCE_ID, USER_ID, 'Task paused')
+
+    expect(db.taskOccurrence.count).not.toHaveBeenCalled()
+  })
+
+  it('does NOT generate next occurrence when task is soft-deleted', async () => {
+    const config: ScheduleConfig = {
+      type: 'fixed_interval',
+      interval: 1,
+      intervalUnit: 'week',
+      endCondition: { type: 'never' },
+    }
+    const task = makeTask({ scheduleConfig: config, metaStatus: 'soft-deleted' })
+    const occ = makeOccurrence()
+    const skippedOcc = { ...occ, task, skippedAt: new Date() }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(skippedOcc)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+
+    await occurrenceService.skip(OCCURRENCE_ID, USER_ID, 'Deleted task')
+
+    expect(db.taskOccurrence.count).not.toHaveBeenCalled()
+  })
+
+  it('does not generate next occurrence when times limit reached after skip', async () => {
+    const config: ScheduleConfig = {
+      type: 'fixed_interval',
+      interval: 1,
+      intervalUnit: 'week',
+      endCondition: { type: 'times', times: 5 },
+    }
+    const task = makeTask({ scheduleConfig: config })
+    const occ = makeOccurrence()
+    const skippedOcc = { ...occ, task, skippedAt: new Date(), dueDate: occ.dueDate }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(skippedOcc)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+    // Already at 5 occurrences — next would be 6, exceeding the limit
+    db.taskOccurrence.count.mockResolvedValue(5)
+
+    await occurrenceService.skip(OCCURRENCE_ID, USER_ID, 'End condition')
+
+    // generateNextOccurrence checks count+1 >= times → 6 >= 5 → stop
+    const createCalls = db.taskOccurrence.create.mock.calls
+    expect(createCalls.length).toBe(0)
+  })
+
+  it('does not create duplicate occurrence on skip', async () => {
+    const config: ScheduleConfig = {
+      type: 'fixed_interval',
+      interval: 1,
+      intervalUnit: 'week',
+      endCondition: { type: 'never' },
+    }
+    const task = makeTask({ scheduleConfig: config })
+    const occ = makeOccurrence({ dueDate: localDate(2024, 1, 15) })
+    const skippedOcc = { ...occ, task, skippedAt: new Date(), dueDate: occ.dueDate }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(skippedOcc)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+    db.taskOccurrence.count.mockResolvedValue(1)
+    // Simulate: an occurrence already exists for the next date
+    db.taskOccurrence.findFirst.mockResolvedValue(makeOccurrence({ id: 'occ-existing' }))
+
+    await occurrenceService.skip(OCCURRENCE_ID, USER_ID, 'Duplicate test')
+
+    // Should NOT create a new occurrence since one already exists
+    expect(db.taskOccurrence.create).not.toHaveBeenCalled()
+  })
+
+  it('skip with empty reason creates only status_change log, not comment log', async () => {
+    const config: ScheduleConfig = {
+      type: 'once',
+      dueDate: localDate(2024, 1, 15),
+      endCondition: { type: 'never' },
+    }
+    const task = makeTask({ scheduleConfig: config })
+    const occ = makeOccurrence()
+    const skippedOcc = { ...occ, task, skippedAt: new Date() }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(skippedOcc)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+
+    await occurrenceService.skip(OCCURRENCE_ID, USER_ID, '')
+
+    // Should have only 1 history log (status_change), not 2 (no comment for empty reason)
+    const historyCalls = db.occurrenceHistoryLog.create.mock.calls
+    expect(historyCalls.length).toBe(1)
+
+    const statusLog = historyCalls[0][0].data
+    expect(statusLog.logType).toBe('status_change')
+    expect(statusLog.newValue).toBe('skipped')
+  })
+
+  it('logs old status → "skipped" transition in history', async () => {
+    const task = makeTask({
+      scheduleConfig: { type: 'once', dueDate: localDate(2024, 1, 15), endCondition: { type: 'never' } },
+    })
+    const occ = makeOccurrence({ status: 'created' })
+    const skippedOcc = { ...occ, task, status: 'skipped', skippedAt: new Date() }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(skippedOcc)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+
+    await occurrenceService.skip(OCCURRENCE_ID, USER_ID, 'Not needed')
+
+    const historyCall = db.occurrenceHistoryLog.create.mock.calls[0][0]
+    expect(historyCall.data.logType).toBe('status_change')
+    expect(historyCall.data.oldValue).toBe('created')
+    expect(historyCall.data.newValue).toBe('skipped')
+  })
 })
 
 // =============================================================================
