@@ -2,6 +2,7 @@ import { defineHouseholdProtectedEventHandler } from "@/server/utils/auth";
 import { createError } from "h3";
 import prisma from "@/server/utils/prisma/client";
 import type { NotificationPreferences } from "@/types";
+import { defaultNotificationPreferences } from "@/types/notification";
 
 export default defineHouseholdProtectedEventHandler(
   async (event, authUser, householdId) => {
@@ -22,16 +23,7 @@ export default defineHouseholdProtectedEventHandler(
       }
 
       // Return the notification preferences or defaults
-      const preferences = user.notificationPreferences as NotificationPreferences || {
-        taskCreated: "mine",
-        taskPaused: "any",
-        taskCompleted: "any",
-        taskDeleted: "any",
-        occurrenceAssigned: "mine",
-        occurrenceExecuted: "mine",
-        occurrenceSkipped: "mine",
-        occurrenceCommented: "mine",
-      };
+      const preferences = user.notificationPreferences as NotificationPreferences || { ...defaultNotificationPreferences };
 
       return preferences;
     } catch (error) {

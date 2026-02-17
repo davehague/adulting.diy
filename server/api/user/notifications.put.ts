@@ -6,14 +6,14 @@ import type { NotificationPreferences } from "@/types";
 // Validation schema for notification preferences
 const validPreferenceValues = ["any", "mine", "none"] as const;
 const requiredFields = [
-  "taskCreated",
-  "taskPaused", 
-  "taskCompleted",
-  "taskDeleted",
-  "occurrenceAssigned",
-  "occurrenceExecuted",
-  "occurrenceSkipped", 
-  "occurrenceCommented",
+  "task_created",
+  "task_paused",
+  "task_completed",
+  "task_deleted",
+  "occurrence_assigned",
+  "occurrence_executed",
+  "occurrence_skipped",
+  "occurrence_commented",
 ] as const;
 
 export default defineHouseholdProtectedEventHandler(

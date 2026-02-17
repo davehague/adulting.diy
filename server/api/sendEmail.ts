@@ -8,7 +8,7 @@ const mailjet = new Mailjet({
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
-  const { toEmail, subject, htmlTemplate } = body;
+  const { to, subject, html } = body;
   try {
     const request = await mailjet.post("send", { version: "v3.1" }).request({
       Messages: [
@@ -19,12 +19,12 @@ export default defineEventHandler(async (event) => {
           },
           To: [
             {
-              Email: `${toEmail}`,
-              Name: `${toEmail}`,
+              Email: `${to}`,
+              Name: `${to}`,
             },
           ],
           Subject: `${subject}`,
-          HTMLPart: `${htmlTemplate}`,
+          HTMLPart: `${html}`,
         },
       ],
     });

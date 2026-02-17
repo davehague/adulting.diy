@@ -1,4 +1,5 @@
 import type { User, TaskDefinition, TaskOccurrence, NotificationPreferences } from "@/types";
+import { defaultNotificationPreferences } from "@/types/notification";
 import prisma from "@/server/utils/prisma/client";
 import { format, isAfter, isBefore, addDays } from "date-fns";
 
@@ -112,7 +113,7 @@ export class NotificationService {
   /**
    * Check if a notification should be sent based on user preferences
    */
-  private shouldSendNotification(
+  public shouldSendNotification(
     eventType: NotificationEventType,
     preferences: NotificationPreferences,
     context: NotificationContext,
@@ -122,33 +123,32 @@ export class NotificationService {
 
     switch (eventType) {
       case "task_created":
-        return preferences.taskCreated === "any" || 
-               (preferences.taskCreated === "mine" && context.actionUser?.id !== userId);
-      
+        return preferences.task_created === "any" && context.actionUser?.id !== userId;
+
       case "task_paused":
-        return preferences.taskPaused === "any";
-      
+        return preferences.task_paused === "any";
+
       case "task_completed":
-        return preferences.taskCompleted === "any";
-      
+        return preferences.task_completed === "any";
+
       case "task_deleted":
-        return preferences.taskDeleted === "any";
-      
+        return preferences.task_deleted === "any";
+
       case "occurrence_assigned":
-        return preferences.occurrenceAssigned === "any" ||
-               (preferences.occurrenceAssigned === "mine" && isMine);
-      
+        return preferences.occurrence_assigned === "any" ||
+               (preferences.occurrence_assigned === "mine" && isMine);
+
       case "occurrence_executed":
-        return preferences.occurrenceExecuted === "any" ||
-               (preferences.occurrenceExecuted === "mine" && isMine);
-      
+        return preferences.occurrence_executed === "any" ||
+               (preferences.occurrence_executed === "mine" && isMine);
+
       case "occurrence_skipped":
-        return preferences.occurrenceSkipped === "any" ||
-               (preferences.occurrenceSkipped === "mine" && isMine);
-      
+        return preferences.occurrence_skipped === "any" ||
+               (preferences.occurrence_skipped === "mine" && isMine);
+
       case "occurrence_commented":
-        return preferences.occurrenceCommented === "any" ||
-               (preferences.occurrenceCommented === "mine" && isMine);
+        return preferences.occurrence_commented === "any" ||
+               (preferences.occurrence_commented === "mine" && isMine);
       
       // Reminder notifications are always sent if configured
       case "task_reminder_initial":
@@ -164,7 +164,7 @@ export class NotificationService {
   /**
    * Check if user is related to an occurrence (assignee or has commented)
    */
-  private isUserRelatedToOccurrence(userId: string, context: NotificationContext): boolean {
+  public isUserRelatedToOccurrence(userId: string, context: NotificationContext): boolean {
     if (!context.occurrence) return false;
     
     // Check if user is assigned to the occurrence
@@ -376,17 +376,20 @@ export class NotificationService {
   /**
    * Check and send reminders for a specific task
    */
-  private async checkAndSendTaskReminders(task: TaskDefinition): Promise<number> {
+  public async checkAndSendTaskReminders(task: TaskDefinition): Promise<number> {
     let remindersSent = 0;
 
     if (!task.reminderConfig) return 0;
 
-    // Get upcoming occurrences for this task
+    // Include past-due occurrences so overdue reminders can fire
+    const lookbackDays = task.reminderConfig.overdueReminder || 0;
+    const earliestDate = addDays(new Date(), -lookbackDays);
+
     const upcomingOccurrences = await prisma.taskOccurrence.findMany({
       where: {
         taskId: task.id,
         status: { in: ["created", "assigned"] },
-        dueDate: { gte: new Date() }, // Only future or today's occurrences
+        dueDate: { gte: earliestDate },
       },
       orderBy: { dueDate: "asc" },
     });
@@ -433,7 +436,7 @@ export class NotificationService {
   /**
    * Helper to check if a date is today
    */
-  private isDateToday(date: Date): boolean {
+  public isDateToday(date: Date): boolean {
     const today = new Date();
     return date.toDateString() === today.toDateString();
   }
@@ -441,7 +444,7 @@ export class NotificationService {
   /**
    * Get days until due date (negative if overdue)
    */
-  private getDaysUntilDue(dueDate?: Date): number {
+  public getDaysUntilDue(dueDate?: Date): number {
     if (!dueDate) return 0;
     const today = new Date();
     const due = new Date(dueDate);
@@ -452,16 +455,7 @@ export class NotificationService {
   /**
    * Get default notification preferences
    */
-  private getDefaultPreferences(): NotificationPreferences {
-    return {
-      taskCreated: "mine",
-      taskPaused: "any",
-      taskCompleted: "any", 
-      taskDeleted: "any",
-      occurrenceAssigned: "mine",
-      occurrenceExecuted: "mine",
-      occurrenceSkipped: "mine",
-      occurrenceCommented: "mine",
-    };
+  public getDefaultPreferences(): NotificationPreferences {
+    return { ...defaultNotificationPreferences };
   }
 }
