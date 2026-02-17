@@ -394,13 +394,20 @@ export class OccurrenceService {
       // After successful completion, generate next occurrence if task is recurring
       if (updatedOccurrence.task) {
         const task = updatedOccurrence.task as unknown as TaskDefinition;
-        
+
         // Only generate next occurrence for recurring tasks (not "once" type)
         if (task.scheduleConfig.type !== "once" && task.metaStatus === "active") {
           try {
+            // For variable_interval, the next occurrence is based on when the
+            // task was actually completed (execution date).
+            // For all fixed schedules, the next occurrence is based on the
+            // original due date so the pattern stays anchored.
+            const baseDate = task.scheduleConfig.type === "variable_interval"
+              ? updatedOccurrence.completedAt!
+              : updatedOccurrence.dueDate;
             await this.generateNextOccurrence(
               task,
-              updatedOccurrence.completedAt!,
+              baseDate,
               userId
             );
           } catch (error) {
@@ -516,13 +523,20 @@ export class OccurrenceService {
       // After successful skip, generate next occurrence if task is recurring
       if (skippedOccurrence.task) {
         const task = skippedOccurrence.task as unknown as TaskDefinition;
-        
+
         // Only generate next occurrence for recurring tasks (not "once" type)
         if (task.scheduleConfig.type !== "once" && task.metaStatus === "active") {
           try {
+            // For variable_interval, the next occurrence is based on when the
+            // task was actually skipped.
+            // For all fixed schedules, the next occurrence is based on the
+            // original due date so the pattern stays anchored.
+            const baseDate = task.scheduleConfig.type === "variable_interval"
+              ? skippedOccurrence.skippedAt!
+              : skippedOccurrence.dueDate;
             await this.generateNextOccurrence(
               task,
-              skippedOccurrence.skippedAt!,
+              baseDate,
               userId
             );
           } catch (error) {
