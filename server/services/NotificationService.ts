@@ -376,17 +376,20 @@ export class NotificationService {
   /**
    * Check and send reminders for a specific task
    */
-  private async checkAndSendTaskReminders(task: TaskDefinition): Promise<number> {
+  public async checkAndSendTaskReminders(task: TaskDefinition): Promise<number> {
     let remindersSent = 0;
 
     if (!task.reminderConfig) return 0;
 
-    // Get upcoming occurrences for this task
+    // Include past-due occurrences so overdue reminders can fire
+    const lookbackDays = task.reminderConfig.overdueReminder || 0;
+    const earliestDate = addDays(new Date(), -lookbackDays);
+
     const upcomingOccurrences = await prisma.taskOccurrence.findMany({
       where: {
         taskId: task.id,
         status: { in: ["created", "assigned"] },
-        dueDate: { gte: new Date() }, // Only future or today's occurrences
+        dueDate: { gte: earliestDate },
       },
       orderBy: { dueDate: "asc" },
     });
@@ -433,7 +436,7 @@ export class NotificationService {
   /**
    * Helper to check if a date is today
    */
-  private isDateToday(date: Date): boolean {
+  public isDateToday(date: Date): boolean {
     const today = new Date();
     return date.toDateString() === today.toDateString();
   }
@@ -441,7 +444,7 @@ export class NotificationService {
   /**
    * Get days until due date (negative if overdue)
    */
-  private getDaysUntilDue(dueDate?: Date): number {
+  public getDaysUntilDue(dueDate?: Date): number {
     if (!dueDate) return 0;
     const today = new Date();
     const due = new Date(dueDate);

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NotificationService } from '@/server/services/NotificationService'
 import type { NotificationPreferences } from '@/types/notification'
 import { defaultNotificationPreferences } from '@/types/notification'
@@ -144,5 +144,77 @@ describe('NotificationService.shouldSendNotification', () => {
       expect(a).toEqual(b)
       expect(a).not.toBe(b)
     })
+  })
+})
+
+describe('isDateToday', () => {
+  const service = new NotificationService()
+
+  it('returns true when date matches today', () => {
+    const today = new Date()
+    expect(service.isDateToday(today)).toBe(true)
+  })
+
+  it('returns false for yesterday', () => {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    expect(service.isDateToday(yesterday)).toBe(false)
+  })
+
+  it('returns false for tomorrow', () => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    expect(service.isDateToday(tomorrow)).toBe(false)
+  })
+})
+
+describe('checkAndSendTaskReminders', () => {
+  it('returns 0 when task has no reminderConfig', async () => {
+    const service = new NotificationService()
+    const task = { id: 'task-1', reminderConfig: null } as any
+    const count = await service.checkAndSendTaskReminders(task)
+    expect(count).toBe(0)
+  })
+
+  it('sends overdue reminder for occurrence with dueDate in the past', async () => {
+    const service = new NotificationService()
+    const threeDaysAgo = new Date()
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+    threeDaysAgo.setHours(0, 0, 0, 0)
+
+    const task = {
+      id: 'task-1',
+      householdId: 'household-1',
+      metaStatus: 'active',
+      reminderConfig: { overdueReminder: 3 },
+    }
+
+    // Mock prisma to return the overdue occurrence
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+    vi.mocked(prisma.taskOccurrence.findMany).mockResolvedValueOnce([
+      {
+        id: 'occ-1',
+        taskId: 'task-1',
+        dueDate: threeDaysAgo,
+        status: 'assigned',
+        assigneeIds: ['user-1'],
+        createdAt: threeDaysAgo,
+        updatedAt: threeDaysAgo,
+      },
+    ] as any)
+
+    // Mock sendNotification to track calls
+    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue()
+
+    const count = await service.checkAndSendTaskReminders(task as any)
+
+    expect(count).toBe(1)
+    expect(sendSpy).toHaveBeenCalledWith(
+      'household-1',
+      'task_reminder_overdue',
+      expect.any(Object)
+    )
+
+    sendSpy.mockRestore()
   })
 })
