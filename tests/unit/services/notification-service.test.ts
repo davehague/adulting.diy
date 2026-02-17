@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NotificationService } from '@/server/services/NotificationService'
 import type { NotificationPreferences } from '@/types/notification'
+import { defaultNotificationPreferences } from '@/types/notification'
 import type { NotificationEventType, NotificationContext } from '@/server/services/NotificationService'
 
 // Preferences using snake_case keys — this is what the DB actually stores
@@ -82,6 +83,25 @@ describe('NotificationService.shouldSendNotification', () => {
     })
   })
 
+  // --- task_created does not notify the action performer ---
+  describe('task_created excludes action performer', () => {
+    it('does NOT send task_created to the user who created the task', () => {
+      const contextWithSelfAsActor: NotificationContext = {
+        ...baseContext,
+        actionUser: { id: userId } as any,
+      }
+      expect(service.shouldSendNotification('task_created', allAnyPrefs, contextWithSelfAsActor, userId)).toBe(false)
+    })
+
+    it('sends task_created to other users when actionUser differs', () => {
+      const contextWithOtherActor: NotificationContext = {
+        ...baseContext,
+        actionUser: { id: otherUserId } as any,
+      }
+      expect(service.shouldSendNotification('task_created', allAnyPrefs, contextWithOtherActor, userId)).toBe(true)
+    })
+  })
+
   // --- "mine" occurrence preference sends only to assignees ---
   describe('when occurrence preference is "mine"', () => {
     it('sends when user is assignee', () => {
@@ -111,6 +131,18 @@ describe('NotificationService.shouldSendNotification', () => {
       // Should NOT have camelCase keys
       expect(defaults).not.toHaveProperty('taskCreated')
       expect(defaults).not.toHaveProperty('occurrenceAssigned')
+    })
+
+    it('returns values matching defaultNotificationPreferences from types/notification.ts', () => {
+      const defaults = service.getDefaultPreferences()
+      expect(defaults).toEqual(defaultNotificationPreferences)
+    })
+
+    it('returns a new object each time (not a shared reference)', () => {
+      const a = service.getDefaultPreferences()
+      const b = service.getDefaultPreferences()
+      expect(a).toEqual(b)
+      expect(a).not.toBe(b)
     })
   })
 })
