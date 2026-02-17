@@ -219,6 +219,134 @@ describe('checkAndSendTaskReminders', () => {
   })
 })
 
+describe('renderEmailTemplate', () => {
+  const service = new NotificationService()
+
+  it('task_created renders with description', () => {
+    const html = service.renderEmailTemplate('task_created', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      descriptionBlock: '<p><strong>Description:</strong> Wipe counters</p>',
+      categoryName: 'Cleaning',
+      createdByName: 'Bob',
+      taskUrl: 'http://localhost/tasks/1',
+    })
+    expect(html).toContain('Alice')
+    expect(html).toContain('Clean Kitchen')
+    expect(html).toContain('Wipe counters')
+    expect(html).toContain('Cleaning')
+    expect(html).toContain('Bob')
+    expect(html).not.toContain('{{')
+  })
+
+  it('task_created renders without description (empty descriptionBlock)', () => {
+    const html = service.renderEmailTemplate('task_created', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      descriptionBlock: '',
+      categoryName: 'Cleaning',
+      createdByName: 'Bob',
+      taskUrl: 'http://localhost/tasks/1',
+    })
+    expect(html).toContain('Alice')
+    expect(html).not.toContain('Description:')
+    expect(html).not.toContain('{{')
+  })
+
+  it('task_reminder_initial uses amber colors and Task Reminder heading', () => {
+    const html = service.renderEmailTemplate('task_reminder_initial', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      dueDate: 'January 20, 2025',
+      dueSummary: 'Your task is due in 3 days:',
+      occurrenceUrl: 'http://localhost/occurrences/1',
+    })
+    expect(html).toContain('#d97706')
+    expect(html).toContain('Task Reminder')
+    expect(html).toContain('due in 3 days')
+    expect(html).not.toContain('{{')
+    expect(html).not.toContain('color: ;')
+  })
+
+  it('task_reminder_followup uses amber colors and Follow-up heading', () => {
+    const html = service.renderEmailTemplate('task_reminder_followup', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      dueDate: 'January 20, 2025',
+      dueSummary: 'Your task is due in 1 days:',
+      occurrenceUrl: 'http://localhost/occurrences/1',
+    })
+    expect(html).toContain('#d97706')
+    expect(html).toContain('Follow-up Reminder')
+    expect(html).not.toContain('{{')
+  })
+
+  it('task_reminder_overdue uses red colors and Task Overdue heading', () => {
+    const html = service.renderEmailTemplate('task_reminder_overdue', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      dueDate: 'January 15, 2025',
+      daysOverdue: 5,
+      occurrenceUrl: 'http://localhost/occurrences/1',
+    })
+    expect(html).toContain('#dc2626')
+    expect(html).toContain('Task Overdue')
+    expect(html).toContain('5 days overdue')
+    expect(html).not.toContain('{{')
+    expect(html).not.toContain('color: ;')
+  })
+
+  it('unknown template falls back to generic', () => {
+    const html = service.renderEmailTemplate('unknown_template', {
+      userName: 'Alice',
+      taskName: 'Test',
+      eventType: 'some_event',
+    })
+    expect(html).toContain('Adulting.DIY Notification')
+    expect(html).toContain('Alice')
+  })
+})
+
+describe('generateEmailContent', () => {
+  const service = new NotificationService()
+  const baseContext = {
+    user: { id: 'u1', name: 'Alice', email: 'alice@test.com' } as any,
+    task: { id: 't1', name: 'Clean Kitchen', description: 'Wipe counters', category: { name: 'Cleaning' } } as any,
+    occurrence: { id: 'o1', dueDate: new Date('2025-03-01'), assigneeIds: ['u1'] } as any,
+    actionUser: { id: 'u2', name: 'Bob' } as any,
+    household: { id: 'h1', name: 'Test House' },
+  }
+
+  it('task_reminder_followup returns proper subject and body (not generic)', () => {
+    const result = service.generateEmailContent('task_reminder_followup', baseContext, baseContext.user)
+    expect(result.subject).toContain('Follow-up')
+    expect(result.subject).toContain('Clean Kitchen')
+    expect(result.body).toContain('Follow-up Reminder')
+    expect(result.body).not.toContain('Adulting.DIY Notification') // NOT the generic template
+  })
+
+  it('task_reminder_overdue includes days overdue in subject', () => {
+    const result = service.generateEmailContent('task_reminder_overdue', baseContext, baseContext.user)
+    expect(result.subject).toContain('Overdue')
+    expect(result.body).toContain('Task Overdue')
+    expect(result.body).toContain('#dc2626')
+  })
+
+  it('task_created includes description when present', () => {
+    const result = service.generateEmailContent('task_created', baseContext, baseContext.user)
+    expect(result.body).toContain('Wipe counters')
+  })
+
+  it('task_created omits description when not present', () => {
+    const noDescContext = {
+      ...baseContext,
+      task: { ...baseContext.task, description: undefined },
+    }
+    const result = service.generateEmailContent('task_created', noDescContext, baseContext.user)
+    expect(result.body).not.toContain('Description:')
+  })
+})
+
 describe('Notification preferences vs reminder config interaction', () => {
   const service = new NotificationService()
 

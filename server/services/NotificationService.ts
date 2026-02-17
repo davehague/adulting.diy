@@ -210,7 +210,7 @@ export class NotificationService {
   /**
    * Generate email content for different notification types
    */
-  private generateEmailContent(
+  public generateEmailContent(
     eventType: NotificationEventType,
     context: NotificationContext,
     user: User
@@ -220,12 +220,15 @@ export class NotificationService {
 
     switch (eventType) {
       case "task_created":
+        const descriptionBlock = task?.description
+          ? `<p><strong>Description:</strong> ${task.description}</p>`
+          : '';
         return {
           subject: `New Task: ${task?.name}`,
           body: this.renderEmailTemplate("task_created", {
             userName: user.name,
             taskName: task?.name,
-            taskDescription: task?.description,
+            descriptionBlock,
             categoryName: task?.category?.name,
             createdByName: actionUser?.name,
             householdName: household?.name,
@@ -245,35 +248,53 @@ export class NotificationService {
           }),
         };
 
-      case "task_reminder_initial":
+      case "task_reminder_initial": {
         const daysBefore = this.getDaysUntilDue(occurrence?.dueDate);
+        const dueSummary = daysBefore > 0
+          ? `Your task is due in ${daysBefore} days:`
+          : 'Your task is due today:';
         return {
-          subject: `Reminder: ${task?.name} due ${daysBefore > 0 ? `in ${daysBefore} days` : "today"}`,
-          body: this.renderEmailTemplate("task_reminder", {
+          subject: `Reminder: ${task?.name} ${daysBefore > 0 ? `due in ${daysBefore} days` : "due today"}`,
+          body: this.renderEmailTemplate("task_reminder_initial", {
             userName: user.name,
             taskName: task?.name,
             dueDate: occurrence?.dueDate ? format(new Date(occurrence.dueDate), "PPP") : "",
-            reminderType: "initial",
-            daysUntilDue: daysBefore,
+            dueSummary,
             occurrenceUrl: `${baseUrl}/occurrences/${occurrence?.id}`,
           }),
         };
+      }
 
-      case "task_reminder_overdue":
+      case "task_reminder_followup": {
+        const daysBeforeFollowup = this.getDaysUntilDue(occurrence?.dueDate);
+        const dueSummaryFollowup = daysBeforeFollowup > 0
+          ? `Your task is due in ${daysBeforeFollowup} days:`
+          : 'Your task is due today:';
+        return {
+          subject: `Follow-up: ${task?.name} ${daysBeforeFollowup > 0 ? `due in ${daysBeforeFollowup} days` : "due today"}`,
+          body: this.renderEmailTemplate("task_reminder_followup", {
+            userName: user.name,
+            taskName: task?.name,
+            dueDate: occurrence?.dueDate ? format(new Date(occurrence.dueDate), "PPP") : "",
+            dueSummary: dueSummaryFollowup,
+            occurrenceUrl: `${baseUrl}/occurrences/${occurrence?.id}`,
+          }),
+        };
+      }
+
+      case "task_reminder_overdue": {
         const daysOverdue = Math.abs(this.getDaysUntilDue(occurrence?.dueDate));
         return {
           subject: `Overdue: ${task?.name} (${daysOverdue} days overdue)`,
-          body: this.renderEmailTemplate("task_reminder", {
+          body: this.renderEmailTemplate("task_reminder_overdue", {
             userName: user.name,
             taskName: task?.name,
             dueDate: occurrence?.dueDate ? format(new Date(occurrence.dueDate), "PPP") : "",
-            reminderType: "overdue",
-            daysOverdue: daysOverdue,
+            daysOverdue,
             occurrenceUrl: `${baseUrl}/occurrences/${occurrence?.id}`,
           }),
         };
-
-      // Add other notification types...
+      }
       default:
         return {
           subject: `Adulting.DIY Notification`,
@@ -289,7 +310,7 @@ export class NotificationService {
   /**
    * Simple template rendering (can be enhanced with a proper template engine)
    */
-  private renderEmailTemplate(templateName: string, variables: Record<string, any>): string {
+  public renderEmailTemplate(templateName: string, variables: Record<string, any>): string {
     const templates = {
       task_created: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -299,7 +320,7 @@ export class NotificationService {
           <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">
             <h3 style="margin-top: 0;">{{taskName}}</h3>
             <p><strong>Category:</strong> {{categoryName}}</p>
-            {{#if taskDescription}}<p><strong>Description:</strong> {{taskDescription}}</p>{{/if}}
+            {{descriptionBlock}}
             <p><strong>Created by:</strong> {{createdByName}}</p>
           </div>
           <p><a href="{{taskUrl}}" style="background: #2563eb; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">View Task</a></p>
@@ -322,28 +343,44 @@ export class NotificationService {
         </div>
       `,
       
-      task_reminder: `
+      task_reminder_initial: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: {{#if reminderType === 'overdue'}}#dc2626{{else}}#d97706{{/if}};">
-            {{#if reminderType === 'overdue'}}Task Overdue{{else}}Task Reminder{{/if}}
-          </h2>
+          <h2 style="color: #d97706;">Task Reminder</h2>
           <p>Hi {{userName}},</p>
-          <p>
-            {{#if reminderType === 'overdue'}}
-              Your task is {{daysOverdue}} days overdue:
-            {{else}}
-              {{#if daysUntilDue > 0}}
-                Your task is due in {{daysUntilDue}} days:
-              {{else}}
-                Your task is due today:
-              {{/if}}
-            {{/if}}
-          </p>
-          <div style="background: {{#if reminderType === 'overdue'}}#fef2f2{{else}}#fffbeb{{/if}}; padding: 16px; border-radius: 8px; margin: 16px 0;">
+          <p>{{dueSummary}}</p>
+          <div style="background: #fffbeb; padding: 16px; border-radius: 8px; margin: 16px 0;">
             <h3 style="margin-top: 0;">{{taskName}}</h3>
             <p><strong>Due Date:</strong> {{dueDate}}</p>
           </div>
-          <p><a href="{{occurrenceUrl}}" style="background: {{#if reminderType === 'overdue'}}#dc2626{{else}}#d97706{{/if}}; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">Complete Task</a></p>
+          <p><a href="{{occurrenceUrl}}" style="background: #d97706; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">Complete Task</a></p>
+          <p>Best regards,<br>Adulting.DIY</p>
+        </div>
+      `,
+
+      task_reminder_followup: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #d97706;">Follow-up Reminder</h2>
+          <p>Hi {{userName}},</p>
+          <p>{{dueSummary}}</p>
+          <div style="background: #fffbeb; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <h3 style="margin-top: 0;">{{taskName}}</h3>
+            <p><strong>Due Date:</strong> {{dueDate}}</p>
+          </div>
+          <p><a href="{{occurrenceUrl}}" style="background: #d97706; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">Complete Task</a></p>
+          <p>Best regards,<br>Adulting.DIY</p>
+        </div>
+      `,
+
+      task_reminder_overdue: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc2626;">Task Overdue</h2>
+          <p>Hi {{userName}},</p>
+          <p>Your task is {{daysOverdue}} days overdue:</p>
+          <div style="background: #fef2f2; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <h3 style="margin-top: 0;">{{taskName}}</h3>
+            <p><strong>Due Date:</strong> {{dueDate}}</p>
+          </div>
+          <p><a href="{{occurrenceUrl}}" style="background: #dc2626; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">Complete Task</a></p>
           <p>Best regards,<br>Adulting.DIY</p>
         </div>
       `,
@@ -367,8 +404,7 @@ export class NotificationService {
       template = template.replace(regex, String(value || ''));
     });
 
-    // Remove unused conditionals and variables (basic cleanup)
-    template = template.replace(/{{#if[^}]*}}.*?{{\/if}}/gs, '');
+    // Remove any unreplaced variables (basic cleanup)
     template = template.replace(/{{[^}]*}}/g, '');
 
     return template;
