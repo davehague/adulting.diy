@@ -14,6 +14,9 @@ const allAnyPrefs: NotificationPreferences = {
   occurrence_executed: 'any',
   occurrence_skipped: 'any',
   occurrence_commented: 'any',
+  reminder_initial: 'any',
+  reminder_followup: 'any',
+  reminder_overdue: 'any',
 }
 
 const allNonePrefs: NotificationPreferences = {
@@ -25,6 +28,9 @@ const allNonePrefs: NotificationPreferences = {
   occurrence_executed: 'none',
   occurrence_skipped: 'none',
   occurrence_commented: 'none',
+  reminder_initial: 'none',
+  reminder_followup: 'none',
+  reminder_overdue: 'none',
 }
 
 const minePrefs: NotificationPreferences = {
@@ -36,6 +42,9 @@ const minePrefs: NotificationPreferences = {
   occurrence_executed: 'mine',
   occurrence_skipped: 'mine',
   occurrence_commented: 'mine',
+  reminder_initial: 'any',
+  reminder_followup: 'any',
+  reminder_overdue: 'any',
 }
 
 const userId = 'user-1'
@@ -113,12 +122,35 @@ describe('NotificationService.shouldSendNotification', () => {
     })
   })
 
-  // --- Reminders always send ---
+  // --- Reminders respect reminder-specific preferences ---
   describe('reminder notifications', () => {
     it.each([
-      'task_reminder_initial', 'task_reminder_followup', 'task_reminder_overdue',
-    ] as NotificationEventType[])('always sends %s regardless of preferences', (eventType) => {
-      expect(service.shouldSendNotification(eventType, allNonePrefs, baseContext, userId)).toBe(true)
+      ['task_reminder_initial', 'reminder_initial'],
+      ['task_reminder_followup', 'reminder_followup'],
+      ['task_reminder_overdue', 'reminder_overdue'],
+    ] as [NotificationEventType, string][])('%s sends when preference is "any"', (eventType, prefKey) => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, [prefKey]: 'any' }
+      expect(service.shouldSendNotification(eventType, prefs, baseContext, userId)).toBe(true)
+    })
+
+    it.each([
+      ['task_reminder_initial', 'reminder_initial'],
+      ['task_reminder_followup', 'reminder_followup'],
+      ['task_reminder_overdue', 'reminder_overdue'],
+    ] as [NotificationEventType, string][])('%s blocks when preference is "none"', (eventType, prefKey) => {
+      const prefs: NotificationPreferences = { ...allAnyPrefs, [prefKey]: 'none' }
+      expect(service.shouldSendNotification(eventType, prefs, baseContext, userId)).toBe(false)
+    })
+
+    it('defaults to sending when preference fields are missing (backward compat)', () => {
+      // Simulate old stored prefs without reminder_* fields
+      const legacyPrefs = { ...allAnyPrefs } as any
+      delete legacyPrefs.reminder_initial
+      delete legacyPrefs.reminder_followup
+      delete legacyPrefs.reminder_overdue
+      expect(service.shouldSendNotification('task_reminder_initial', legacyPrefs, baseContext, userId)).toBe(true)
+      expect(service.shouldSendNotification('task_reminder_followup', legacyPrefs, baseContext, userId)).toBe(true)
+      expect(service.shouldSendNotification('task_reminder_overdue', legacyPrefs, baseContext, userId)).toBe(true)
     })
   })
 
@@ -219,6 +251,134 @@ describe('checkAndSendTaskReminders', () => {
   })
 })
 
+describe('renderEmailTemplate', () => {
+  const service = new NotificationService()
+
+  it('task_created renders with description', () => {
+    const html = service.renderEmailTemplate('task_created', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      descriptionBlock: '<p><strong>Description:</strong> Wipe counters</p>',
+      categoryName: 'Cleaning',
+      createdByName: 'Bob',
+      taskUrl: 'http://localhost/tasks/1',
+    })
+    expect(html).toContain('Alice')
+    expect(html).toContain('Clean Kitchen')
+    expect(html).toContain('Wipe counters')
+    expect(html).toContain('Cleaning')
+    expect(html).toContain('Bob')
+    expect(html).not.toContain('{{')
+  })
+
+  it('task_created renders without description (empty descriptionBlock)', () => {
+    const html = service.renderEmailTemplate('task_created', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      descriptionBlock: '',
+      categoryName: 'Cleaning',
+      createdByName: 'Bob',
+      taskUrl: 'http://localhost/tasks/1',
+    })
+    expect(html).toContain('Alice')
+    expect(html).not.toContain('Description:')
+    expect(html).not.toContain('{{')
+  })
+
+  it('task_reminder_initial uses amber colors and Task Reminder heading', () => {
+    const html = service.renderEmailTemplate('task_reminder_initial', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      dueDate: 'January 20, 2025',
+      dueSummary: 'Your task is due in 3 days:',
+      occurrenceUrl: 'http://localhost/occurrences/1',
+    })
+    expect(html).toContain('#d97706')
+    expect(html).toContain('Task Reminder')
+    expect(html).toContain('due in 3 days')
+    expect(html).not.toContain('{{')
+    expect(html).not.toContain('color: ;')
+  })
+
+  it('task_reminder_followup uses amber colors and Follow-up heading', () => {
+    const html = service.renderEmailTemplate('task_reminder_followup', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      dueDate: 'January 20, 2025',
+      dueSummary: 'Your task is due in 1 days:',
+      occurrenceUrl: 'http://localhost/occurrences/1',
+    })
+    expect(html).toContain('#d97706')
+    expect(html).toContain('Follow-up Reminder')
+    expect(html).not.toContain('{{')
+  })
+
+  it('task_reminder_overdue uses red colors and Task Overdue heading', () => {
+    const html = service.renderEmailTemplate('task_reminder_overdue', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      dueDate: 'January 15, 2025',
+      daysOverdue: 5,
+      occurrenceUrl: 'http://localhost/occurrences/1',
+    })
+    expect(html).toContain('#dc2626')
+    expect(html).toContain('Task Overdue')
+    expect(html).toContain('5 days overdue')
+    expect(html).not.toContain('{{')
+    expect(html).not.toContain('color: ;')
+  })
+
+  it('unknown template falls back to generic', () => {
+    const html = service.renderEmailTemplate('unknown_template', {
+      userName: 'Alice',
+      taskName: 'Test',
+      eventType: 'some_event',
+    })
+    expect(html).toContain('Adulting.DIY Notification')
+    expect(html).toContain('Alice')
+  })
+})
+
+describe('generateEmailContent', () => {
+  const service = new NotificationService()
+  const baseContext = {
+    user: { id: 'u1', name: 'Alice', email: 'alice@test.com' } as any,
+    task: { id: 't1', name: 'Clean Kitchen', description: 'Wipe counters', category: { name: 'Cleaning' } } as any,
+    occurrence: { id: 'o1', dueDate: new Date('2025-03-01'), assigneeIds: ['u1'] } as any,
+    actionUser: { id: 'u2', name: 'Bob' } as any,
+    household: { id: 'h1', name: 'Test House' },
+  }
+
+  it('task_reminder_followup returns proper subject and body (not generic)', () => {
+    const result = service.generateEmailContent('task_reminder_followup', baseContext, baseContext.user)
+    expect(result.subject).toContain('Follow-up')
+    expect(result.subject).toContain('Clean Kitchen')
+    expect(result.body).toContain('Follow-up Reminder')
+    expect(result.body).not.toContain('Adulting.DIY Notification') // NOT the generic template
+  })
+
+  it('task_reminder_overdue includes days overdue in subject', () => {
+    const result = service.generateEmailContent('task_reminder_overdue', baseContext, baseContext.user)
+    expect(result.subject).toContain('Overdue')
+    expect(result.body).toContain('Task Overdue')
+    expect(result.body).toContain('#dc2626')
+  })
+
+  it('task_created includes description when present', () => {
+    const result = service.generateEmailContent('task_created', baseContext, baseContext.user)
+    expect(result.body).toContain('Wipe counters')
+  })
+
+  it('task_created omits description when not present', () => {
+    const noDescContext = {
+      ...baseContext,
+      task: { ...baseContext.task, description: undefined },
+    }
+    const result = service.generateEmailContent('task_created', noDescContext, baseContext.user)
+    expect(result.body).not.toContain('Description:')
+  })
+})
+
 describe('Notification preferences vs reminder config interaction', () => {
   const service = new NotificationService()
 
@@ -233,11 +393,15 @@ describe('Notification preferences vs reminder config interaction', () => {
     expect(result).toBe(false)
   })
 
-  // NOTE: "reminder notification ignores user preferences" skipped — already covered
-  // in the "reminder notifications" describe block above.
-
-  // NOTE: "checkAndSendTaskReminders returns 0 for null reminderConfig" skipped —
-  // already covered in the "checkAndSendTaskReminders" describe block above.
+  it('reminder notification respects reminder-specific preferences', () => {
+    const prefsWithRemindersOff: NotificationPreferences = {
+      ...allAnyPrefs,
+      reminder_initial: 'none',
+    }
+    expect(service.shouldSendNotification(
+      'task_reminder_initial', prefsWithRemindersOff, baseContext, userId
+    )).toBe(false)
+  })
 
   it('"mine" occurrence preference sends only when user is assignee', () => {
     const prefs: NotificationPreferences = {

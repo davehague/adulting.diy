@@ -85,6 +85,36 @@
         </div>
       </div>
       
+      <!-- Reminder Notifications -->
+      <div>
+        <h4 class="text-sm font-medium text-gray-900 mb-3">Reminder Notifications</h4>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="text-sm text-gray-700">Initial Reminder</label>
+            <select v-model="preferences.reminder_initial" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+              <option value="any">Enabled</option>
+              <option value="none">Disabled</option>
+            </select>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <label class="text-sm text-gray-700">Follow-up Reminder</label>
+            <select v-model="preferences.reminder_followup" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+              <option value="any">Enabled</option>
+              <option value="none">Disabled</option>
+            </select>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <label class="text-sm text-gray-700">Overdue Reminder</label>
+            <select v-model="preferences.reminder_overdue" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+              <option value="any">Enabled</option>
+              <option value="none">Disabled</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <!-- Save Button -->
       <div class="pt-4 border-t border-gray-200">
         <button 
@@ -120,7 +150,10 @@ const preferences = ref<NotificationPreferences>({
   occurrence_assigned: 'mine',
   occurrence_executed: 'mine',
   occurrence_skipped: 'mine',
-  occurrence_commented: 'mine'
+  occurrence_commented: 'mine',
+  reminder_initial: 'any',
+  reminder_followup: 'any',
+  reminder_overdue: 'any'
 });
 
 // Load current preferences

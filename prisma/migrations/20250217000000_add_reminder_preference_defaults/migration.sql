@@ -1,0 +1,2 @@
+-- AlterTable: Update default value for notificationPreferences to include reminder fields
+ALTER TABLE "users" ALTER COLUMN "notificationPreferences" SET DEFAULT '{"task_created":"any","task_paused":"any","task_completed":"any","task_deleted":"any","occurrence_assigned":"mine","occurrence_executed":"mine","occurrence_skipped":"mine","occurrence_commented":"mine","reminder_initial":"any","reminder_followup":"any","reminder_overdue":"any"}';

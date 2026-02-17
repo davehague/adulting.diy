@@ -6,7 +6,7 @@ const mailjet = new Mailjet({
   apiSecret: process.env.MJ_APIKEY_PRIVATE,
 });
 
-export default defineEventHandler(async (event) => {
+export default defineSchedulerProtectedEventHandler(async (event) => {
   const body = await readBody(event);
   const { to, subject, html } = body;
   try {

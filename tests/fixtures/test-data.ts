@@ -153,6 +153,9 @@ export const testNotificationPreferences = {
     occurrence_executed: 'mine' as const,
     occurrence_skipped: 'mine' as const,
     occurrence_commented: 'mine' as const,
+    reminder_initial: 'any' as const,
+    reminder_followup: 'any' as const,
+    reminder_overdue: 'any' as const,
   },
 
   member: {
@@ -165,5 +168,8 @@ export const testNotificationPreferences = {
     occurrence_executed: 'any' as const,
     occurrence_skipped: 'any' as const,
     occurrence_commented: 'any' as const,
+    reminder_initial: 'any' as const,
+    reminder_followup: 'any' as const,
+    reminder_overdue: 'any' as const,
   }
 }
