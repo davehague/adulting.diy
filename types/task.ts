@@ -112,6 +112,12 @@ export interface TaskDefinition {
   createdByUserId: string; // Renamed
   defaultAssigneeIds?: string[]; // Renamed
   category?: Category; // Add optional category if needed by TaskDefinition usage
+  nextOccurrence?: {
+    id: string;
+    dueDate: Date;
+    status: OccurrenceStatus;
+    assigneeIds: string[];
+  };
 }
 
 export type OccurrenceStatus =

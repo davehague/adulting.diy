@@ -93,18 +93,38 @@ export class TaskService {
         ];
       }
 
-      // Find tasks
+      // Find tasks with their next pending occurrence
       const tasks = await prisma.taskDefinition.findMany({
         where,
         include: {
           category: true,
+          occurrences: {
+            where: {
+              status: { in: ["created", "assigned"] },
+            },
+            orderBy: { dueDate: "asc" },
+            take: 1,
+          },
         },
         orderBy: {
           name: "asc",
         },
       });
 
-      return tasks.map(mapPrismaTaskToDefinition);
+      return tasks.map((task) => {
+        const { occurrences, ...taskWithoutOccurrences } = task;
+        const mapped = mapPrismaTaskToDefinition(taskWithoutOccurrences);
+        if (occurrences && occurrences.length > 0) {
+          const occ = occurrences[0];
+          mapped.nextOccurrence = {
+            id: occ.id,
+            dueDate: occ.dueDate,
+            status: occ.status as any,
+            assigneeIds: occ.assigneeIds ?? [],
+          };
+        }
+        return mapped;
+      });
     } catch (error) {
       console.error(
         `[TaskService] Unexpected error in findForHousehold:`,

@@ -78,6 +78,12 @@
               Schedule
             </th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Next Due
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Assignee(s)
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Status
             </th>
             <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -102,6 +108,25 @@
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
               {{ formatSchedule(task.scheduleConfig) }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <template v-if="task.nextOccurrence">
+                <div class="text-sm text-gray-900" :class="{ 'text-red-600 font-semibold': isOverdue(task.nextOccurrence.dueDate) }">
+                  {{ formatDate(task.nextOccurrence.dueDate) }}
+                </div>
+                <div v-if="isOverdue(task.nextOccurrence.dueDate)" class="text-xs text-red-500 font-medium">
+                  Overdue
+                </div>
+              </template>
+              <span v-else class="text-sm text-gray-400 italic">None</span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <template v-if="task.nextOccurrence && task.nextOccurrence.assigneeIds.length > 0">
+                <div class="text-sm text-gray-900">
+                  {{ getAssigneeNames(task.nextOccurrence.assigneeIds).join(', ') }}
+                </div>
+              </template>
+              <span v-else class="text-sm text-gray-400 italic">Unassigned</span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
@@ -199,7 +224,7 @@ import { useRouter } from 'vue-router';
 import { useApi } from '@/utils/api';
 import { useTaskStore } from '@/stores/tasks';
 import { useAuthStore } from '@/stores/auth'; // Import auth store
-import type { TaskDefinition, Category } from '@/types';
+import type { TaskDefinition, Category, User } from '@/types';
 
 const api = useApi(); // Keep for categories for now
 const taskStore = useTaskStore();
@@ -212,8 +237,9 @@ const loading = computed(() => taskStore.isLoading);
 const tasks = computed(() => taskStore.tasks);
 const error = computed(() => taskStore.error);
 
-// Keep local state for categories filter
+// Keep local state for categories filter and household users
 const categories = ref<Category[]>([]);
+const householdUsers = ref<User[]>([]);
 
 // Dropdown state
 const openDropdownId = ref<string | null>(null);
@@ -233,7 +259,14 @@ onMounted(async () => {
     categories.value = categoriesData;
   } catch (err) {
     console.error('Error loading categories:', err);
-    // Handle category loading error if needed
+  }
+
+  // Fetch household users for assignee display
+  try {
+    const usersData = await api.get<User[]>('/api/household/users');
+    householdUsers.value = usersData;
+  } catch (err) {
+    console.error('Error loading household users:', err);
   }
 
   // Close dropdown when clicking outside
@@ -306,6 +339,30 @@ const formatSchedule = (scheduleConfig: any): string => {
     default:
       return 'Custom schedule';
   }
+};
+
+const formatDate = (date: Date | string): string => {
+  const d = new Date(date);
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+};
+
+const isOverdue = (dueDate: Date | string): boolean => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  return due < today;
+};
+
+const getAssigneeNames = (assigneeIds: string[]): string[] => {
+  return assigneeIds.map(id => {
+    const user = householdUsers.value.find(u => u.id === id);
+    return user ? user.name : 'Unknown User';
+  });
 };
 
 const getStatusClass = (status: string): string => {
