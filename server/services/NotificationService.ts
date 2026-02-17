@@ -192,6 +192,7 @@ export class NotificationService {
       // Use the existing sendEmail API
       const response = await $fetch("/api/sendEmail", {
         method: "POST",
+        headers: { 'x-scheduler-key': process.env.SCHEDULER_API_KEY || '' },
         body: {
           to: user.email,
           subject: subject,

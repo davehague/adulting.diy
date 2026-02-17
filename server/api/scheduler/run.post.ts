@@ -1,4 +1,4 @@
-import { defineEventHandler, createError } from "h3";
+import { createError } from "h3";
 import prisma from "@/server/utils/prisma/client";
 import { OccurrenceService } from "@/server/services/OccurrenceService";
 import { TaskDefinition as PrismaTaskDefinition } from "@prisma/client";
@@ -46,10 +46,8 @@ function mapPrismaTaskToDefinitionTemp(
   };
 }
 
-export default defineEventHandler(async (event) => {
+export default defineSchedulerProtectedEventHandler(async (event) => {
   console.log("[Scheduler API] Running occurrence generation...");
-  // TODO: Add security - This endpoint should ideally be protected (e.g., require a secret key)
-  //       if exposed publicly and triggered by an external scheduler.
 
   const occurrenceService = new OccurrenceService();
   const generationHorizonMonths = 3; // Generate occurrences 3 months ahead
