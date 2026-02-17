@@ -218,3 +218,37 @@ describe('checkAndSendTaskReminders', () => {
     sendSpy.mockRestore()
   })
 })
+
+describe('Notification preferences vs reminder config interaction', () => {
+  const service = new NotificationService()
+
+  it('event notification respects "none" preference', () => {
+    const prefs: NotificationPreferences = {
+      ...allAnyPrefs,
+      occurrence_executed: 'none',
+    }
+    const result = service.shouldSendNotification(
+      'occurrence_executed', prefs, contextWithOccurrenceAssignedToUser, userId
+    )
+    expect(result).toBe(false)
+  })
+
+  // NOTE: "reminder notification ignores user preferences" skipped — already covered
+  // in the "reminder notifications" describe block above.
+
+  // NOTE: "checkAndSendTaskReminders returns 0 for null reminderConfig" skipped —
+  // already covered in the "checkAndSendTaskReminders" describe block above.
+
+  it('"mine" occurrence preference sends only when user is assignee', () => {
+    const prefs: NotificationPreferences = {
+      ...allNonePrefs,
+      occurrence_executed: 'mine',
+    }
+    expect(service.shouldSendNotification(
+      'occurrence_executed', prefs, contextWithOccurrenceAssignedToUser, userId
+    )).toBe(true)
+    expect(service.shouldSendNotification(
+      'occurrence_executed', prefs, contextWithOccurrenceAssignedToOther, userId
+    )).toBe(false)
+  })
+})
