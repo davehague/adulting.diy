@@ -186,6 +186,17 @@
                     <div class="py-1">
                       <button
                         v-if="['created', 'assigned'].includes(occurrence.status)"
+                        @click="editOccurrence(occurrence)"
+                        class="group flex items-center w-full px-4 py-2 text-sm text-blue-600 hover:bg-gray-100"
+                      >
+                        <svg class="mr-3 h-4 w-4 text-blue-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Edit
+                      </button>
+
+                      <button
+                        v-if="['created', 'assigned'].includes(occurrence.status)"
                         @click="executeOccurrence(occurrence.id)"
                         class="group flex items-center w-full px-4 py-2 text-sm text-green-600 hover:bg-gray-100"
                       >
@@ -194,10 +205,10 @@
                         </svg>
                         Complete
                       </button>
-                      
+
                       <button
                         v-if="['created', 'assigned'].includes(occurrence.status)"
-                        @click="skipOccurrence(occurrence.id)"
+                        @click="skipOccurrence(occurrence.id, occurrence)"
                         class="group flex items-center w-full px-4 py-2 text-sm text-yellow-600 hover:bg-gray-100"
                       >
                         <svg class="mr-3 h-4 w-4 text-yellow-400 group-hover:text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -205,7 +216,7 @@
                         </svg>
                         Skip
                       </button>
-                      
+
                       <div v-if="!['created', 'assigned'].includes(occurrence.status)" class="px-4 py-2 text-sm text-gray-500">
                         No actions available
                       </div>
@@ -218,6 +229,38 @@
         </table>
       </div>
     </div>
+
+    <!-- Skip Modal -->
+    <SkipModal
+      :show="showSkipModal"
+      :is-variable-interval="skipTargetIsVariableInterval"
+      :disabled="isSubmittingSkip"
+      @confirm="handleSkipConfirm"
+      @cancel="handleSkipCancel"
+    />
+
+    <!-- Edit Modal -->
+    <div v-if="showEditModal"
+      class="fixed inset-0 z-10 overflow-y-auto bg-gray-500 bg-opacity-75 transition-opacity"
+      aria-labelledby="edit-modal-title" role="dialog" aria-modal="true">
+      <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+        <div class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+          <div>
+            <h3 class="text-lg font-medium leading-6 text-gray-900" id="edit-modal-title">Edit Occurrence</h3>
+            <div class="mt-4">
+              <OccurrenceEditForm
+                v-if="editTargetOccurrence"
+                :occurrence="editTargetOccurrence"
+                @submit="handleEditSubmit"
+                @cancel="handleEditCancel"
+                :disabled="isSubmittingEdit"
+              />
+              <p v-if="editError" class="mt-3 text-sm text-red-600">{{ editError }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -226,6 +269,8 @@ import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useApi } from '@/utils/api';
 import { useAuthStore } from '@/stores/auth';
+import SkipModal from '@/components/occurrences/SkipModal.vue';
+import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
 import type { TaskOccurrence, Category, User } from '@/types';
 
 const api = useApi();
@@ -241,6 +286,18 @@ const sortBy = ref('dueDate');
 
 // Dropdown state
 const openDropdownId = ref<string | null>(null);
+
+// Skip modal state
+const showSkipModal = ref(false);
+const skipTargetId = ref<string | null>(null);
+const skipTargetIsVariableInterval = ref(false);
+const isSubmittingSkip = ref(false);
+
+// Edit modal state
+const showEditModal = ref(false);
+const editTargetOccurrence = ref<TaskOccurrence | null>(null);
+const isSubmittingEdit = ref(false);
+const editError = ref<string | null>(null);
 
 // Filters - Default to showing only pending occurrences (created/assigned)
 const filters = reactive({
@@ -435,20 +492,64 @@ const executeOccurrence = async (occurrenceId: string) => {
   }
 };
 
-const skipOccurrence = async (occurrenceId: string) => {
+const skipOccurrence = (occurrenceId: string, occurrence: TaskOccurrence) => {
   closeDropdown();
-  const reason = prompt('Please provide a reason for skipping this task:');
-  if (!reason || reason.trim() === '') {
-    return; // User cancelled or didn't provide a reason
-  }
+  skipTargetId.value = occurrenceId;
+  skipTargetIsVariableInterval.value = (occurrence.task?.scheduleConfig as any)?.type === 'variable_interval';
+  showSkipModal.value = true;
+};
 
+const handleSkipConfirm = async (reason: string) => {
+  if (!skipTargetId.value) return;
+  isSubmittingSkip.value = true;
   try {
-    await api.post(`/api/occurrences/${occurrenceId}/skip`, { reason: reason.trim() });
-    await fetchOccurrences(); // Refresh the list
+    await api.post(`/api/occurrences/${skipTargetId.value}/skip`, { reason });
+    showSkipModal.value = false;
+    skipTargetId.value = null;
+    await fetchOccurrences();
   } catch (err) {
     console.error('Error skipping occurrence:', err);
     alert('Failed to skip occurrence. Please try again.');
+  } finally {
+    isSubmittingSkip.value = false;
   }
+};
+
+const handleSkipCancel = () => {
+  showSkipModal.value = false;
+  skipTargetId.value = null;
+};
+
+const editOccurrence = (occurrence: TaskOccurrence) => {
+  closeDropdown();
+  editTargetOccurrence.value = occurrence;
+  showEditModal.value = true;
+};
+
+const handleEditSubmit = async (formData: { dueDate: string; assigneeIds: string[] }) => {
+  if (!editTargetOccurrence.value) return;
+  isSubmittingEdit.value = true;
+  editError.value = null;
+  try {
+    await api.put(`/api/occurrences/${editTargetOccurrence.value.id}`, {
+      dueDate: formData.dueDate,
+      assigneeIds: formData.assigneeIds,
+    });
+    showEditModal.value = false;
+    editTargetOccurrence.value = null;
+    await fetchOccurrences();
+  } catch (err: any) {
+    console.error("Edit failed:", err);
+    editError.value = 'Failed to save changes. Please try again.';
+  } finally {
+    isSubmittingEdit.value = false;
+  }
+};
+
+const handleEditCancel = () => {
+  showEditModal.value = false;
+  editTargetOccurrence.value = null;
+  editError.value = null;
 };
 
 // Page metadata

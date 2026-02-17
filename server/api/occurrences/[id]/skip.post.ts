@@ -15,16 +15,9 @@ export default defineHouseholdProtectedEventHandler(
         });
       }
 
-      // Read request body for the reason
+      // Read request body for the reason (optional)
       const body = await readBody(event);
-      const reason = body.reason as string;
-
-      if (!reason || typeof reason !== "string" || reason.trim() === "") {
-        throw createError({
-          statusCode: 400,
-          message: "A non-empty reason is required to skip an occurrence",
-        });
-      }
+      const reason = (body.reason as string | undefined) || '';
 
       // Get occurrence service
       const occurrenceService = new OccurrenceService();

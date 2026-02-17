@@ -94,6 +94,17 @@
                   <div class="py-1">
                     <button
                       v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
+                      @click="handleEdit(occurrence)"
+                      class="group flex items-center w-full px-4 py-2 text-sm text-blue-600 hover:bg-gray-100"
+                    >
+                      <svg class="mr-3 h-4 w-4 text-blue-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit
+                    </button>
+
+                    <button
+                      v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
                       @click="handleExecute(occurrence.id)"
                       class="group flex items-center w-full px-4 py-2 text-sm text-green-600 hover:bg-gray-100"
                     >
@@ -102,7 +113,7 @@
                       </svg>
                       Complete
                     </button>
-                    
+
                     <button
                       v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
                       @click="handleSkip(occurrence.id)"
@@ -113,7 +124,7 @@
                       </svg>
                       Skip
                     </button>
-                    
+
                     <div v-if="!(occurrence.status === 'assigned' || occurrence.status === 'created')" class="px-4 py-2 text-sm text-gray-500">
                       No actions available
                     </div>
@@ -125,15 +136,49 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Skip Modal -->
+    <SkipModal
+      :show="showSkipModal"
+      :is-variable-interval="isVariableInterval"
+      :disabled="isSubmittingSkip"
+      @confirm="handleSkipConfirm"
+      @cancel="handleSkipCancel"
+    />
+
+    <!-- Edit Modal -->
+    <div v-if="showEditModal"
+      class="fixed inset-0 z-10 overflow-y-auto bg-gray-500 bg-opacity-75 transition-opacity"
+      aria-labelledby="edit-modal-title" role="dialog" aria-modal="true">
+      <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+        <div class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+          <div>
+            <h3 class="text-lg font-medium leading-6 text-gray-900" id="edit-modal-title">Edit Occurrence</h3>
+            <div class="mt-4">
+              <OccurrenceEditForm
+                v-if="editTargetOccurrence"
+                :occurrence="editTargetOccurrence"
+                @submit="handleEditSubmit"
+                @cancel="handleEditCancel"
+                :disabled="isSubmittingEdit"
+              />
+              <p v-if="editError" class="mt-3 text-sm text-red-600">{{ editError }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router'; // Import useRouter
+import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/utils/api';
 import { useTaskStore } from '@/stores/tasks';
-import type { TaskDefinition, TaskOccurrence, User } from '@/types'; // Add User type
+import SkipModal from '@/components/occurrences/SkipModal.vue';
+import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
+import type { TaskDefinition, TaskOccurrence, User } from '@/types';
 
 const route = useRoute();
 const router = useRouter(); // Get router instance
@@ -155,6 +200,22 @@ const errorOccurrences = ref('');
 
 // Dropdown state
 const openDropdownId = ref<string | null>(null);
+
+// Skip modal state
+const showSkipModal = ref(false);
+const skipTargetId = ref<string | null>(null);
+const isSubmittingSkip = ref(false);
+
+// Edit modal state
+const showEditModal = ref(false);
+const editTargetOccurrence = ref<TaskOccurrence | null>(null);
+const isSubmittingEdit = ref(false);
+const editError = ref<string | null>(null);
+
+// Determine if the task uses variable interval scheduling
+const isVariableInterval = computed(() => {
+  return (task.value?.scheduleConfig as any)?.type === 'variable_interval';
+});
 
 // Fetch parent task details (for name/category display)
 const task = computed(() => taskStore.selectedTask);
@@ -255,24 +316,63 @@ const handleExecute = async (occurrenceId: string) => {
   }
 };
 
-const handleSkip = async (occurrenceId: string) => {
+const handleSkip = (occurrenceId: string) => {
   closeDropdown();
-  // Basic prompt for reason - replace with modal later
-  const reason = prompt('Please enter a reason for skipping this occurrence:');
-  if (reason && reason.trim() !== '') {
-    try {
-      await taskStore.skipOccurrence(occurrenceId, reason.trim());
-      // Refetch occurrences after successful skip
-      await fetchOccurrences();
-    } catch (err) {
-      // Error is handled/displayed via the store's error state
-      console.error("Skip failed:", err);
-      // Optionally show a notification to the user
-      alert(`Error skipping occurrence: ${taskStore.error || 'Unknown error'}`);
-    }
-  } else if (reason !== null) { // Only show alert if prompt wasn't cancelled
-    alert('A reason is required to skip an occurrence.');
+  skipTargetId.value = occurrenceId;
+  showSkipModal.value = true;
+};
+
+const handleSkipConfirm = async (reason: string) => {
+  if (!skipTargetId.value) return;
+  isSubmittingSkip.value = true;
+  try {
+    await taskStore.skipOccurrence(skipTargetId.value, reason);
+    showSkipModal.value = false;
+    skipTargetId.value = null;
+    await fetchOccurrences();
+  } catch (err) {
+    console.error("Skip failed:", err);
+    alert(`Error skipping occurrence: ${taskStore.error || 'Unknown error'}`);
+  } finally {
+    isSubmittingSkip.value = false;
   }
+};
+
+const handleSkipCancel = () => {
+  showSkipModal.value = false;
+  skipTargetId.value = null;
+};
+
+const handleEdit = (occurrence: TaskOccurrence) => {
+  closeDropdown();
+  editTargetOccurrence.value = occurrence;
+  showEditModal.value = true;
+};
+
+const handleEditSubmit = async (formData: { dueDate: string; assigneeIds: string[] }) => {
+  if (!editTargetOccurrence.value) return;
+  isSubmittingEdit.value = true;
+  editError.value = null;
+  try {
+    await taskStore.updateOccurrence(editTargetOccurrence.value.id, {
+      dueDate: formData.dueDate,
+      assigneeIds: formData.assigneeIds,
+    });
+    showEditModal.value = false;
+    editTargetOccurrence.value = null;
+    await fetchOccurrences();
+  } catch (err: any) {
+    console.error("Edit failed:", err);
+    editError.value = err.data?.message || taskStore.error || 'Failed to save changes';
+  } finally {
+    isSubmittingEdit.value = false;
+  }
+};
+
+const handleEditCancel = () => {
+  showEditModal.value = false;
+  editTargetOccurrence.value = null;
+  editError.value = null;
 };
 
 // Function for programmatic navigation

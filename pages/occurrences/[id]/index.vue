@@ -141,51 +141,13 @@
         </div>
 
         <!-- Skip Modal -->
-        <div v-if="showSkipModal"
-            class="fixed inset-0 z-10 overflow-y-auto bg-gray-500 bg-opacity-75 transition-opacity"
-            aria-labelledby="modal-title" role="dialog" aria-modal="true">
-            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                <div
-                    class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
-                    <div>
-                        <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Skip Occurrence</h3>
-                        <div class="mt-4">
-                            <p class="text-sm text-gray-500 mb-4">
-                                Please provide a reason for skipping this task occurrence.
-                            </p>
-                            <div>
-                                <label for="skip-reason" class="block text-sm font-medium text-gray-700">Reason</label>
-                                <textarea
-                                    id="skip-reason"
-                                    v-model="skipReason"
-                                    rows="3"
-                                    required
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                                    placeholder="Enter the reason for skipping..."
-                                />
-                            </div>
-                            <p v-if="skipError" class="mt-2 text-sm text-red-600">{{ skipError }}</p>
-                        </div>
-                    </div>
-                    <div class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-                        <button
-                            type="button"
-                            @click="skipOccurrence"
-                            :disabled="isSubmittingSkip || !skipReason.trim()"
-                            class="inline-flex w-full justify-center rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600 disabled:opacity-50 sm:col-start-2">
-                            {{ isSubmittingSkip ? 'Skipping...' : 'Skip' }}
-                        </button>
-                        <button
-                            type="button"
-                            @click="handleSkipCancel"
-                            :disabled="isSubmittingSkip"
-                            class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:col-start-1 sm:mt-0 disabled:opacity-50">
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <SkipModal
+            :show="showSkipModal"
+            :is-variable-interval="isVariableInterval"
+            :disabled="isSubmittingSkip"
+            @confirm="handleSkipConfirm"
+            @cancel="handleSkipCancel"
+        />
 
     </div>
 </template>
@@ -196,7 +158,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/utils/api';
 import type { TaskOccurrence, User, Category, TaskDefinition } from '@/types';
 import OccurrenceTimeline from '@/components/occurrences/OccurrenceTimeline.vue';
-import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue'; // Import edit form
+import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
+import SkipModal from '@/components/occurrences/SkipModal.vue';
 import { format } from 'date-fns';
 
 // Setup
@@ -224,7 +187,6 @@ const isSubmittingEdit = ref(false);
 const editError = ref<string | null>(null);
 const isSubmittingSkip = ref(false);
 const skipError = ref<string | null>(null);
-const skipReason = ref('');
 
 // Fetch Occurrence Data
 const fetchOccurrence = async () => {
@@ -300,6 +262,11 @@ const fetchFullTask = async (taskId: string) => {
 // Computed property to disable actions if occurrence is completed/skipped/deleted
 const isActionDisabled = computed(() => {
     return !occurrence.value || ['completed', 'skipped', 'deleted'].includes(occurrence.value.status);
+});
+
+// Determine if the task uses variable interval scheduling
+const isVariableInterval = computed(() => {
+    return (fullTask.value?.scheduleConfig as any)?.type === 'variable_interval';
 });
 
 // --- Formatting Helpers ---
@@ -412,16 +379,15 @@ const handleEditCancel = () => {
 };
 
 // --- Skip Occurrence Logic ---
-const skipOccurrence = async () => {
-    if (!occurrenceId.value || !skipReason.value.trim() || isActionDisabled.value) return;
+const handleSkipConfirm = async (reason: string) => {
+    if (!occurrenceId.value || isActionDisabled.value) return;
     isSubmittingSkip.value = true;
     skipError.value = null;
     try {
         await api.post(`/api/occurrences/${occurrenceId.value}/skip`, {
-            reason: skipReason.value.trim()
+            reason
         });
         showSkipModal.value = false;
-        skipReason.value = '';
         // Refresh data after successful skip
         fetchOccurrence();
         if (timelineComponent.value) {
@@ -430,7 +396,6 @@ const skipOccurrence = async () => {
     } catch (err: any) {
         console.error("Error skipping occurrence:", err);
         skipError.value = err.data?.message || 'Failed to skip occurrence';
-        // Keep modal open to show error
     } finally {
         isSubmittingSkip.value = false;
     }
@@ -438,7 +403,6 @@ const skipOccurrence = async () => {
 
 const handleSkipCancel = () => {
     showSkipModal.value = false;
-    skipReason.value = '';
     skipError.value = null;
 };
 
