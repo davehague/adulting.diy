@@ -23,14 +23,14 @@ export default defineHouseholdProtectedEventHandler(
 
       // Return the notification preferences or defaults
       const preferences = user.notificationPreferences as NotificationPreferences || {
-        taskCreated: "mine",
-        taskPaused: "any",
-        taskCompleted: "any",
-        taskDeleted: "any",
-        occurrenceAssigned: "mine",
-        occurrenceExecuted: "mine",
-        occurrenceSkipped: "mine",
-        occurrenceCommented: "mine",
+        task_created: "any",
+        task_paused: "any",
+        task_completed: "any",
+        task_deleted: "any",
+        occurrence_assigned: "mine",
+        occurrence_executed: "mine",
+        occurrence_skipped: "mine",
+        occurrence_commented: "mine",
       };
 
       return preferences;
