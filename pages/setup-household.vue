@@ -1,23 +1,23 @@
 <template>
   <div class="container mx-auto px-4 py-8 max-w-lg">
 
-    <h1 class="text-2xl font-bold mb-6 text-center">Set Up Your Household</h1>
+    <h1 class="font-heading text-2xl font-bold mb-6 text-center text-stone-900">Set Up Your Household</h1>
 
-    <div class="bg-white rounded-lg shadow-md p-6">
+    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
       <div class="mb-6">
-        <h2 class="text-xl font-semibold mb-4">Welcome to Adulting.DIY!</h2>
-        <p class="text-gray-700 mb-4">
+        <h2 class="font-heading text-xl font-semibold mb-4 text-stone-900">Welcome to Adulting.DIY!</h2>
+        <p class="text-stone-700 mb-4">
           To get started, you need to either create a new household or join an existing one.
         </p>
       </div>
 
       <div class="flex gap-4 mb-6">
         <button @click="activeTab = 'create'" class="flex-1 py-2 rounded-md text-center font-medium"
-          :class="activeTab === 'create' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'">
+          :class="activeTab === 'create' ? 'bg-amber-600 text-white' : 'bg-stone-100 text-stone-700'">
           Create New
         </button>
         <button @click="activeTab = 'join'" class="flex-1 py-2 rounded-md text-center font-medium"
-          :class="activeTab === 'join' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'">
+          :class="activeTab === 'join' ? 'bg-amber-600 text-white' : 'bg-stone-100 text-stone-700'">
           Join Existing
         </button>
       </div>
@@ -26,15 +26,15 @@
       <div v-if="activeTab === 'create'" class="mt-6">
         <form @submit.prevent="createHousehold">
           <div class="mb-4">
-            <label for="householdName" class="block text-sm font-medium text-gray-700 mb-1">Household Name</label>
+            <label for="householdName" class="block text-sm font-medium text-stone-700 mb-1">Household Name</label>
             <input id="householdName" v-model="createForm.name" type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
               placeholder="Enter a name for your household" required />
           </div>
 
           <div class="flex justify-end">
             <button type="submit"
-              class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+              class="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50"
               :disabled="isLoading">
               <span v-if="isLoading">Creating...</span>
               <span v-else>Create Household</span>
@@ -47,15 +47,15 @@
       <div v-if="activeTab === 'join'" class="mt-6">
         <form @submit.prevent="joinHousehold">
           <div class="mb-4">
-            <label for="inviteCode" class="block text-sm font-medium text-gray-700 mb-1">Invite Code</label>
+            <label for="inviteCode" class="block text-sm font-medium text-stone-700 mb-1">Invite Code</label>
             <input id="inviteCode" v-model="joinForm.inviteCode" type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="w-full px-3 py-2 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
               placeholder="Enter your invite code" required />
           </div>
 
           <div class="flex justify-end">
             <button type="submit"
-              class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+              class="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50"
               :disabled="isLoading">
               <span v-if="isLoading">Joining...</span>
               <span v-else>Join Household</span>
@@ -71,7 +71,7 @@
 
 
       <!-- Debug section -->
-      <div v-if="debugMode" class="mt-6 p-4 bg-gray-100 rounded-md">
+      <div v-if="debugMode" class="mt-6 p-4 bg-stone-100 rounded-md">
         <h3 class="font-medium mb-2">Debug Info:</h3>
         <pre class="text-xs overflow-auto">{{ debugInfo }}</pre>
       </div>

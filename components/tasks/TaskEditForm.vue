@@ -2,17 +2,17 @@
   <form @submit.prevent="handleSubmit" class="space-y-6">
     <!-- Name Field -->
     <div>
-      <label for="name" class="block text-sm font-medium text-gray-700">Name*</label>
+      <label for="name" class="block text-sm font-medium text-stone-700">Name*</label>
       <input id="name" v-model="formData.name" type="text" required
-        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
         placeholder="Task name" />
     </div>
 
     <!-- Category Field -->
     <div>
-      <label for="categoryId" class="block text-sm font-medium text-gray-700">Category*</label>
+      <label for="categoryId" class="block text-sm font-medium text-stone-700">Category*</label>
       <select id="categoryId" v-model="formData.categoryId" required
-        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+        class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
         <option disabled value="">Select a category</option>
         <option v-for="category in categories" :key="category.id" :value="category.id">
           {{ category.name }}
@@ -22,29 +22,29 @@
 
     <!-- Description Field -->
     <div>
-      <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+      <label for="description" class="block text-sm font-medium text-stone-700">Description</label>
       <textarea id="description" v-model="formData.description" rows="3"
-        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
         placeholder="Optional task description"></textarea>
     </div>
 
     <!-- Instructions Field -->
     <div>
-      <label for="instructions" class="block text-sm font-medium text-gray-700">Instructions</label>
+      <label for="instructions" class="block text-sm font-medium text-stone-700">Instructions</label>
       <textarea id="instructions" v-model="formData.instructions" rows="4"
-        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
         placeholder="Step-by-step instructions for completing this task"></textarea>
     </div>
 
     <!-- Schedule Configuration -->
-    <div class="border rounded-md p-4 bg-gray-50">
-      <h3 class="text-lg font-medium text-gray-700 mb-4">Schedule Configuration</h3>
+    <div class="border rounded-lg p-4 bg-stone-50">
+      <h3 class="text-lg font-medium text-stone-700 mb-4 font-heading">Schedule Configuration</h3>
 
       <!-- Schedule Type -->
       <div class="mb-4">
-        <label for="scheduleType" class="block text-sm font-medium text-gray-700">Schedule Type*</label>
+        <label for="scheduleType" class="block text-sm font-medium text-stone-700">Schedule Type*</label>
         <select id="scheduleType" v-model="formData.scheduleConfig.type" required
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
           <option value="once">One Time</option>
           <option value="fixed_interval">Fixed Interval</option>
           <option value="specific_days_of_week">Specific Days of Week</option>
@@ -57,14 +57,14 @@
       <!-- Fixed Interval Options -->
       <div v-if="formData.scheduleConfig.type === 'fixed_interval'" class="mb-4 grid grid-cols-2 gap-4">
         <div>
-          <label for="interval" class="block text-sm font-medium text-gray-700">Interval*</label>
+          <label for="interval" class="block text-sm font-medium text-stone-700">Interval*</label>
           <input id="interval" v-model.number="formData.scheduleConfig.interval" type="number" min="1" required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+            class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
         </div>
         <div>
-          <label for="intervalUnit" class="block text-sm font-medium text-gray-700">Unit*</label>
+          <label for="intervalUnit" class="block text-sm font-medium text-stone-700">Unit*</label>
           <select id="intervalUnit" v-model="formData.scheduleConfig.intervalUnit" required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
             <option value="day">Day(s)</option>
             <option value="week">Week(s)</option>
             <option value="month">Month(s)</option>
@@ -75,13 +75,13 @@
 
       <!-- Specific Days of Week Options -->
       <div v-if="formData.scheduleConfig.type === 'specific_days_of_week'" class="mb-4">
-        <label class="block text-sm font-medium text-gray-700 mb-2">Days of Week*</label>
+        <label class="block text-sm font-medium text-stone-700 mb-2">Days of Week*</label>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div v-for="day in daysOfWeek" :key="day.value">
             <label class="inline-flex items-center">
               <input type="checkbox" v-if="formData.scheduleConfig.type === 'specific_days_of_week'"
                 v-model="(formData.scheduleConfig as SpecificDaysScheduleConfig).daysOfWeek[day.value as keyof DaysOfWeek]"
-                class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" />
+                class="rounded border-stone-300 text-amber-700 shadow-sm focus:border-amber-300 focus:ring focus:ring-amber-200 focus:ring-opacity-50" />
               <span class="ml-2">{{ day.label }}</span>
             </label>
           </div>
@@ -90,19 +90,19 @@
 
       <!-- Specific Day of Month Options -->
       <div v-if="formData.scheduleConfig.type === 'specific_day_of_month'" class="mb-4">
-        <label for="dayOfMonth" class="block text-sm font-medium text-gray-700">Day of Month*</label>
+        <label for="dayOfMonth" class="block text-sm font-medium text-stone-700">Day of Month*</label>
         <input id="dayOfMonth" v-model.number="formData.scheduleConfig.dayOfMonth" type="number" min="1" max="31"
           required
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
       </div>
 
       <!-- Specific Weekday of Month Options -->
       <div v-if="formData.scheduleConfig.type === 'specific_weekday_of_month'"
         class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label for="weekdayOccurrence" class="block text-sm font-medium text-gray-700">Occurrence*</label>
+          <label for="weekdayOccurrence" class="block text-sm font-medium text-stone-700">Occurrence*</label>
           <select id="weekdayOccurrence" v-model="formData.scheduleConfig.weekdayOfMonth.occurrence" required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
             <option value="first">First</option>
             <option value="second">Second</option>
             <option value="third">Third</option>
@@ -111,9 +111,9 @@
           </select>
         </div>
         <div>
-          <label for="weekday" class="block text-sm font-medium text-gray-700">Weekday*</label>
+          <label for="weekday" class="block text-sm font-medium text-stone-700">Weekday*</label>
           <select id="weekday" v-model="formData.scheduleConfig.weekdayOfMonth.weekday" required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
             <option v-for="day in daysOfWeek" :key="day.value" :value="day.value">
               {{ day.label }}
             </option>
@@ -124,15 +124,15 @@
       <!-- Variable Interval Options -->
       <div v-if="formData.scheduleConfig.type === 'variable_interval'" class="mb-4 grid grid-cols-2 gap-4">
         <div>
-          <label for="variableInterval" class="block text-sm font-medium text-gray-700">Interval*</label>
+          <label for="variableInterval" class="block text-sm font-medium text-stone-700">Interval*</label>
           <input id="variableInterval" v-model.number="formData.scheduleConfig.variableInterval.interval" type="number"
             min="1" required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+            class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
         </div>
         <div>
-          <label for="variableUnit" class="block text-sm font-medium text-gray-700">Unit*</label>
+          <label for="variableUnit" class="block text-sm font-medium text-stone-700">Unit*</label>
           <select id="variableUnit" v-model="formData.scheduleConfig.variableInterval.unit" required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
             <option value="day">Day(s)</option>
             <option value="week">Week(s)</option>
             <option value="month">Month(s)</option>
@@ -143,9 +143,9 @@
 
       <!-- End Condition -->
       <div class="mb-4">
-        <label for="endConditionType" class="block text-sm font-medium text-gray-700">End Condition*</label>
+        <label for="endConditionType" class="block text-sm font-medium text-stone-700">End Condition*</label>
         <select id="endConditionType" v-model="formData.scheduleConfig.endCondition.type" required
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
           <option value="never">Never (Run indefinitely)</option>
           <option value="times">After specified number of times</option>
           <option value="date">Until specified date</option>
@@ -154,46 +154,46 @@
 
       <!-- End Condition Options -->
       <div v-if="formData.scheduleConfig.endCondition.type === 'times'" class="mb-4">
-        <label for="endTimes" class="block text-sm font-medium text-gray-700">Number of Times*</label>
+        <label for="endTimes" class="block text-sm font-medium text-stone-700">Number of Times*</label>
         <input id="endTimes" v-model.number="formData.scheduleConfig.endCondition.times" type="number" min="1" required
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
       </div>
 
       <div v-if="formData.scheduleConfig.endCondition.type === 'date'" class="mb-4">
-        <label for="endDate" class="block text-sm font-medium text-gray-700">End Date*</label>
+        <label for="endDate" class="block text-sm font-medium text-stone-700">End Date*</label>
         <input id="endDate" v-model="endDateString" type="date" required
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
       </div>
     </div>
 
     <!-- Reminder Configuration -->
-    <div class="border rounded-md p-4 bg-gray-50">
-      <h3 class="text-lg font-medium text-gray-700 mb-4">Reminder Configuration</h3>
+    <div class="border rounded-lg p-4 bg-stone-50">
+      <h3 class="text-lg font-medium text-stone-700 mb-4 font-heading">Reminder Configuration</h3>
 
       <!-- Initial Reminder -->
       <div class="mb-4">
-        <label for="initialReminder" class="block text-sm font-medium text-gray-700">Initial Reminder (days
+        <label for="initialReminder" class="block text-sm font-medium text-stone-700">Initial Reminder (days
           before)</label>
         <input id="initialReminder" v-model.number="formData.reminderConfig.initialReminder" type="number" min="0"
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
           placeholder="Optional" />
       </div>
 
       <!-- Follow-up Reminder -->
       <div class="mb-4">
-        <label for="followUpReminder" class="block text-sm font-medium text-gray-700">Follow-up Reminder (days
+        <label for="followUpReminder" class="block text-sm font-medium text-stone-700">Follow-up Reminder (days
           before)</label>
         <input id="followUpReminder" v-model.number="formData.reminderConfig.followUpReminder" type="number" min="0"
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
           placeholder="Optional" />
       </div>
 
       <!-- Overdue Reminder -->
       <div>
-        <label for="overdueReminder" class="block text-sm font-medium text-gray-700">Overdue Reminder (days
+        <label for="overdueReminder" class="block text-sm font-medium text-stone-700">Overdue Reminder (days
           after)</label>
         <input id="overdueReminder" v-model.number="formData.reminderConfig.overdueReminder" type="number" min="0"
-          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
           placeholder="Optional" />
       </div>
     </div>
@@ -207,11 +207,11 @@
     <!-- Form Buttons -->
     <div class="flex justify-end space-x-3">
       <NuxtLink :to="cancelUrl"
-        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+        class="px-4 py-2 border border-stone-300 rounded-lg shadow-sm text-sm font-medium text-stone-700 bg-white hover:bg-stone-50">
         Cancel
       </NuxtLink>
       <button type="submit"
-        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        class="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors duration-150"
         :disabled="isSubmitting">
         {{ isSubmitting ? 'Saving...' : submitButtonText }}
       </button>

@@ -1,10 +1,10 @@
 <template>
-  <div class="bg-white rounded-lg shadow-md">
+  <div class="bg-white rounded-xl shadow-sm border border-stone-200">
     <div class="p-6 pb-4">
       <div class="flex justify-between items-start mb-4">
-        <h2 
-          class="text-xl font-semibold"
-          :class="{ 'cursor-pointer hover:text-gray-700 transition-colors': collapsible }"
+        <h2
+          class="text-xl font-semibold font-heading"
+          :class="{ 'cursor-pointer hover:text-stone-700 transition-colors': collapsible }"
           @click="collapsible && (isExpanded = !isExpanded)"
         >
           Task Details
@@ -13,13 +13,13 @@
           <span class="px-2 py-1 text-xs font-semibold rounded-full mr-2" :class="getStatusClass(task.metaStatus)">
             {{ formatStatus(task.metaStatus) }}
           </span>
-          <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+          <span class="px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
             {{ getCategoryName(task.categoryId) }}
           </span>
           <button 
             v-if="collapsible"
             @click="isExpanded = !isExpanded"
-            class="p-1 rounded-md hover:bg-gray-100 transition-colors"
+            class="p-1 rounded-md hover:bg-stone-100 transition-colors"
             :title="isExpanded ? 'Collapse' : 'Expand'"
           >
             <svg 
@@ -39,42 +39,42 @@
     <div v-if="!collapsible || isExpanded" class="px-6 pb-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <h3 class="text-lg font-medium mb-3">Task Information</h3>
+        <h3 class="text-lg font-medium mb-3 font-heading">Task Information</h3>
         
         <div class="mb-4">
-          <h4 class="text-sm font-medium text-gray-500 mb-1">Name</h4>
-          <p class="text-gray-800 font-medium">{{ task.name }}</p>
+          <h4 class="text-sm font-medium text-stone-500 mb-1">Name</h4>
+          <p class="text-stone-800 font-medium">{{ task.name }}</p>
         </div>
 
         <div v-if="task.description" class="mb-4">
-          <h4 class="text-sm font-medium text-gray-500 mb-1">Description</h4>
-          <p class="text-gray-800">{{ task.description }}</p>
+          <h4 class="text-sm font-medium text-stone-500 mb-1">Description</h4>
+          <p class="text-stone-800">{{ task.description }}</p>
         </div>
 
         <div v-if="task.instructions" class="mb-4">
-          <h4 class="text-sm font-medium text-gray-500 mb-1">Instructions</h4>
-          <p class="text-gray-800 whitespace-pre-line">{{ task.instructions }}</p>
+          <h4 class="text-sm font-medium text-stone-500 mb-1">Instructions</h4>
+          <p class="text-stone-800 whitespace-pre-line">{{ task.instructions }}</p>
         </div>
 
         <div class="mb-4">
-          <h4 class="text-sm font-medium text-gray-500 mb-1">Default Assignees</h4>
-          <p class="text-gray-800">
+          <h4 class="text-sm font-medium text-stone-500 mb-1">Default Assignees</h4>
+          <p class="text-stone-800">
             {{ getDefaultAssigneeNames(task.defaultAssigneeIds) }}
           </p>
         </div>
       </div>
 
       <div>
-        <h3 class="text-lg font-medium mb-3">Schedule & Configuration</h3>
+        <h3 class="text-lg font-medium mb-3 font-heading">Schedule & Configuration</h3>
 
         <div class="mb-4">
-          <h4 class="text-sm font-medium text-gray-500 mb-1">Schedule Type</h4>
-          <p class="text-gray-800">{{ formatSchedule(task.scheduleConfig) }}</p>
+          <h4 class="text-sm font-medium text-stone-500 mb-1">Schedule Type</h4>
+          <p class="text-stone-800">{{ formatSchedule(task.scheduleConfig) }}</p>
         </div>
 
         <div v-if="task.reminderConfig" class="mb-4">
-          <h4 class="text-sm font-medium text-gray-500 mb-1">Reminders</h4>
-          <ul class="list-disc pl-5 text-gray-800">
+          <h4 class="text-sm font-medium text-stone-500 mb-1">Reminders</h4>
+          <ul class="list-disc pl-5 text-stone-800">
             <li v-if="task.reminderConfig.initialReminder">
               Initial: {{ task.reminderConfig.initialReminder }} days before due date
             </li>
@@ -88,13 +88,13 @@
         </div>
 
         <div class="mb-4">
-          <h4 class="text-sm font-medium text-gray-500 mb-1">Created</h4>
-          <p class="text-gray-800">{{ formatDate(task.createdAt) }}</p>
+          <h4 class="text-sm font-medium text-stone-500 mb-1">Created</h4>
+          <p class="text-stone-800">{{ formatDate(task.createdAt) }}</p>
         </div>
 
         <div class="mb-4">
-          <h4 class="text-sm font-medium text-gray-500 mb-1">Last Updated</h4>
-          <p class="text-gray-800">{{ formatDate(task.updatedAt) }}</p>
+          <h4 class="text-sm font-medium text-stone-500 mb-1">Last Updated</h4>
+          <p class="text-stone-800">{{ formatDate(task.updatedAt) }}</p>
         </div>
       </div>
     </div>
@@ -153,9 +153,9 @@ const getStatusClass = (status: string): string => {
     case 'soft-deleted':
       return 'bg-red-100 text-red-800';
     case 'completed':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-amber-100 text-amber-800';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-stone-100 text-stone-800';
   }
 };
 

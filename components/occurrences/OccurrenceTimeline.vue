@@ -1,7 +1,7 @@
 <template>
     <div class="mt-6 flow-root">
-        <h3 class="text-lg font-medium text-gray-900 mb-4">Occurrence History</h3>
-        <div v-if="loading" class="text-center text-gray-500 py-4">Loading history...</div>
+        <h3 class="font-heading text-lg font-medium text-stone-900 mb-4">Occurrence History</h3>
+        <div v-if="loading" class="text-center text-stone-500 py-4">Loading history...</div>
         <div v-else-if="error" class="text-center text-red-600 py-4">
             Error loading history: {{ error }}
         </div>
@@ -10,7 +10,7 @@
                 <div class="relative pb-8">
                     <!-- Vertical line connector -->
                     <span v-if="logIdx !== historyLogs.length - 1"
-                        class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
+                        class="absolute left-4 top-4 -ml-px h-full w-0.5 bg-stone-200" aria-hidden="true"></span>
                     <div class="relative flex space-x-3">
                         <div>
                             <span
@@ -20,16 +20,16 @@
                         </div>
                         <div class="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
                             <div>
-                                <p class="text-sm text-gray-500">
+                                <p class="text-sm text-stone-500">
                                     {{ formatLogMessage(log) }}
-                                    <span class="font-medium text-gray-900">{{ log.user?.name || 'System' }}</span>
+                                    <span class="font-medium text-stone-900">{{ log.user?.name || 'System' }}</span>
                                 </p>
                                 <p v-if="log.logType === 'comment' && log.comment"
-                                    class="mt-1 text-sm text-gray-700 italic">
+                                    class="mt-1 text-sm text-stone-700 italic">
                                     "{{ log.comment }}"
                                 </p>
                             </div>
-                            <div class="whitespace-nowrap text-right text-sm text-gray-500">
+                            <div class="whitespace-nowrap text-right text-sm text-stone-500">
                                 <time :datetime="log.createdAt.toISOString()">{{ formatRelativeTime(log.createdAt)
                                 }}</time>
                             </div>
@@ -38,7 +38,7 @@
                 </div>
             </li>
         </ul>
-        <div v-else class="text-center text-gray-500 py-4">No history found for this occurrence.</div>
+        <div v-else class="text-center text-stone-500 py-4">No history found for this occurrence.</div>
     </div>
 </template>
 
@@ -125,11 +125,11 @@ const getIcon = (logType: OccurrenceHistoryLog['logType']) => {
 
 const getIconBackground = (logType: OccurrenceHistoryLog['logType']) => {
     switch (logType) {
-        case 'comment': return 'bg-gray-400';
-        case 'status_change': return 'bg-blue-500'; // Example: blue for status
+        case 'comment': return 'bg-stone-400';
+        case 'status_change': return 'bg-amber-600'; // Example: blue for status
         case 'assignment_change': return 'bg-yellow-500'; // Example: yellow for assignment
         case 'date_change': return 'bg-purple-500'; // Example: purple for date
-        default: return 'bg-gray-400';
+        default: return 'bg-stone-400';
     }
 };
 

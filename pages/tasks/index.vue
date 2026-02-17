@@ -1,20 +1,20 @@
 <template>
   <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Task List</h1>
-      <NuxtLink to="/tasks/create" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+      <h1 class="font-heading text-2xl font-bold text-stone-900">Task List</h1>
+      <NuxtLink to="/tasks/create" class="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700">
         Create Task
       </NuxtLink>
     </div>
 
     <!-- Filters and Search -->
-    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-4 mb-6">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Status filter -->
         <div>
-          <label for="statusFilter" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <label for="statusFilter" class="block text-sm font-medium text-stone-700 mb-1">Status</label>
           <select id="statusFilter" v-model="filters.status"
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
             <option value="">All Statuses</option>
             <option value="active">Active</option>
             <option value="paused">Paused</option>
@@ -25,9 +25,9 @@
 
         <!-- Category filter -->
         <div>
-          <label for="categoryFilter" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+          <label for="categoryFilter" class="block text-sm font-medium text-stone-700 mb-1">Category</label>
           <select id="categoryFilter" v-model="filters.categoryId"
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
             <option value="">All Categories</option>
             <option v-for="category in categories" :key="category.id" :value="category.id">
               {{ category.name }}
@@ -37,96 +37,96 @@
 
         <!-- Search -->
         <div>
-          <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+          <label for="search" class="block text-sm font-medium text-stone-700 mb-1">Search</label>
           <input id="search" v-model="filters.search" type="text" placeholder="Search tasks..."
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
         </div>
       </div>
     </div>
 
     <!-- Loading and Empty States -->
     <div v-if="loading" class="text-center py-8">
-      <p class="text-gray-600">Loading tasks...</p>
+      <p class="text-stone-600">Loading tasks...</p>
     </div>
 
-    <div v-else-if="!tasks.length" class="bg-white rounded-lg shadow-md p-8 text-center">
-      <h2 class="text-xl font-semibold text-gray-700 mb-2">No tasks found</h2>
-      <p class="text-gray-500 mb-4">
+    <div v-else-if="!tasks.length" class="bg-white rounded-xl shadow-sm border border-stone-200 p-8 text-center">
+      <h2 class="font-heading text-xl font-semibold text-stone-700 mb-2">No tasks found</h2>
+      <p class="text-stone-500 mb-4">
         {{
           filters.status || filters.categoryId || filters.search
             ? 'Try changing your filters or search term'
             : 'Create your first task to get started'
         }}
       </p>
-      <NuxtLink to="/tasks/create" class="inline-block bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+      <NuxtLink to="/tasks/create" class="inline-block bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700">
         Create Your First Task
       </NuxtLink>
     </div>
 
     <!-- Task List -->
-    <div v-else class="bg-white rounded-lg shadow-md overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+      <table class="min-w-full divide-y divide-stone-200">
+        <thead class="bg-stone-50">
           <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
               Task
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
               Category
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
               Schedule
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
               Next Due
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
               Assignee(s)
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
               Status
             </th>
-            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">
               Actions
             </th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
+        <tbody class="bg-white divide-y divide-stone-200">
           <tr v-for="task in tasks" :key="task.id" 
               @click="navigateToTask(task.id)"
-              class="cursor-pointer hover:bg-gray-50 transition-colors">
+              class="cursor-pointer hover:bg-stone-50 transition-colors">
             <td class="px-6 py-4 whitespace-nowrap">
-              <div class="text-sm font-medium text-gray-900">{{ task.name }}</div>
-              <div v-if="task.description" class="text-sm text-gray-500 truncate max-w-xs">
+              <div class="text-sm font-medium text-stone-900">{{ task.name }}</div>
+              <div v-if="task.description" class="text-sm text-stone-500 truncate max-w-xs">
                 {{ task.description }}
               </div>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-amber-100 text-amber-800">
                 {{ getCategoryName(task.categoryId) }}
               </span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
               {{ formatSchedule(task.scheduleConfig) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <template v-if="task.nextOccurrence">
-                <div class="text-sm text-gray-900" :class="{ 'text-red-600 font-semibold': isOverdue(task.nextOccurrence.dueDate) }">
+                <div class="text-sm text-stone-900" :class="{ 'text-red-600 font-semibold': isOverdue(task.nextOccurrence.dueDate) }">
                   {{ formatDate(task.nextOccurrence.dueDate) }}
                 </div>
                 <div v-if="isOverdue(task.nextOccurrence.dueDate)" class="text-xs text-red-500 font-medium">
                   Overdue
                 </div>
               </template>
-              <span v-else class="text-sm text-gray-400 italic">None</span>
+              <span v-else class="text-sm text-stone-400 italic">None</span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <template v-if="task.nextOccurrence && task.nextOccurrence.assigneeIds.length > 0">
-                <div class="text-sm text-gray-900">
+                <div class="text-sm text-stone-900">
                   {{ getAssigneeNames(task.nextOccurrence.assigneeIds).join(', ') }}
                 </div>
               </template>
-              <span v-else class="text-sm text-gray-400 italic">Unassigned</span>
+              <span v-else class="text-sm text-stone-400 italic">Unassigned</span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
               <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
@@ -139,7 +139,7 @@
               <div class="relative inline-block text-left">
                 <button 
                   @click="toggleDropdown(task.id)"
-                  class="text-gray-400 hover:text-gray-600 focus:outline-none"
+                  class="text-stone-400 hover:text-stone-600 focus:outline-none"
                   title="Actions"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -154,9 +154,9 @@
                   <div class="py-1">
                     <NuxtLink
                       :to="`/tasks/${task.id}/edit`"
-                      class="group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      class="group flex items-center px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
                     >
-                      <svg class="mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                       Edit
@@ -164,9 +164,9 @@
                     
                     <NuxtLink
                       :to="`/tasks/${task.id}/occurrences`"
-                      class="group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      class="group flex items-center px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
                     >
-                      <svg class="mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                       View Occurrences
@@ -175,9 +175,9 @@
                     <button
                       v-if="task.metaStatus === 'active'"
                       @click="pauseTask(task.id)"
-                      class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
                     >
-                      <svg class="mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       Pause Task
@@ -186,21 +186,21 @@
                     <button
                       v-if="task.metaStatus === 'paused'"
                       @click="unpauseTask(task.id)"
-                      class="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
                     >
-                      <svg class="mr-3 h-4 w-4 text-gray-400 group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       Unpause Task
                     </button>
                     
-                    <div class="border-t border-gray-100"></div>
+                    <div class="border-t border-stone-100"></div>
                     
                     <button
                       v-if="task.metaStatus !== 'soft-deleted'"
                       @click="deleteTask(task.id)"
-                      class="group flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                      class="group flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-stone-100"
                     >
                       <svg class="mr-3 h-4 w-4 text-red-400 group-hover:text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -374,9 +374,9 @@ const getStatusClass = (status: string): string => {
     case 'soft-deleted':
       return 'bg-red-100 text-red-800';
     case 'completed':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-amber-100 text-amber-800';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-stone-100 text-stone-800';
   }
 };
 

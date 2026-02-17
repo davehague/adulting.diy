@@ -2,12 +2,12 @@
   <div class="container mx-auto px-4 py-8">
     <!-- Loading and Error States -->
     <div v-if="loadingTask" class="text-center py-8">
-      <p class="text-gray-600">Loading task details...</p>
+      <p class="text-stone-600">Loading task details...</p>
     </div>
     <div v-else-if="errorTask" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
       <p>{{ errorTask }}</p>
       <div class="mt-2">
-        <NuxtLink to="/tasks" class="text-blue-600 hover:text-blue-800">
+        <NuxtLink to="/tasks" class="text-amber-700 hover:text-amber-800">
           Return to task list
         </NuxtLink>
       </div>
@@ -15,16 +15,16 @@
 
     <!-- Page Header -->
     <div v-if="task" class="mb-6">
-      <NuxtLink :to="`/tasks/${taskId}`" class="text-blue-600 hover:text-blue-800 mb-2 block">
+      <NuxtLink :to="`/tasks/${taskId}`" class="text-amber-700 hover:text-amber-800 mb-2 block">
         &larr; Back to Task: {{ task.name }}
       </NuxtLink>
-      <h1 class="text-2xl font-bold text-gray-900">Occurrences for: {{ task.name }}</h1>
-      <p v-if="task.category" class="text-gray-600 mt-1">Category: {{ task.category.name }}</p>
+      <h1 class="text-2xl font-bold text-stone-900 font-heading">Occurrences for: {{ task.name }}</h1>
+      <p v-if="task.category" class="text-stone-600 mt-1">Category: {{ task.category.name }}</p>
     </div>
 
     <!-- Occurrences Loading and Error -->
     <div v-if="loadingOccurrences" class="text-center py-8">
-      <p class="text-gray-600">Loading occurrences...</p>
+      <p class="text-stone-600">Loading occurrences...</p>
     </div>
     <div v-else-if="errorOccurrences"
       class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
@@ -32,37 +32,37 @@
     </div>
 
     <!-- Empty State for Occurrences -->
-    <div v-else-if="!occurrences.length" class="bg-white rounded-lg shadow-md p-8 text-center">
-      <h2 class="text-xl font-semibold text-gray-700 mb-2">No Occurrences Found</h2>
-      <p class="text-gray-500">
+    <div v-else-if="!occurrences.length" class="bg-white rounded-xl shadow-sm border border-stone-200 p-8 text-center">
+      <h2 class="text-xl font-semibold text-stone-700 mb-2 font-heading">No Occurrences Found</h2>
+      <p class="text-stone-500">
         There are currently no occurrences listed for this task.
       </p>
     </div>
 
     <!-- Occurrences List Table -->
-    <div v-else class="bg-white rounded-lg shadow-md overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+      <table class="min-w-full divide-y divide-stone-200">
+        <thead class="bg-stone-50">
           <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
               Due Date
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
               Status
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
               Assignees
             </th>
-            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">
               Actions
             </th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
+        <tbody class="bg-white divide-y divide-stone-200">
           <tr v-for="occurrence in occurrences" :key="occurrence.id"
               @click="navigateToOccurrence(occurrence.id)"
-              class="cursor-pointer hover:bg-gray-50 transition-colors">
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              class="cursor-pointer hover:bg-stone-50 transition-colors">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-900">
               {{ formatDate(occurrence.dueDate) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
@@ -71,7 +71,7 @@
                 {{ formatOccurrenceStatus(occurrence.status) }}
               </span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
               {{ getAssigneeNames(occurrence.assigneeIds) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
@@ -79,7 +79,7 @@
               <div class="relative inline-block text-left">
                 <button 
                   @click="toggleDropdown(occurrence.id)"
-                  class="text-gray-400 hover:text-gray-600 focus:outline-none"
+                  class="text-stone-400 hover:text-stone-600 focus:outline-none"
                   title="Actions"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,9 +95,9 @@
                     <button
                       v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
                       @click="handleEdit(occurrence)"
-                      class="group flex items-center w-full px-4 py-2 text-sm text-blue-600 hover:bg-gray-100"
+                      class="group flex items-center w-full px-4 py-2 text-sm text-amber-700 hover:bg-stone-100"
                     >
-                      <svg class="mr-3 h-4 w-4 text-blue-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg class="mr-3 h-4 w-4 text-amber-500 group-hover:text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                       Edit
@@ -106,7 +106,7 @@
                     <button
                       v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
                       @click="handleExecute(occurrence.id)"
-                      class="group flex items-center w-full px-4 py-2 text-sm text-green-600 hover:bg-gray-100"
+                      class="group flex items-center w-full px-4 py-2 text-sm text-green-600 hover:bg-stone-100"
                     >
                       <svg class="mr-3 h-4 w-4 text-green-400 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -117,7 +117,7 @@
                     <button
                       v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
                       @click="handleSkip(occurrence.id)"
-                      class="group flex items-center w-full px-4 py-2 text-sm text-yellow-600 hover:bg-gray-100"
+                      class="group flex items-center w-full px-4 py-2 text-sm text-yellow-600 hover:bg-stone-100"
                     >
                       <svg class="mr-3 h-4 w-4 text-yellow-400 group-hover:text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -125,7 +125,7 @@
                       Skip
                     </button>
 
-                    <div v-if="!(occurrence.status === 'assigned' || occurrence.status === 'created')" class="px-4 py-2 text-sm text-gray-500">
+                    <div v-if="!(occurrence.status === 'assigned' || occurrence.status === 'created')" class="px-4 py-2 text-sm text-stone-500">
                       No actions available
                     </div>
                   </div>
@@ -148,12 +148,12 @@
 
     <!-- Edit Modal -->
     <div v-if="showEditModal"
-      class="fixed inset-0 z-10 overflow-y-auto bg-gray-500 bg-opacity-75 transition-opacity"
+      class="fixed inset-0 z-10 overflow-y-auto bg-stone-500 bg-opacity-75 transition-opacity"
       aria-labelledby="edit-modal-title" role="dialog" aria-modal="true">
       <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
         <div class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
           <div>
-            <h3 class="text-lg font-medium leading-6 text-gray-900" id="edit-modal-title">Edit Occurrence</h3>
+            <h3 class="text-lg font-medium leading-6 text-stone-900 font-heading" id="edit-modal-title">Edit Occurrence</h3>
             <div class="mt-4">
               <OccurrenceEditForm
                 v-if="editTargetOccurrence"
@@ -424,9 +424,9 @@ const formatOccurrenceStatus = (status: string): string => {
 const getOccurrenceStatusClass = (status: string): string => {
   switch (status) {
     case 'created':
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-stone-100 text-stone-800';
     case 'assigned':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-amber-100 text-amber-800';
     case 'completed':
       return 'bg-green-100 text-green-800';
     case 'skipped':
@@ -434,7 +434,7 @@ const getOccurrenceStatusClass = (status: string): string => {
     case 'deleted':
       return 'bg-red-100 text-red-800';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-stone-100 text-stone-800';
   }
 };
 

@@ -2,19 +2,19 @@
   <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">All Occurrences</h1>
-        <p class="text-gray-600 mt-1">Manage all task occurrences across your household</p>
+        <h1 class="text-2xl font-bold text-stone-900 font-heading">All Occurrences</h1>
+        <p class="text-stone-600 mt-1">Manage all task occurrences across your household</p>
       </div>
     </div>
 
     <!-- Filters and Search -->
-    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-4 mb-6">
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <!-- Status filter -->
         <div>
-          <label for="statusFilter" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <label for="statusFilter" class="block text-sm font-medium text-stone-700 mb-1">Status</label>
           <select id="statusFilter" v-model="filters.status"
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
             <option value="">All Statuses</option>
             <option value="pending">Pending (Created/Assigned)</option>
             <option value="created">Created</option>
@@ -26,9 +26,9 @@
 
         <!-- Category filter -->
         <div>
-          <label for="categoryFilter" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+          <label for="categoryFilter" class="block text-sm font-medium text-stone-700 mb-1">Category</label>
           <select id="categoryFilter" v-model="filters.categoryId"
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
             <option value="">All Categories</option>
             <option v-for="category in categories" :key="category.id" :value="category.id">
               {{ category.name }}
@@ -38,9 +38,9 @@
 
         <!-- Assignee filter -->
         <div>
-          <label for="assigneeFilter" class="block text-sm font-medium text-gray-700 mb-1">Assignee</label>
+          <label for="assigneeFilter" class="block text-sm font-medium text-stone-700 mb-1">Assignee</label>
           <select id="assigneeFilter" v-model="filters.assigneeId"
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
             <option value="">All Assignees</option>
             <option v-for="user in householdUsers" :key="user.id" :value="user.id">
               {{ user.name }}
@@ -50,9 +50,9 @@
 
         <!-- Sort By -->
         <div>
-          <label for="sortBy" class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+          <label for="sortBy" class="block text-sm font-medium text-stone-700 mb-1">Sort By</label>
           <select id="sortBy" v-model="sortBy"
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
             <option value="dueDate">Due Date</option>
             <option value="taskName">Task Name</option>
             <option value="category">Category</option>
@@ -62,89 +62,89 @@
 
         <!-- Search -->
         <div>
-          <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+          <label for="search" class="block text-sm font-medium text-stone-700 mb-1">Search</label>
           <input id="search" v-model="filters.search" type="text" placeholder="Search tasks..."
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
         </div>
       </div>
 
       <!-- Date Range Filters -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <div>
-          <label for="dueDateFrom" class="block text-sm font-medium text-gray-700 mb-1">Due Date From</label>
+          <label for="dueDateFrom" class="block text-sm font-medium text-stone-700 mb-1">Due Date From</label>
           <input id="dueDateFrom" v-model="filters.dueDateFrom" type="date"
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
         </div>
         <div>
-          <label for="dueDateTo" class="block text-sm font-medium text-gray-700 mb-1">Due Date To</label>
+          <label for="dueDateTo" class="block text-sm font-medium text-stone-700 mb-1">Due Date To</label>
           <input id="dueDateTo" v-model="filters.dueDateTo" type="date"
-            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
         </div>
       </div>
     </div>
 
     <!-- Loading and Empty States -->
     <div v-if="loading" class="text-center py-8">
-      <p class="text-gray-600">Loading occurrences...</p>
+      <p class="text-stone-600">Loading occurrences...</p>
     </div>
 
-    <div v-else-if="!occurrences.length" class="bg-white rounded-lg shadow-md p-8 text-center">
-      <h2 class="text-xl font-semibold text-gray-700 mb-2">No occurrences found</h2>
-      <p class="text-gray-500 mb-4">
+    <div v-else-if="!occurrences.length" class="bg-white rounded-xl shadow-sm border border-stone-200 p-8 text-center">
+      <h2 class="text-xl font-semibold text-stone-700 mb-2 font-heading">No occurrences found</h2>
+      <p class="text-stone-500 mb-4">
         {{
           hasActiveFilters
             ? 'Try changing your filters or search term'
             : 'No task occurrences exist yet. Create some tasks to see occurrences here.'
         }}
       </p>
-      <NuxtLink to="/tasks" class="inline-block bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+      <NuxtLink to="/tasks" class="inline-block bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700">
         Go to Tasks
       </NuxtLink>
     </div>
 
     <!-- Occurrence List -->
-    <div v-else class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+        <table class="min-w-full divide-y divide-stone-200">
+          <thead class="bg-stone-50">
             <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                 Task
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                 Category
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                 Due Date
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                 Assignee(s)
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                 Status
               </th>
-              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
+          <tbody class="bg-white divide-y divide-stone-200">
             <tr v-for="occurrence in occurrences" :key="occurrence.id"
                 @click="navigateToOccurrence(occurrence.id)"
-                class="cursor-pointer hover:bg-gray-50 transition-colors">
+                class="cursor-pointer hover:bg-stone-50 transition-colors">
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-medium text-gray-900">{{ occurrence.task?.name || 'Unknown Task' }}</div>
-                <div v-if="occurrence.task?.description" class="text-sm text-gray-500 truncate max-w-xs">
+                <div class="text-sm font-medium text-stone-900">{{ occurrence.task?.name || 'Unknown Task' }}</div>
+                <div v-if="occurrence.task?.description" class="text-sm text-stone-500 truncate max-w-xs">
                   {{ occurrence.task.description }}
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-amber-100 text-amber-800">
                   {{ getCategoryName(occurrence.task?.category) }}
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900" :class="{ 'text-red-600 font-semibold': isOverdue(occurrence.dueDate) }">
+                <div class="text-sm text-stone-900" :class="{ 'text-red-600 font-semibold': isOverdue(occurrence.dueDate) }">
                   {{ formatDate(occurrence.dueDate) }}
                 </div>
                 <div v-if="isOverdue(occurrence.dueDate) && ['created', 'assigned'].includes(occurrence.status)" 
@@ -153,10 +153,10 @@
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div v-if="occurrence.assigneeIds && occurrence.assigneeIds.length > 0" class="text-sm text-gray-900">
+                <div v-if="occurrence.assigneeIds && occurrence.assigneeIds.length > 0" class="text-sm text-stone-900">
                   {{ getAssigneeNames(occurrence.assigneeIds).join(', ') }}
                 </div>
-                <div v-else class="text-sm text-gray-500 italic">
+                <div v-else class="text-sm text-stone-500 italic">
                   Unassigned
                 </div>
               </td>
@@ -171,7 +171,7 @@
                 <div class="relative inline-block text-left">
                   <button 
                     @click="toggleDropdown(occurrence.id)"
-                    class="text-gray-400 hover:text-gray-600 focus:outline-none"
+                    class="text-stone-400 hover:text-stone-600 focus:outline-none"
                     title="Actions"
                   >
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,9 +187,9 @@
                       <button
                         v-if="['created', 'assigned'].includes(occurrence.status)"
                         @click="editOccurrence(occurrence)"
-                        class="group flex items-center w-full px-4 py-2 text-sm text-blue-600 hover:bg-gray-100"
+                        class="group flex items-center w-full px-4 py-2 text-sm text-amber-700 hover:bg-stone-100"
                       >
-                        <svg class="mr-3 h-4 w-4 text-blue-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="mr-3 h-4 w-4 text-amber-500 group-hover:text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                         Edit
@@ -198,7 +198,7 @@
                       <button
                         v-if="['created', 'assigned'].includes(occurrence.status)"
                         @click="executeOccurrence(occurrence.id)"
-                        class="group flex items-center w-full px-4 py-2 text-sm text-green-600 hover:bg-gray-100"
+                        class="group flex items-center w-full px-4 py-2 text-sm text-green-600 hover:bg-stone-100"
                       >
                         <svg class="mr-3 h-4 w-4 text-green-400 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -209,7 +209,7 @@
                       <button
                         v-if="['created', 'assigned'].includes(occurrence.status)"
                         @click="skipOccurrence(occurrence.id, occurrence)"
-                        class="group flex items-center w-full px-4 py-2 text-sm text-yellow-600 hover:bg-gray-100"
+                        class="group flex items-center w-full px-4 py-2 text-sm text-yellow-600 hover:bg-stone-100"
                       >
                         <svg class="mr-3 h-4 w-4 text-yellow-400 group-hover:text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -217,7 +217,7 @@
                         Skip
                       </button>
 
-                      <div v-if="!['created', 'assigned'].includes(occurrence.status)" class="px-4 py-2 text-sm text-gray-500">
+                      <div v-if="!['created', 'assigned'].includes(occurrence.status)" class="px-4 py-2 text-sm text-stone-500">
                         No actions available
                       </div>
                     </div>
@@ -241,12 +241,12 @@
 
     <!-- Edit Modal -->
     <div v-if="showEditModal"
-      class="fixed inset-0 z-10 overflow-y-auto bg-gray-500 bg-opacity-75 transition-opacity"
+      class="fixed inset-0 z-10 overflow-y-auto bg-stone-500 bg-opacity-75 transition-opacity"
       aria-labelledby="edit-modal-title" role="dialog" aria-modal="true">
       <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
         <div class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
           <div>
-            <h3 class="text-lg font-medium leading-6 text-gray-900" id="edit-modal-title">Edit Occurrence</h3>
+            <h3 class="text-lg font-medium leading-6 text-stone-900 font-heading" id="edit-modal-title">Edit Occurrence</h3>
             <div class="mt-4">
               <OccurrenceEditForm
                 v-if="editTargetOccurrence"
@@ -452,9 +452,9 @@ const isOverdue = (dueDate: Date | string): boolean => {
 const getStatusClass = (status: string): string => {
   switch (status) {
     case 'created':
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-stone-100 text-stone-800';
     case 'assigned':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-amber-100 text-amber-800';
     case 'completed':
       return 'bg-green-100 text-green-800';
     case 'skipped':
@@ -462,7 +462,7 @@ const getStatusClass = (status: string): string => {
     case 'deleted':
       return 'bg-red-100 text-red-800';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-stone-100 text-stone-800';
   }
 };
 

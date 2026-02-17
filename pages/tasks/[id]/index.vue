@@ -2,13 +2,13 @@
   <div class="container mx-auto px-4 py-8">
     <!-- Loading and Error States -->
     <div v-if="loading" class="text-center py-8">
-      <p class="text-gray-600">Loading task details...</p>
+      <p class="text-stone-600">Loading task details...</p>
     </div>
 
     <div v-else-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
       <p>{{ error }}</p>
       <div class="mt-2">
-        <NuxtLink to="/tasks" class="text-blue-600 hover:text-blue-800">
+        <NuxtLink to="/tasks" class="text-amber-700 hover:text-amber-800">
           Return to task list
         </NuxtLink>
       </div>
@@ -18,11 +18,11 @@
     <div v-else class="mb-8">
       <div class="flex justify-between items-start mb-6">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">{{ task.name }}</h1>
+          <h1 class="font-heading text-2xl font-bold text-stone-900">{{ task.name }}</h1>
         </div>
         <div class="flex space-x-2">
           <NuxtLink :to="`/tasks/${task.id}/edit`"
-            class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+            class="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700">
             Edit Task
           </NuxtLink>
           <button v-if="task.metaStatus === 'active'" @click="pauseTask"
@@ -51,21 +51,21 @@
       <!-- Occurrences Section -->
       <div class="mb-6">
         <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl font-semibold">Occurrences</h2>
-          <NuxtLink :to="`/tasks/${task.id}/occurrences`" class="text-blue-600 hover:text-blue-800">
+          <h2 class="font-heading text-xl font-semibold text-stone-900">Occurrences</h2>
+          <NuxtLink :to="`/tasks/${task.id}/occurrences`" class="text-amber-700 hover:text-amber-800">
             View All Occurrences
           </NuxtLink>
         </div>
 
         <!-- Occurrences Loading -->
         <div v-if="loadingOccurrences" class="text-center py-4">
-          <p class="text-gray-600">Loading occurrences...</p>
+          <p class="text-stone-600">Loading occurrences...</p>
         </div>
 
         <!-- Empty State for Occurrences -->
-        <div v-else-if="!occurrences.length" class="bg-white rounded-lg shadow-md p-6 text-center">
-          <h3 class="text-lg font-semibold text-gray-700 mb-2">No Occurrences</h3>
-          <p class="text-gray-500 mb-4">
+        <div v-else-if="!occurrences.length" class="bg-white rounded-xl shadow-sm border border-stone-200 p-6 text-center">
+          <h3 class="font-heading text-lg font-semibold text-stone-700 mb-2">No Occurrences</h3>
+          <p class="text-stone-500 mb-4">
             {{
               task.metaStatus === 'active'
                 ? 'This task has no occurrences yet. They will be automatically generated based on the schedule.'
@@ -75,29 +75,29 @@
         </div>
 
         <!-- Occurrences List -->
-        <div v-else class="bg-white rounded-lg shadow-md overflow-hidden">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+        <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+          <table class="min-w-full divide-y divide-stone-200">
+            <thead class="bg-stone-50">
               <tr>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                   Due Date
                 </th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
                   Assignees
                 </th>
-                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+            <tbody class="bg-white divide-y divide-stone-200">
               <tr v-for="occurrence in occurrences.slice(0, 5)" :key="occurrence.id"
                   @click="navigateToOccurrence(occurrence.id)"
-                  class="cursor-pointer hover:bg-gray-50 transition-colors">
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  class="cursor-pointer hover:bg-stone-50 transition-colors">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-900">
                   {{ formatDate(occurrence.dueDate) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -106,12 +106,12 @@
                     {{ formatOccurrenceStatus(occurrence.status) }}
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
                   {{ getAssigneeNames(occurrence.assigneeIds) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2"
                     @click.stop>
-                  <NuxtLink :to="`/occurrences/${occurrence.id}`" class="text-blue-600 hover:text-blue-900" title="View">
+                  <NuxtLink :to="`/occurrences/${occurrence.id}`" class="text-amber-700 hover:text-amber-900" title="View">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -123,8 +123,8 @@
           </table>
 
           <!-- Show More Link if more than 5 occurrences -->
-          <div v-if="occurrences.length > 5" class="px-6 py-3 bg-gray-50 text-right">
-            <NuxtLink :to="`/tasks/${task.id}/occurrences`" class="text-blue-600 hover:text-blue-800">
+          <div v-if="occurrences.length > 5" class="px-6 py-3 bg-stone-50 text-right">
+            <NuxtLink :to="`/tasks/${task.id}/occurrences`" class="text-amber-700 hover:text-amber-800">
               View all {{ occurrences.length }} occurrences
             </NuxtLink>
           </div>
@@ -133,7 +133,7 @@
 
       <!-- Back to Tasks List -->
       <div class="mt-8">
-        <NuxtLink to="/tasks" class="text-blue-600 hover:text-blue-800">
+        <NuxtLink to="/tasks" class="text-amber-700 hover:text-amber-800">
           &larr; Back to Tasks List
         </NuxtLink>
       </div>
@@ -308,9 +308,9 @@ const getStatusClass = (status: string): string => {
     case 'soft-deleted':
       return 'bg-red-100 text-red-800';
     case 'completed':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-amber-100 text-amber-800';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-stone-100 text-stone-800';
   }
 };
 
@@ -321,9 +321,9 @@ const formatOccurrenceStatus = (status: string): string => {
 const getOccurrenceStatusClass = (status: string): string => {
   switch (status) {
     case 'created':
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-stone-100 text-stone-800';
     case 'assigned':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-amber-100 text-amber-800';
     case 'completed':
       return 'bg-green-100 text-green-800';
     case 'skipped':
@@ -331,7 +331,7 @@ const getOccurrenceStatusClass = (status: string): string => {
     case 'deleted':
       return 'bg-red-100 text-red-800';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-stone-100 text-stone-800';
   }
 };
 
