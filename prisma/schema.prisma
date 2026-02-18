@@ -45,6 +45,18 @@ model Household {
   @@map("households")
 }
 
+// Former Household Member - tracks users who have left a household
+model FormerHouseholdMember {
+  id          String   @id @default(uuid())
+  userId      String
+  householdId String
+  name        String
+  leftAt      DateTime @default(now())
+
+  @@unique([userId, householdId])
+  @@map("former_household_members")
+}
+
 // Category model
 model Category {
   id           String           @id @default(uuid())
