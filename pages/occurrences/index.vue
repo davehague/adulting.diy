@@ -8,78 +8,137 @@
     </div>
 
     <!-- Filters and Search -->
-    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-4 mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <!-- Status filter -->
-        <div>
-          <label for="statusFilter" class="block text-sm font-medium text-stone-700 mb-1">Status</label>
-          <select id="statusFilter" v-model="filters.status"
-            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
-            <option value="">All Statuses</option>
-            <option value="pending">Pending (Created/Assigned)</option>
-            <option value="created">Created</option>
-            <option value="assigned">Assigned</option>
-            <option value="completed">Completed</option>
-            <option value="skipped">Skipped</option>
-          </select>
+    <div class="flex flex-col gap-2 mb-6">
+      <!-- Compact toolbar row -->
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Search input with icon -->
+        <div class="relative flex-1 min-w-[200px] max-w-sm">
+          <Search :size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+          <input
+            v-model="filters.search"
+            type="text"
+            placeholder="Search tasks..."
+            class="w-full pl-9 pr-3 py-2 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder:text-stone-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+          />
         </div>
 
-        <!-- Category filter -->
-        <div>
-          <label for="categoryFilter" class="block text-sm font-medium text-stone-700 mb-1">Category</label>
-          <select id="categoryFilter" v-model="filters.categoryId"
-            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
-            <option value="">All Categories</option>
-            <option v-for="category in categories" :key="category.id" :value="category.id">
-              {{ category.name }}
-            </option>
-          </select>
-        </div>
+        <!-- Status select -->
+        <select
+          v-model="filters.status"
+          class="bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-700 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-colors min-w-[140px]"
+        >
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="created">Created</option>
+          <option value="assigned">Assigned</option>
+          <option value="completed">Completed</option>
+          <option value="skipped">Skipped</option>
+        </select>
 
-        <!-- Assignee filter -->
-        <div>
-          <label for="assigneeFilter" class="block text-sm font-medium text-stone-700 mb-1">Assignee</label>
-          <select id="assigneeFilter" v-model="filters.assigneeId"
-            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
-            <option value="">All Assignees</option>
-            <option v-for="user in householdUsers" :key="user.id" :value="user.id">
-              {{ user.name }}
-            </option>
-          </select>
-        </div>
+        <!-- Category select -->
+        <select
+          v-model="filters.categoryId"
+          class="bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-700 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-colors min-w-[150px]"
+        >
+          <option value="">All Categories</option>
+          <option v-for="category in categories" :key="category.id" :value="category.id">
+            {{ category.name }}
+          </option>
+        </select>
 
-        <!-- Sort By -->
-        <div>
-          <label for="sortBy" class="block text-sm font-medium text-stone-700 mb-1">Sort By</label>
-          <select id="sortBy" v-model="sortBy"
-            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
-            <option value="dueDate">Due Date</option>
-            <option value="taskName">Task Name</option>
-            <option value="category">Category</option>
-            <option value="status">Status</option>
-          </select>
-        </div>
+        <!-- Assignee select -->
+        <select
+          v-model="filters.assigneeId"
+          class="bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-700 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-colors min-w-[140px]"
+        >
+          <option value="">All Assignees</option>
+          <option v-for="user in householdUsers" :key="user.id" :value="user.id">
+            {{ user.name }}
+          </option>
+        </select>
 
-        <!-- Search -->
-        <div>
-          <label for="search" class="block text-sm font-medium text-stone-700 mb-1">Search</label>
-          <input id="search" v-model="filters.search" type="text" placeholder="Search tasks..."
-            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
+        <!-- Date filter toggle button -->
+        <button
+          @click="showDateFilters = !showDateFilters"
+          class="inline-flex items-center gap-1.5 px-3 py-2 text-sm border rounded-lg transition-colors"
+          :class="showDateFilters || filters.dueDateFrom || filters.dueDateTo
+            ? 'bg-amber-50 border-amber-300 text-amber-700'
+            : 'bg-white border-stone-300 text-stone-700 hover:bg-stone-50'"
+        >
+          <SlidersHorizontal :size="16" />
+          <span class="hidden sm:inline">Dates</span>
+        </button>
+      </div>
+
+      <!-- Date range row (collapsible) -->
+      <div v-if="showDateFilters" class="flex flex-wrap items-center gap-2">
+        <div class="relative">
+          <input
+            v-model="filters.dueDateFrom"
+            type="date"
+            class="bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-700 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+          />
+        </div>
+        <span class="text-stone-400 text-sm">to</span>
+        <div class="relative">
+          <input
+            v-model="filters.dueDateTo"
+            type="date"
+            class="bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-700 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+          />
         </div>
       </div>
 
-      <!-- Date Range Filters -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-        <div>
-          <label for="dueDateFrom" class="block text-sm font-medium text-stone-700 mb-1">Due Date From</label>
-          <input id="dueDateFrom" v-model="filters.dueDateFrom" type="date"
-            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
-        </div>
-        <div>
-          <label for="dueDateTo" class="block text-sm font-medium text-stone-700 mb-1">Due Date To</label>
-          <input id="dueDateTo" v-model="filters.dueDateTo" type="date"
-            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
-        </div>
+      <!-- Active filter chips -->
+      <div v-if="activeFilterCount > 0" class="flex items-center gap-2 flex-wrap">
+        <span
+          v-if="filters.status && filters.status !== 'pending'"
+          class="inline-flex items-center gap-1 bg-amber-100 text-amber-800 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+        >
+          Status: {{ filters.status.charAt(0).toUpperCase() + filters.status.slice(1) }}
+          <button @click="clearFilter('status')" class="hover:text-amber-900"><X :size="12" /></button>
+        </span>
+        <span
+          v-if="filters.categoryId"
+          class="inline-flex items-center gap-1 bg-amber-100 text-amber-800 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+        >
+          {{ categories.find(c => c.id === filters.categoryId)?.name || 'Category' }}
+          <button @click="clearFilter('categoryId')" class="hover:text-amber-900"><X :size="12" /></button>
+        </span>
+        <span
+          v-if="filters.assigneeId"
+          class="inline-flex items-center gap-1 bg-amber-100 text-amber-800 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+        >
+          {{ householdUsers.find(u => u.id === filters.assigneeId)?.name || 'Assignee' }}
+          <button @click="clearFilter('assigneeId')" class="hover:text-amber-900"><X :size="12" /></button>
+        </span>
+        <span
+          v-if="filters.search"
+          class="inline-flex items-center gap-1 bg-amber-100 text-amber-800 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+        >
+          Search: "{{ filters.search }}"
+          <button @click="clearFilter('search')" class="hover:text-amber-900"><X :size="12" /></button>
+        </span>
+        <span
+          v-if="filters.dueDateFrom"
+          class="inline-flex items-center gap-1 bg-amber-100 text-amber-800 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+        >
+          From: {{ filters.dueDateFrom }}
+          <button @click="clearFilter('dueDateFrom')" class="hover:text-amber-900"><X :size="12" /></button>
+        </span>
+        <span
+          v-if="filters.dueDateTo"
+          class="inline-flex items-center gap-1 bg-amber-100 text-amber-800 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+        >
+          To: {{ filters.dueDateTo }}
+          <button @click="clearFilter('dueDateTo')" class="hover:text-amber-900"><X :size="12" /></button>
+        </span>
+        <button
+          @click="clearFilters"
+          class="text-xs text-stone-500 hover:text-stone-700 transition-colors"
+        >
+          Clear all
+        </button>
       </div>
     </div>
 
@@ -159,22 +218,42 @@
         <table class="min-w-full divide-y divide-stone-200">
           <thead class="bg-stone-50">
             <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
-                Task
+              <th scope="col" @click="toggleSort('taskName')"
+                class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider cursor-pointer hover:text-stone-700 transition-colors select-none">
+                <span class="inline-flex items-center gap-1">
+                  Task
+                  <ChevronUp v-if="sortColumn === 'taskName' && sortDirection === 'asc'" :size="14" class="text-amber-600" />
+                  <ChevronDown v-else-if="sortColumn === 'taskName' && sortDirection === 'desc'" :size="14" class="text-amber-600" />
+                </span>
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
-                Category
+              <th scope="col" @click="toggleSort('category')"
+                class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider cursor-pointer hover:text-stone-700 transition-colors select-none">
+                <span class="inline-flex items-center gap-1">
+                  Category
+                  <ChevronUp v-if="sortColumn === 'category' && sortDirection === 'asc'" :size="14" class="text-amber-600" />
+                  <ChevronDown v-else-if="sortColumn === 'category' && sortDirection === 'desc'" :size="14" class="text-amber-600" />
+                </span>
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
-                Due Date
+              <th scope="col" @click="toggleSort('dueDate')"
+                class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider cursor-pointer hover:text-stone-700 transition-colors select-none">
+                <span class="inline-flex items-center gap-1">
+                  Due Date
+                  <ChevronUp v-if="sortColumn === 'dueDate' && sortDirection === 'asc'" :size="14" class="text-amber-600" />
+                  <ChevronDown v-else-if="sortColumn === 'dueDate' && sortDirection === 'desc'" :size="14" class="text-amber-600" />
+                </span>
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider">
                 Assignee(s)
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
-                Status
+              <th scope="col" @click="toggleSort('status')"
+                class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider cursor-pointer hover:text-stone-700 transition-colors select-none">
+                <span class="inline-flex items-center gap-1">
+                  Status
+                  <ChevronUp v-if="sortColumn === 'status' && sortDirection === 'asc'" :size="14" class="text-amber-600" />
+                  <ChevronDown v-else-if="sortColumn === 'status' && sortDirection === 'desc'" :size="14" class="text-amber-600" />
+                </span>
               </th>
-              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-right text-xs font-semibold text-stone-500 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -322,7 +401,7 @@ import { useApi } from '@/utils/api';
 import { useAuthStore } from '@/stores/auth';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
-import { Plus } from 'lucide-vue-next';
+import { Plus, Search, X, ChevronUp, ChevronDown, SlidersHorizontal } from 'lucide-vue-next';
 import type { TaskOccurrence, Category, User } from '@/types';
 
 const api = useApi();
@@ -334,7 +413,18 @@ const loading = ref(false);
 const rawOccurrences = ref<TaskOccurrence[]>([]);
 const categories = ref<Category[]>([]);
 const householdUsers = ref<User[]>([]);
-const sortBy = ref('dueDate');
+// Sort state (replaces sortBy dropdown)
+const sortColumn = ref<string>('dueDate');
+const sortDirection = ref<'asc' | 'desc'>('asc');
+
+const toggleSort = (column: string) => {
+  if (sortColumn.value === column) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = column;
+    sortDirection.value = 'asc';
+  }
+};
 
 // Dropdown state
 const openDropdownId = ref<string | null>(null);
@@ -361,31 +451,67 @@ const filters = reactive({
   dueDateTo: ''
 });
 
+// Date filter panel toggle
+const showDateFilters = ref(false);
+
+const activeFilterCount = computed(() => {
+  let count = 0;
+  if (filters.status && filters.status !== 'pending') count++; // pending is default, don't count it
+  if (filters.categoryId) count++;
+  if (filters.assigneeId) count++;
+  if (filters.search) count++;
+  if (filters.dueDateFrom) count++;
+  if (filters.dueDateTo) count++;
+  return count;
+});
+
+const clearFilters = () => {
+  filters.status = 'pending';
+  filters.categoryId = '';
+  filters.assigneeId = '';
+  filters.search = '';
+  filters.dueDateFrom = '';
+  filters.dueDateTo = '';
+  showDateFilters.value = false;
+};
+
+const clearFilter = (key: keyof typeof filters) => {
+  if (key === 'status') {
+    filters.status = 'pending'; // Reset to default, not empty
+  } else {
+    filters[key] = '';
+  }
+};
+
 // Computed properties
 const hasActiveFilters = computed(() => {
   return Object.values(filters).some(value => value !== '');
 });
 
 const occurrences = computed(() => {
-  let sorted = [...rawOccurrences.value];
-  
-  switch (sortBy.value) {
-    case 'dueDate':
-      sorted.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-      break;
-    case 'taskName':
-      sorted.sort((a, b) => (a.task?.name || '').localeCompare(b.task?.name || ''));
-      break;
-    case 'category':
-      sorted.sort((a, b) => (a.task?.category?.name || '').localeCompare(b.task?.category?.name || ''));
-      break;
-    case 'status':
-      sorted.sort((a, b) => a.status.localeCompare(b.status));
-      break;
-    default:
-      break;
-  }
-  
+  const sorted = [...rawOccurrences.value];
+
+  sorted.sort((a, b) => {
+    let cmp = 0;
+    switch (sortColumn.value) {
+      case 'dueDate':
+        cmp = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        break;
+      case 'taskName':
+        cmp = (a.task?.name || '').localeCompare(b.task?.name || '');
+        break;
+      case 'category':
+        cmp = getCategoryName(a.task?.category).localeCompare(getCategoryName(b.task?.category));
+        break;
+      case 'status':
+        cmp = a.status.localeCompare(b.status);
+        break;
+      default:
+        break;
+    }
+    return sortDirection.value === 'desc' ? -cmp : cmp;
+  });
+
   return sorted;
 });
 
