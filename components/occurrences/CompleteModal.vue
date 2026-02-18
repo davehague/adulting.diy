@@ -1,30 +1,20 @@
 <template>
   <div v-if="show"
     class="fixed inset-0 z-10 overflow-y-auto bg-stone-500 bg-opacity-75 transition-opacity"
-    aria-labelledby="skip-modal-title" role="dialog" aria-modal="true">
+    aria-labelledby="complete-modal-title" role="dialog" aria-modal="true">
     <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
       <div
         class="relative transform overflow-hidden rounded-xl bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
         <div>
-          <h3 class="text-lg font-medium leading-6 text-stone-900 font-heading" id="skip-modal-title">Skip Occurrence</h3>
+          <h3 class="text-lg font-medium leading-6 text-stone-900 font-heading" id="complete-modal-title">Complete Occurrence</h3>
           <div class="mt-4">
-            <p v-if="isVariableInterval" class="text-sm text-amber-700 bg-amber-50 p-3 rounded mb-4">
-              This is a variable-interval task. The next occurrence will be scheduled based on today's date rather than the original due date.
-            </p>
-            <p v-else-if="isRecurring" class="text-sm text-stone-600 bg-stone-50 p-3 rounded mb-4">
-              The next occurrence will stay on its regular schedule.
-            </p>
-            <p class="text-sm text-stone-500 mb-4">
-              Optionally provide a reason for skipping this task occurrence.
-            </p>
             <div>
-              <label for="skip-reason" class="block text-sm font-medium text-stone-700">Reason</label>
-              <textarea
-                id="skip-reason"
-                v-model="skipReason"
-                rows="3"
+              <label for="completion-date" class="block text-sm font-medium text-stone-700">Completion Date</label>
+              <input
+                id="completion-date"
+                v-model="completionDate"
+                type="date"
                 class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm"
-                placeholder="Enter a reason for skipping (optional)..."
               />
             </div>
           </div>
@@ -33,9 +23,9 @@
           <button
             type="button"
             @click="handleConfirm"
-            :disabled="disabled"
+            :disabled="disabled || !completionDate"
             class="inline-flex items-center justify-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 sm:col-start-2">
-            <SkipForward :size="16" />{{ disabled ? 'Skipping...' : 'Skip' }}
+            <CheckCircle :size="16" />{{ disabled ? 'Completing...' : 'Complete' }}
           </button>
           <button
             type="button"
@@ -51,30 +41,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { SkipForward, X } from 'lucide-vue-next';
+import { ref, watch, toRefs } from 'vue';
+import { CheckCircle, X } from 'lucide-vue-next';
+import { format } from 'date-fns';
 
-defineProps<{
+const props = defineProps<{
   show: boolean;
-  isVariableInterval?: boolean;
-  isRecurring?: boolean;
   disabled?: boolean;
 }>();
 
 const emit = defineEmits<{
-  (e: 'confirm', reason: string): void;
+  (e: 'confirm', completionDate: string): void;
   (e: 'cancel'): void;
 }>();
 
-const skipReason = ref('');
+const completionDate = ref(format(new Date(), 'yyyy-MM-dd'));
+
+// Reset date to today each time the modal opens
+const { show } = toRefs(props);
+watch(show, (newVal) => {
+  if (newVal) {
+    completionDate.value = format(new Date(), 'yyyy-MM-dd');
+  }
+});
 
 const handleConfirm = () => {
-  emit('confirm', skipReason.value.trim());
-  skipReason.value = '';
+  emit('confirm', completionDate.value);
 };
 
 const handleCancel = () => {
-  skipReason.value = '';
+  completionDate.value = format(new Date(), 'yyyy-MM-dd');
   emit('cancel');
 };
 </script>

@@ -1,6 +1,6 @@
 import { defineHouseholdProtectedEventHandler } from "@/server/utils/auth";
 import { OccurrenceService } from "@/server/services/OccurrenceService";
-import { createError } from "h3";
+import { createError, readBody } from "h3";
 
 export default defineHouseholdProtectedEventHandler(
   async (event, authUser, householdId) => {
@@ -13,6 +13,20 @@ export default defineHouseholdProtectedEventHandler(
           statusCode: 400,
           message: "Occurrence ID is required",
         });
+      }
+
+      // Read optional executedAt from request body
+      const body = await readBody(event).catch(() => ({}));
+      let executedAt: Date | undefined;
+      if (body?.executedAt) {
+        const parsed = new Date(body.executedAt);
+        if (isNaN(parsed.getTime())) {
+          throw createError({
+            statusCode: 400,
+            message: "Invalid executedAt date",
+          });
+        }
+        executedAt = parsed;
       }
 
       // Get occurrence service
@@ -62,7 +76,8 @@ export default defineHouseholdProtectedEventHandler(
       // Execute the occurrence using the service
       const updatedOccurrence = await occurrenceService.execute(
         occurrenceId,
-        authUser.userId
+        authUser.userId,
+        executedAt
       );
 
       return updatedOccurrence;

@@ -345,6 +345,22 @@
       @confirm="handleCatchUp"
       @cancel="closeCatchUpModal"
     />
+
+    <!-- Pause Modal -->
+    <PauseModal
+      :show="showPauseModal"
+      :disabled="isSubmittingPause"
+      @confirm="handlePauseConfirm"
+      @cancel="handlePauseCancel"
+    />
+
+    <!-- Delete Modal -->
+    <DeleteModal
+      :show="showDeleteModal"
+      :disabled="isSubmittingDelete"
+      @confirm="handleDeleteConfirm"
+      @cancel="handleDeleteCancel"
+    />
   </div>
 </template>
 
@@ -356,6 +372,8 @@ import { useTaskStore } from '@/stores/tasks';
 import { useAuthStore } from '@/stores/auth'; // Import auth store
 import type { TaskDefinition, Category, User } from '@/types';
 import CatchUpModal from '@/components/tasks/CatchUpModal.vue';
+import PauseModal from '@/components/tasks/PauseModal.vue';
+import DeleteModal from '@/components/tasks/DeleteModal.vue';
 import { useToast } from '@/composables/useToast';
 import { Plus, Search, X, ChevronUp, ChevronDown } from 'lucide-vue-next';
 
@@ -413,6 +431,16 @@ const householdUsers = ref<User[]>([]);
 
 // Dropdown state
 const openDropdownId = ref<string | null>(null);
+
+// Pause modal state
+const showPauseModal = ref(false);
+const pauseTargetId = ref<string | null>(null);
+const isSubmittingPause = ref(false);
+
+// Delete modal state
+const showDeleteModal = ref(false);
+const deleteTargetId = ref<string | null>(null);
+const isSubmittingDelete = ref(false);
 
 // Filters
 const filters = reactive({
@@ -608,17 +636,30 @@ const closeDropdown = () => {
 };
 
 // Task actions
-const pauseTask = async (taskId: string) => {
+const pauseTask = (taskId: string) => {
   closeDropdown();
-  // TODO: Implement pauseTask action in store and call it here
+  pauseTargetId.value = taskId;
+  showPauseModal.value = true;
+};
+
+const handlePauseConfirm = async () => {
+  if (!pauseTargetId.value) return;
+  isSubmittingPause.value = true;
   try {
-    // Placeholder: Direct API call for now, ideally move to store action
-    await api.post(`/api/tasks/${taskId}/pause`, {}); // Pass empty object for data
-    await taskStore.fetchTasks(apiFilters(filters)); // Refetch tasks via store
+    await api.post(`/api/tasks/${pauseTargetId.value}/pause`, {});
+    showPauseModal.value = false;
+    pauseTargetId.value = null;
+    await taskStore.fetchTasks(apiFilters(filters));
   } catch (err) {
     console.error('Error pausing task:', err);
-    // error.value = 'Failed to pause task. Please try again.'; // Store handles errors
+  } finally {
+    isSubmittingPause.value = false;
   }
+};
+
+const handlePauseCancel = () => {
+  showPauseModal.value = false;
+  pauseTargetId.value = null;
 };
 
 const unpauseTask = async (taskId: string) => {
@@ -634,21 +675,30 @@ const unpauseTask = async (taskId: string) => {
   }
 };
 
-const deleteTask = async (taskId: string) => {
+const deleteTask = (taskId: string) => {
   closeDropdown();
-  try {
-    if (!confirm('Are you sure you want to delete this task? This will remove all future occurrences.')) {
-      return;
-    }
+  deleteTargetId.value = taskId;
+  showDeleteModal.value = true;
+};
 
-    // TODO: Implement deleteTask action in store and call it here
-    // Placeholder: Direct API call for now, ideally move to store action
-    await api.delete(`/api/tasks/${taskId}`);
-    await taskStore.fetchTasks(apiFilters(filters)); // Refetch tasks via store
+const handleDeleteConfirm = async () => {
+  if (!deleteTargetId.value) return;
+  isSubmittingDelete.value = true;
+  try {
+    await api.delete(`/api/tasks/${deleteTargetId.value}`);
+    showDeleteModal.value = false;
+    deleteTargetId.value = null;
+    await taskStore.fetchTasks(apiFilters(filters));
   } catch (err) {
     console.error('Error deleting task:', err);
-    // error.value = 'Failed to delete task. Please try again.'; // Store handles errors
+  } finally {
+    isSubmittingDelete.value = false;
   }
+};
+
+const handleDeleteCancel = () => {
+  showDeleteModal.value = false;
+  deleteTargetId.value = null;
 };
 
 // Catch-up state
