@@ -2,6 +2,19 @@
 
 ## 2026-02-18
 
+### Former Household Members
+- When a user leaves a household, their name is preserved for historical display
+- Departed users appear with dimmed grey italic styling throughout the app (task lists, occurrence lists, detail pages, timelines)
+- Future task assignments are automatically cleaned up when a user leaves (removed from default assignees and upcoming occurrences)
+- Past/completed occurrences retain the departed user for historical accuracy
+- If a user rejoins the same household, they are restored as a normal active member
+
+### Leave Household Improvements
+- Leave household consolidated to the profile page (removed from household settings)
+- Admins who are the sole admin see a helpful dialog directing them to transfer privileges before leaving
+- Non-admin users see a standard confirmation dialog
+- Fixed broken leave household API (was passing undefined user ID)
+
 ### Task-Occurrence Lifecycle Improvements
 - Unpausing a task now immediately generates the next occurrence (previously required waiting for the daily scheduler)
 - Editing a task's schedule now reconciles occurrences: future pending occurrences are deleted and regenerated based on the new schedule

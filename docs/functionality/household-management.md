@@ -17,7 +17,25 @@ Users join by entering the household's invite code. New members join with **memb
 
 ## Leaving a Household
 
-Any member can leave, with one constraint: the **last admin cannot leave** if other members are still present. The admin must either promote another member to admin first or remove all other members.
+Any member can leave from the **Profile** page, with one constraint: the **last admin cannot leave** if other members are still present. The admin must either promote another member to admin first or remove all other members.
+
+When a user leaves (or is removed by an admin):
+- A **former member record** is created, snapshotting the user's name at departure time
+- The user is **removed from default assignees** on all task definitions in the household
+- The user is **removed from assignees** on all future actionable occurrences (status `created` or `assigned`, due date today or later)
+- Past and completed occurrences are **left untouched** for historical accuracy
+- The user's name appears with **dimmed grey italic styling** wherever it was referenced historically
+
+If a user rejoins the same household, the former member record is deleted and they become a normal active member again.
+
+## Former Members
+
+Departed members remain visible in the household's historical data. Their names appear in:
+- Assignee lists on past/completed occurrences
+- Occurrence timeline history (comments, status changes, etc.)
+- Task detail default assignees (if they were assigned before cleanup)
+
+Former members are styled with dimmed/italic text to distinguish them from active members. They do not appear in assignee filter dropdowns or assignment pickers.
 
 ## Roles
 

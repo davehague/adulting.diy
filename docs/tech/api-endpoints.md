@@ -22,7 +22,9 @@ The API uses three authentication levels:
 |--------|----------|------|-------------|
 | `POST` | `/api/household/create` | Protected | Create new household, set user as admin |
 | `POST` | `/api/household/join` | Protected | Join household using invite code |
-| `GET` | `/api/household/users` | Household | Get all users in household |
+| `GET` | `/api/household/users` | Household | Get active members and former members |
+| `POST` | `/api/household/leave` | Household | Leave current household |
+| `DELETE` | `/api/household/users/[userId]` | Household | Remove user from household (admin only) |
 
 ## Task Definitions
 
@@ -107,6 +109,7 @@ Key data models handled by the API:
 - **TaskDefinition**: Task templates with scheduling rules
 - **TaskOccurrence**: Specific instances of tasks to be completed
 - **OccurrenceHistoryLog**: Audit trail for occurrence changes
+- **FormerHouseholdMember**: Snapshot of departed users for historical display
 
 ## Rate Limiting
 

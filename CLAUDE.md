@@ -59,6 +59,7 @@ After completing feature work, use the `update-docs` skill to update relevant do
 4. **TaskOccurrence**: Specific instances of tasks that need completion
 5. **Category**: Organization system for tasks (predefined + custom)
 6. **OccurrenceHistoryLog**: Audit trail for task occurrences
+7. **FormerHouseholdMember**: Name snapshots of users who left a household
 
 ### Task Scheduling System
 
