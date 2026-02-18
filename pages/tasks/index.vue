@@ -66,6 +66,58 @@
 
     <!-- Task List -->
     <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200">
+      <!-- Mobile card list -->
+      <div class="md:hidden divide-y divide-stone-100">
+        <div v-for="task in tasks" :key="'m-' + task.id"
+             @click="navigateToTask(task.id)"
+             class="p-4 cursor-pointer hover:bg-stone-50 transition-colors">
+          <div class="flex items-start justify-between mb-2">
+            <div class="text-sm font-medium text-stone-900 flex-1 min-w-0 mr-2">{{ task.name }}</div>
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full flex-shrink-0"
+              :class="getStatusClass(task.metaStatus)">
+              {{ task.metaStatus.charAt(0).toUpperCase() + task.metaStatus.slice(1) }}
+            </span>
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-amber-100 text-amber-800">
+              {{ getCategoryName(task.categoryId) }}
+            </span>
+            <span class="text-xs text-stone-500">{{ formatSchedule(task.scheduleConfig) }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="text-sm">
+              <template v-if="task.nextOccurrence">
+                <span :class="{ 'text-red-600 font-semibold': isOverdue(task.nextOccurrence.dueDate), 'text-stone-600': !isOverdue(task.nextOccurrence.dueDate) }">
+                  {{ formatDate(task.nextOccurrence.dueDate) }}
+                </span>
+                <span v-if="isOverdue(task.nextOccurrence.dueDate)" class="text-xs text-red-500 ml-1">Overdue</span>
+              </template>
+              <span v-else class="text-stone-400 italic">No due date</span>
+            </div>
+            <div class="relative" @click.stop>
+              <button @click="toggleDropdown(task.id)" class="text-stone-400 hover:text-stone-600 p-1" title="Actions">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+              </button>
+              <div v-if="openDropdownId === task.id"
+                class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                <div class="py-1">
+                  <NuxtLink :to="`/tasks/${task.id}/edit`" class="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">Edit</NuxtLink>
+                  <NuxtLink :to="`/tasks/${task.id}/occurrences`" class="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">View Occurrences</NuxtLink>
+                  <button v-if="task.metaStatus === 'active' && isTaskOverdue(task)" @click="openCatchUp(task)" class="block w-full text-left px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">Catch Up</button>
+                  <button v-if="task.metaStatus === 'active'" @click="pauseTask(task.id)" class="block w-full text-left px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">Pause Task</button>
+                  <button v-if="task.metaStatus === 'paused'" @click="unpauseTask(task.id)" class="block w-full text-left px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">Unpause Task</button>
+                  <div class="border-t border-stone-100"></div>
+                  <button v-if="task.metaStatus !== 'soft-deleted'" @click="deleteTask(task.id)" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-stone-100">Delete Task</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Desktop table -->
+      <div class="hidden md:block">
       <table class="min-w-full divide-y divide-stone-200">
         <thead class="bg-stone-50">
           <tr>
@@ -226,6 +278,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- Catch Up Modal -->

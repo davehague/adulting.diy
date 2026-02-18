@@ -104,7 +104,57 @@
 
     <!-- Occurrence List -->
     <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200">
-      <div class="overflow-x-auto">
+      <!-- Mobile card list -->
+      <div class="md:hidden divide-y divide-stone-100">
+        <div v-for="occurrence in occurrences" :key="'m-' + occurrence.id"
+             @click="navigateToOccurrence(occurrence.id)"
+             class="p-4 cursor-pointer hover:bg-stone-50 transition-colors">
+          <div class="flex items-start justify-between mb-2">
+            <div class="text-sm font-medium text-stone-900 flex-1 min-w-0 mr-2">{{ occurrence.task?.name || 'Unknown Task' }}</div>
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full flex-shrink-0"
+              :class="getStatusClass(occurrence.status)">
+              {{ occurrence.status.charAt(0).toUpperCase() + occurrence.status.slice(1) }}
+            </span>
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-amber-100 text-amber-800">
+              {{ getCategoryName(occurrence.task?.category) }}
+            </span>
+          </div>
+          <div class="flex items-center justify-between mb-1">
+            <div class="text-sm">
+              <span :class="{ 'text-red-600 font-semibold': isOverdue(occurrence.dueDate), 'text-stone-600': !isOverdue(occurrence.dueDate) }">
+                {{ formatDate(occurrence.dueDate) }}
+              </span>
+              <span v-if="isOverdue(occurrence.dueDate) && ['created', 'assigned'].includes(occurrence.status)" class="text-xs text-red-500 ml-1">Overdue</span>
+            </div>
+            <div class="relative" @click.stop>
+              <button @click="toggleDropdown(occurrence.id)" class="text-stone-400 hover:text-stone-600 p-1" title="Actions">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+              </button>
+              <div v-if="openDropdownId === occurrence.id"
+                class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                <div class="py-1">
+                  <button v-if="['created', 'assigned'].includes(occurrence.status)" @click="editOccurrence(occurrence)" class="block w-full text-left px-4 py-2 text-sm text-amber-700 hover:bg-stone-100">Edit</button>
+                  <button v-if="['created', 'assigned'].includes(occurrence.status)" @click="executeOccurrence(occurrence.id)" class="block w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-stone-100">Complete</button>
+                  <button v-if="['created', 'assigned'].includes(occurrence.status)" @click="skipOccurrence(occurrence.id, occurrence)" class="block w-full text-left px-4 py-2 text-sm text-yellow-600 hover:bg-stone-100">Skip</button>
+                  <div v-if="!['created', 'assigned'].includes(occurrence.status)" class="px-4 py-2 text-sm text-stone-500">No actions available</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="text-xs text-stone-500">
+            <template v-if="occurrence.assigneeIds && occurrence.assigneeIds.length > 0">
+              {{ getAssigneeNames(occurrence.assigneeIds).join(', ') }}
+            </template>
+            <span v-else class="italic">Unassigned</span>
+          </div>
+        </div>
+      </div>
+      <!-- Desktop table -->
+      <div class="hidden md:block overflow-x-auto">
         <table class="min-w-full divide-y divide-stone-200">
           <thead class="bg-stone-50">
             <tr>

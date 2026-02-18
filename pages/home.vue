@@ -89,7 +89,7 @@
                 {{ formatDueLabel(occ) }}
               </span>
             </div>
-            <div class="text-xs text-stone-400 flex-shrink-0 w-24 text-right truncate">
+            <div class="text-xs text-stone-400 flex-shrink-0 hidden sm:block w-24 text-right truncate">
               {{ assigneeLabel(occ) }}
             </div>
           </NuxtLink>
@@ -113,7 +113,7 @@
           </div>
           <div v-else class="p-6 space-y-3">
             <div v-for="cat in categoryBreakdown" :key="cat.name" class="flex items-center gap-3">
-              <span class="text-sm text-stone-700 w-28 truncate flex-shrink-0">{{ cat.name }}</span>
+              <span class="text-sm text-stone-700 w-20 sm:w-28 truncate flex-shrink-0">{{ cat.name }}</span>
               <div class="flex-1 bg-stone-100 rounded-full h-2">
                 <div class="h-2 rounded-full transition-all" :class="categoryBarColor(cat.index)" :style="{ width: categoryBarWidth(cat.count) }"></div>
               </div>
