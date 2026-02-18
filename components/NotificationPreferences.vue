@@ -120,12 +120,12 @@
 
       <!-- Save Button -->
       <div class="pt-4 border-t border-stone-200">
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           :disabled="saving"
-          class="w-full sm:w-auto px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+          class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto"
         >
-          {{ saving ? 'Saving...' : 'Save Preferences' }}
+          <Check :size="16" />{{ saving ? 'Saving...' : 'Save Preferences' }}
         </button>
         
         <div v-if="saveMessage" class="mt-2 text-sm" :class="saveError ? 'text-red-600' : 'text-green-600'">
@@ -138,6 +138,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { Check } from 'lucide-vue-next';
 import type { NotificationPreferences } from '@/types/notification';
 
 const loading = ref(true);

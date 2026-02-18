@@ -2,8 +2,8 @@
   <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-6">
       <h1 class="font-heading text-2xl font-bold text-stone-900">Task List</h1>
-      <NuxtLink to="/tasks/create" class="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700">
-        Create Task
+      <NuxtLink to="/tasks/create" class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50">
+        <Plus :size="16" /> Create Task
       </NuxtLink>
     </div>
 
@@ -59,8 +59,8 @@
             : 'Create your first task to get started'
         }}
       </p>
-      <NuxtLink to="/tasks/create" class="inline-block bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700">
-        Create Your First Task
+      <NuxtLink to="/tasks/create" class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50">
+        <Plus :size="16" /> Create Your First Task
       </NuxtLink>
     </div>
 
@@ -303,6 +303,7 @@ import { useAuthStore } from '@/stores/auth'; // Import auth store
 import type { TaskDefinition, Category, User } from '@/types';
 import CatchUpModal from '@/components/tasks/CatchUpModal.vue';
 import { useToast } from '@/composables/useToast';
+import { Plus } from 'lucide-vue-next';
 
 const api = useApi(); // Keep for categories for now
 const taskStore = useTaskStore();

@@ -33,13 +33,13 @@
         <!-- Form Buttons -->
         <div class="flex justify-end space-x-3 pt-2">
             <button type="button" @click="handleCancel"
-                class="px-4 py-2 border border-stone-300 rounded-lg shadow-sm text-sm font-medium text-stone-700 bg-white hover:bg-stone-50 transition-colors duration-150">
-                Cancel
+                class="inline-flex items-center gap-1.5 text-stone-600 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-stone-100 transition-colors">
+                <X :size="16" />Cancel
             </button>
             <button type="submit"
-                class="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors duration-150"
+                class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50"
                 :disabled="isSubmitting">
-                {{ isSubmitting ? 'Saving...' : 'Save Changes' }}
+                <Check :size="16" />{{ isSubmitting ? 'Saving...' : 'Save Changes' }}
             </button>
         </div>
     </form>
@@ -48,6 +48,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue';
 import { useApi } from '@/utils/api';
+import { Check, X } from 'lucide-vue-next';
 import type { TaskOccurrence, User } from '@/types';
 import { format } from 'date-fns';
 
