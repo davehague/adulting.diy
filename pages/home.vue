@@ -14,9 +14,55 @@
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="flex items-center justify-center py-20">
-      <div class="text-stone-400">Loading dashboard...</div>
+    <!-- Skeleton Loading State -->
+    <div v-if="loading">
+      <!-- Stat Cards Skeleton -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div v-for="i in 3" :key="i" class="bg-white rounded-xl shadow-sm border border-stone-100 p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="h-4 w-16 bg-stone-200 rounded animate-pulse"></div>
+            <div class="w-8 h-8 rounded-full bg-stone-200 animate-pulse"></div>
+          </div>
+          <div class="h-9 w-12 bg-stone-200 rounded animate-pulse mb-2"></div>
+          <div class="w-full bg-stone-100 rounded-full h-1.5">
+            <div class="bg-stone-200 h-1.5 rounded-full w-1/3 animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coming Up Skeleton -->
+      <div class="bg-white rounded-xl shadow-sm border border-stone-100 mb-8">
+        <div class="px-6 py-4 border-b border-stone-100">
+          <div class="h-5 w-24 bg-stone-200 rounded animate-pulse"></div>
+        </div>
+        <div class="divide-y divide-stone-50">
+          <div v-for="i in 5" :key="i" class="flex items-center gap-4 px-6 py-3.5">
+            <div class="w-2 h-2 rounded-full bg-stone-200 animate-pulse"></div>
+            <div class="flex-1">
+              <div class="h-4 w-48 bg-stone-200 rounded animate-pulse mb-1"></div>
+              <div class="h-3 w-24 bg-stone-100 rounded animate-pulse"></div>
+            </div>
+            <div class="h-3 w-16 bg-stone-200 rounded animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Row Skeleton -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div v-for="i in 2" :key="i" class="bg-white rounded-xl shadow-sm border border-stone-100">
+          <div class="px-6 py-4 border-b border-stone-100">
+            <div class="h-5 w-32 bg-stone-200 rounded animate-pulse"></div>
+          </div>
+          <div class="p-6 space-y-3">
+            <div v-for="j in 4" :key="j" class="flex items-center gap-3">
+              <div class="h-4 w-20 bg-stone-200 rounded animate-pulse"></div>
+              <div class="flex-1 bg-stone-100 rounded-full h-2">
+                <div class="bg-stone-200 h-2 rounded-full animate-pulse" :style="{ width: (70 - j * 15) + '%' }"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <template v-else>
@@ -58,8 +104,8 @@
             <span class="text-sm font-medium text-stone-500">Completed (7d)</span>
             <span class="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-green-500 text-sm">&#10003;</span>
           </div>
-          <div class="text-3xl font-bold" :class="recentlyCompleted.length > 0 ? 'text-green-600' : 'text-stone-300'">
-            {{ recentlyCompleted.length }}
+          <div class="text-3xl font-bold" :class="recentlyCompletedCount > 0 ? 'text-green-600' : 'text-stone-300'">
+            {{ recentlyCompletedCount }}
           </div>
           <div class="mt-2 w-full bg-stone-100 rounded-full h-1.5">
             <div class="bg-green-500 h-1.5 rounded-full transition-all" :style="{ width: completedBarWidth }"></div>
@@ -171,17 +217,21 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useApi } from '@/utils/api';
-import type { TaskOccurrence, TaskDefinition } from '@/types/task';
+import type { DashboardData } from '@/types/task';
 import { Plus } from 'lucide-vue-next';
+
+type PendingOccurrence = DashboardData['pendingOccurrences'][number];
 
 const authStore = useAuthStore();
 const api = useApi();
 
 const loading = ref(true);
-const pendingOccurrences = ref<TaskOccurrence[]>([]);
-const recentlyCompleted = ref<TaskOccurrence[]>([]);
-const tasks = ref<TaskDefinition[]>([]);
-const householdMembers = ref<{ id: string; name: string; email: string; isAdmin: boolean }[]>([]);
+const dashboardData = ref<DashboardData | null>(null);
+
+// Convenience computed refs
+const pendingOccurrences = computed(() => dashboardData.value?.pendingOccurrences ?? []);
+const recentlyCompletedCount = computed(() => dashboardData.value?.recentlyCompletedCount ?? 0);
+const householdMembers = computed(() => dashboardData.value?.householdMembers ?? []);
 
 // Greeting based on time of day
 const greeting = computed(() => {
@@ -209,12 +259,12 @@ const endOfDay = (date: Date): Date => {
   return d;
 };
 
-const isOverdue = (occ: TaskOccurrence): boolean => {
+const isOverdue = (occ: PendingOccurrence): boolean => {
   const due = new Date(occ.dueDate);
   return due < startOfDay(new Date());
 };
 
-const isDueToday = (occ: TaskOccurrence): boolean => {
+const isDueToday = (occ: PendingOccurrence): boolean => {
   const due = new Date(occ.dueDate);
   const today = new Date();
   return due >= startOfDay(today) && due <= endOfDay(today);
@@ -230,29 +280,23 @@ const dueTodayOccurrences = computed(() =>
 );
 
 const comingUp = computed(() => {
-  const items = [...pendingOccurrences.value];
-  items.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-  return items.slice(0, 5);
+  // Server returns sorted by dueDate asc, just take first 5
+  return pendingOccurrences.value.slice(0, 5);
 });
 
 // Bar widths for stat cards (relative to a reasonable max of ~20)
 const barScale = (count: number) => Math.min(100, (count / 20) * 100) + '%';
 const overdueBarWidth = computed(() => barScale(overdueOccurrences.value.length));
 const dueTodayBarWidth = computed(() => barScale(dueTodayOccurrences.value.length));
-const completedBarWidth = computed(() => barScale(recentlyCompleted.value.length));
+const completedBarWidth = computed(() => barScale(recentlyCompletedCount.value));
 
-// Category breakdown from active tasks
+// Category breakdown from server-aggregated data
 const categoryBreakdown = computed(() => {
-  const counts: Record<string, number> = {};
-  for (const task of tasks.value) {
-    if (task.metaStatus === 'active') {
-      const catName = task.category?.name || 'Uncategorized';
-      counts[catName] = (counts[catName] || 0) + 1;
-    }
-  }
-  return Object.entries(counts)
-    .map(([name, count], index) => ({ name, count, index }))
-    .sort((a, b) => b.count - a.count);
+  if (!dashboardData.value) return [];
+  return dashboardData.value.categoryBreakdown.map((cat, index) => ({
+    ...cat,
+    index,
+  }));
 });
 
 const maxCategoryCount = computed(() =>
@@ -278,7 +322,7 @@ const memberStats = computed(() => {
 });
 
 // Labels
-const formatDueLabel = (occ: TaskOccurrence): string => {
+const formatDueLabel = (occ: PendingOccurrence): string => {
   const due = new Date(occ.dueDate);
   const today = startOfDay(new Date());
   const diffMs = today.getTime() - startOfDay(due).getTime();
@@ -291,7 +335,7 @@ const formatDueLabel = (occ: TaskOccurrence): string => {
   return `In ${Math.abs(diffDays)}d`;
 };
 
-const assigneeLabel = (occ: TaskOccurrence): string => {
+const assigneeLabel = (occ: PendingOccurrence): string => {
   if (!occ.assigneeIds || occ.assigneeIds.length === 0) return 'Unassigned';
   const names = occ.assigneeIds.map(id => {
     const member = householdMembers.value.find(m => m.id === id);
@@ -300,48 +344,13 @@ const assigneeLabel = (occ: TaskOccurrence): string => {
   return names.join(', ');
 };
 
-// Data fetching
+// Data fetching - single optimized API call
 const fetchDashboardData = async () => {
   loading.value = true;
   try {
-    const today = new Date();
-    const sevenDaysAgo = new Date(today);
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
-
-    const fetches: Promise<void>[] = [];
-
-    // Fetch pending occurrences (overdue + today + upcoming)
-    fetches.push(
-      api.get<TaskOccurrence[]>(`/api/occurrences?statusIn=created,assigned`)
-        .then(data => { pendingOccurrences.value = data; })
-        .catch(err => { console.error('Error fetching pending occurrences:', err); })
-    );
-
-    // Fetch recently completed
-    fetches.push(
-      api.get<TaskOccurrence[]>(`/api/occurrences?status=completed&dueDateFrom=${sevenDaysAgoStr}`)
-        .then(data => { recentlyCompleted.value = data; })
-        .catch(err => { console.error('Error fetching completed occurrences:', err); })
-    );
-
-    // Fetch tasks for category breakdown
-    fetches.push(
-      api.get<TaskDefinition[]>('/api/tasks?status=active')
-        .then(data => { tasks.value = data; })
-        .catch(err => { console.error('Error fetching tasks:', err); })
-    );
-
-    // Fetch household members
-    if (authStore.user?.householdId) {
-      fetches.push(
-        api.get<{ id: string; name: string; email: string; isAdmin: boolean }[]>('/api/household/users')
-          .then(data => { householdMembers.value = data; })
-          .catch(err => { console.error('Error fetching household members:', err); })
-      );
-    }
-
-    await Promise.all(fetches);
+    dashboardData.value = await api.get<DashboardData>('/api/dashboard');
+  } catch (err) {
+    console.error('Error fetching dashboard data:', err);
   } finally {
     loading.value = false;
   }
@@ -351,9 +360,5 @@ onMounted(() => {
   watch(() => authStore.isReady, (ready) => {
     if (ready) fetchDashboardData();
   }, { immediate: true });
-
-  if (authStore.isReady) {
-    fetchDashboardData();
-  }
 });
 </script>
