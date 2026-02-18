@@ -10,12 +10,6 @@
           Task Details
         </h2>
         <div class="flex items-center space-x-2">
-          <span class="px-2 py-1 text-xs font-semibold rounded-full mr-2" :class="getStatusClass(task.metaStatus)">
-            {{ formatStatus(task.metaStatus) }}
-          </span>
-          <span class="px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
-            {{ getCategoryName(task.categoryId) }}
-          </span>
           <div class="relative" ref="menuRef">
             <button
               @click="toggleMenu"
@@ -74,6 +68,23 @@
         <div class="mb-4">
           <h4 class="text-sm font-medium text-stone-500 mb-1">Name</h4>
           <p class="text-stone-800 font-medium">{{ task.name }}</p>
+        </div>
+
+        <div class="mb-4">
+          <h4 class="text-sm font-medium text-stone-500 mb-1">Status</h4>
+          <span class="inline-flex items-center gap-1.5 text-sm text-stone-600">
+            <CirclePlay v-if="task.metaStatus === 'active'" :size="16" />
+            <PauseIcon v-else-if="task.metaStatus === 'paused'" :size="16" />
+            <Trash2 v-else-if="task.metaStatus === 'soft-deleted'" :size="16" />
+            {{ formatStatus(task.metaStatus) }}
+          </span>
+        </div>
+
+        <div class="mb-4">
+          <h4 class="text-sm font-medium text-stone-500 mb-1">Category</h4>
+          <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
+            {{ getCategoryName(task.categoryId) }}
+          </span>
         </div>
 
         <div v-if="task.description" class="mb-4">
@@ -135,10 +146,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import type { TaskDefinition, Category, User } from '@/types';
 import type { FormerHouseholdMember } from '@/types/user';
-import { EllipsisVertical, Eye, Pencil } from 'lucide-vue-next';
+import { EllipsisVertical, Eye, Pencil, CirclePlay, Pause as PauseIcon, Trash2 } from 'lucide-vue-next';
 
 interface Props {
   task: TaskDefinition;
@@ -199,21 +210,6 @@ const formatDate = (date: Date | string): string => {
 const formatStatus = (status: string | undefined | null): string => {
   if (!status) return 'Unknown';
   return status.charAt(0).toUpperCase() + status.slice(1).replace(/-/g, ' ');
-};
-
-const getStatusClass = (status: string): string => {
-  switch (status) {
-    case 'active':
-      return 'bg-green-100 text-green-800';
-    case 'paused':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'soft-deleted':
-      return 'bg-red-100 text-red-800';
-    case 'completed':
-      return 'bg-amber-100 text-amber-800';
-    default:
-      return 'bg-stone-100 text-stone-800';
-  }
 };
 
 const formatSchedule = (scheduleConfig: any): string => {

@@ -1,6 +1,68 @@
 <template>
     <div class="container mx-auto p-4 md:p-6">
-        <div v-if="loading" class="text-center py-10 text-stone-500">Loading occurrence details...</div>
+        <!-- Skeleton Loader -->
+        <div v-if="loading" class="space-y-6 animate-pulse">
+            <!-- Header skeleton -->
+            <div class="pb-4 border-b border-stone-200">
+                <div class="h-4 bg-stone-200 rounded w-32 mb-3"></div>
+                <div class="h-8 bg-stone-200 rounded w-72"></div>
+            </div>
+
+            <!-- Task Details skeleton -->
+            <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="h-6 bg-stone-200 rounded w-32"></div>
+                    <div class="flex gap-2">
+                        <div class="h-5 bg-stone-200 rounded w-16"></div>
+                        <div class="h-5 bg-stone-200 rounded-full w-20"></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div><div class="h-3 bg-stone-100 rounded w-16 mb-1"></div><div class="h-4 bg-stone-200 rounded w-48"></div></div>
+                        <div><div class="h-3 bg-stone-100 rounded w-20 mb-1"></div><div class="h-4 bg-stone-200 rounded w-64"></div></div>
+                        <div><div class="h-3 bg-stone-100 rounded w-28 mb-1"></div><div class="h-4 bg-stone-200 rounded w-36"></div></div>
+                    </div>
+                    <div class="space-y-4">
+                        <div><div class="h-3 bg-stone-100 rounded w-24 mb-1"></div><div class="h-4 bg-stone-200 rounded w-40"></div></div>
+                        <div><div class="h-3 bg-stone-100 rounded w-16 mb-1"></div><div class="h-4 bg-stone-200 rounded w-36"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Occurrence Details skeleton -->
+            <div class="bg-white shadow-sm border border-stone-200 overflow-hidden sm:rounded-xl">
+                <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+                    <div class="h-6 bg-stone-200 rounded w-40"></div>
+                    <div class="flex gap-2">
+                        <div class="h-8 bg-stone-200 rounded-lg w-16"></div>
+                        <div class="h-8 bg-stone-200 rounded-lg w-16"></div>
+                        <div class="h-8 bg-stone-200 rounded-lg w-24"></div>
+                    </div>
+                </div>
+                <div class="border-t border-stone-200 px-4 py-5 sm:px-6 space-y-4">
+                    <div class="sm:grid sm:grid-cols-3 sm:gap-4"><div class="h-4 bg-stone-100 rounded w-16"></div><div class="h-4 bg-stone-200 rounded w-20 sm:col-span-2"></div></div>
+                    <div class="sm:grid sm:grid-cols-3 sm:gap-4"><div class="h-4 bg-stone-100 rounded w-16"></div><div class="h-4 bg-stone-200 rounded w-28 sm:col-span-2"></div></div>
+                    <div class="sm:grid sm:grid-cols-3 sm:gap-4"><div class="h-4 bg-stone-100 rounded w-20"></div><div class="h-4 bg-stone-200 rounded w-24 sm:col-span-2"></div></div>
+                </div>
+            </div>
+
+            <!-- Comment form skeleton -->
+            <div>
+                <div class="h-5 bg-stone-200 rounded w-28 mb-2"></div>
+                <div class="h-20 bg-stone-100 rounded-md w-full"></div>
+            </div>
+
+            <!-- Timeline skeleton -->
+            <div>
+                <div class="h-5 bg-stone-200 rounded w-20 mb-3"></div>
+                <div class="space-y-3">
+                    <div class="flex gap-3"><div class="h-8 w-8 bg-stone-200 rounded-full flex-shrink-0"></div><div class="h-12 bg-stone-100 rounded w-full"></div></div>
+                    <div class="flex gap-3"><div class="h-8 w-8 bg-stone-200 rounded-full flex-shrink-0"></div><div class="h-12 bg-stone-100 rounded w-full"></div></div>
+                </div>
+            </div>
+        </div>
+
         <div v-else-if="error" class="text-center py-10 text-red-600">
             Error loading occurrence: {{ error }}
         </div>
@@ -54,16 +116,14 @@
                 <div class="border-t border-stone-200 px-4 py-5 sm:p-0">
                     <dl class="sm:divide-y sm:divide-stone-200">
                         <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                            <dt class="text-sm font-medium text-stone-500">Category</dt>
-                            <dd class="mt-1 text-sm text-stone-900 sm:col-span-2 sm:mt-0">
-                                {{ occurrence.task?.category?.name || 'N/A' }}
-                            </dd>
-                        </div>
-                        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                             <dt class="text-sm font-medium text-stone-500">Status</dt>
-                            <dd class="mt-1 text-sm text-stone-900 sm:col-span-2 sm:mt-0 capitalize">
-                                <span :class="getStatusClass(occurrence.status)">
-                                    {{ occurrence.status }}
+                            <dd class="mt-1 sm:col-span-2 sm:mt-0">
+                                <span class="inline-flex items-center gap-1.5 text-sm text-stone-600">
+                                    <CirclePlay v-if="occurrence.status === 'created' || occurrence.status === 'assigned'" :size="16" />
+                                    <CircleCheck v-else-if="occurrence.status === 'completed'" :size="16" />
+                                    <SkipForward v-else-if="occurrence.status === 'skipped'" :size="16" />
+                                    <Trash2 v-else-if="occurrence.status === 'deleted'" :size="16" />
+                                    {{ displayStatus(occurrence.status) }}
                                 </span>
                             </dd>
                         </div>
@@ -179,7 +239,7 @@ import OccurrenceTimeline from '@/components/occurrences/OccurrenceTimeline.vue'
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
 import CompleteModal from '@/components/occurrences/CompleteModal.vue';
-import { Pencil, SkipForward, CheckCircle, MessageSquare } from 'lucide-vue-next';
+import { Pencil, SkipForward, CheckCircle, MessageSquare, CirclePlay, CircleCheck, Trash2 } from 'lucide-vue-next';
 import { format } from 'date-fns';
 
 // Setup
@@ -326,15 +386,9 @@ const formatAssignees = (assigneeIds: string[] | undefined): { name: string; dep
     });
 };
 
-const getStatusClass = (status: string): string => {
-    switch (status) {
-        case 'completed': return 'inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800';
-        case 'skipped': return 'inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800';
-        case 'deleted': return 'inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800';
-        case 'assigned': return 'inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800';
-        case 'created': return 'inline-flex items-center rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-800';
-        default: return 'inline-flex items-center rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-800';
-    }
+const displayStatus = (status: string): string => {
+    if (status === 'created' || status === 'assigned') return 'Pending';
+    return status.charAt(0).toUpperCase() + status.slice(1);
 };
 
 // --- Actions ---

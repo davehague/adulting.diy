@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-02-20
+
+### Detail Page Polish
+- Unified status styling on task and occurrence detail pages to match their respective grid views (icon + text instead of colored capsules)
+- Moved status and category from the TaskDetails header into the Task Information section as labeled fields
+- Removed category from occurrence details (it belongs to the task, already shown in Task Details)
+- Added skeleton loaders to task detail and occurrence detail pages (replaces plain "Loading..." text)
+
 ## 2026-02-19
 
 ### UI Consistency Improvements

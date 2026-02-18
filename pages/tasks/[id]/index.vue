@@ -1,8 +1,83 @@
 <template>
   <div class="container mx-auto px-4 py-8">
-    <!-- Loading and Error States -->
-    <div v-if="loading" class="text-center py-8">
-      <p class="text-stone-600">Loading task details...</p>
+    <!-- Skeleton Loader -->
+    <div v-if="loading" class="animate-pulse">
+      <!-- Header skeleton -->
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
+        <div class="h-8 bg-stone-200 rounded w-64"></div>
+        <div class="flex flex-wrap gap-2">
+          <div class="h-8 bg-stone-200 rounded-lg w-20"></div>
+          <div class="h-8 bg-stone-200 rounded-lg w-24"></div>
+          <div class="h-8 bg-stone-200 rounded-lg w-24"></div>
+        </div>
+      </div>
+
+      <!-- Task Details card skeleton -->
+      <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-6 mb-6">
+        <div class="flex justify-between items-start mb-4">
+          <div class="h-6 bg-stone-200 rounded w-32"></div>
+          <div class="flex gap-2">
+            <div class="h-5 bg-stone-200 rounded w-16"></div>
+            <div class="h-5 bg-stone-200 rounded-full w-20"></div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="space-y-4">
+            <div><div class="h-3 bg-stone-100 rounded w-16 mb-1"></div><div class="h-4 bg-stone-200 rounded w-48"></div></div>
+            <div><div class="h-3 bg-stone-100 rounded w-14 mb-1"></div><div class="h-4 bg-stone-200 rounded w-20"></div></div>
+            <div><div class="h-3 bg-stone-100 rounded w-20 mb-1"></div><div class="h-4 bg-stone-200 rounded w-28"></div></div>
+            <div><div class="h-3 bg-stone-100 rounded w-24 mb-1"></div><div class="h-4 bg-stone-200 rounded w-64"></div></div>
+            <div><div class="h-3 bg-stone-100 rounded w-28 mb-1"></div><div class="h-4 bg-stone-200 rounded w-36"></div></div>
+          </div>
+          <div class="space-y-4">
+            <div><div class="h-3 bg-stone-100 rounded w-24 mb-1"></div><div class="h-4 bg-stone-200 rounded w-40"></div></div>
+            <div><div class="h-3 bg-stone-100 rounded w-20 mb-1"></div><div class="h-4 bg-stone-200 rounded w-32"></div></div>
+            <div><div class="h-3 bg-stone-100 rounded w-16 mb-1"></div><div class="h-4 bg-stone-200 rounded w-36"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Occurrences section skeleton -->
+      <div class="mb-6">
+        <div class="h-6 bg-stone-200 rounded w-28 mb-4"></div>
+        <div class="bg-white rounded-xl shadow-sm border border-stone-200">
+          <div class="hidden md:block">
+            <table class="min-w-full divide-y divide-stone-200">
+              <thead class="bg-stone-50">
+                <tr>
+                  <th class="px-6 py-3"><div class="h-3 bg-stone-200 rounded w-16"></div></th>
+                  <th class="px-6 py-3"><div class="h-3 bg-stone-200 rounded w-12"></div></th>
+                  <th class="px-6 py-3"><div class="h-3 bg-stone-200 rounded w-16"></div></th>
+                  <th class="px-6 py-3"><div class="h-3 bg-stone-200 rounded w-14"></div></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-stone-200">
+                <tr v-for="i in 4" :key="i">
+                  <td class="px-6 py-4"><div class="h-4 bg-stone-200 rounded w-24"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 bg-stone-200 rounded w-16"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 bg-stone-200 rounded w-20"></div></td>
+                  <td class="px-6 py-4"><div class="h-4 bg-stone-200 rounded w-5 ml-auto"></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="md:hidden divide-y divide-stone-100">
+            <div v-for="i in 4" :key="i" class="p-4">
+              <div class="flex justify-between mb-1"><div class="h-4 bg-stone-200 rounded w-28"></div><div class="h-4 bg-stone-200 rounded w-16"></div></div>
+              <div class="h-3 bg-stone-100 rounded w-24 mt-1"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline skeleton -->
+      <div>
+        <div class="h-5 bg-stone-200 rounded w-20 mb-3"></div>
+        <div class="space-y-3">
+          <div class="flex gap-3"><div class="h-8 w-8 bg-stone-200 rounded-full flex-shrink-0"></div><div class="h-12 bg-stone-100 rounded w-full"></div></div>
+          <div class="flex gap-3"><div class="h-8 w-8 bg-stone-200 rounded-full flex-shrink-0"></div><div class="h-12 bg-stone-100 rounded w-full"></div></div>
+        </div>
+      </div>
     </div>
 
     <div v-else-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
