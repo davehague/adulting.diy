@@ -276,7 +276,7 @@ export class OccurrenceService {
   ): Promise<TaskOccurrence> {
     try {
       // Start a transaction to log the changes
-      return await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         // Get current occurrence state
         const currentOccurrence = await tx.taskOccurrence.findUnique({
           where: { id },
@@ -334,8 +334,54 @@ export class OccurrenceService {
           }
         }
 
-        return updatedOccurrence as unknown as TaskOccurrence; // Ensure cast is here
+        return {
+          updatedOccurrence: updatedOccurrence as unknown as TaskOccurrence,
+          assigneesChanged: data.assigneeIds
+            ? JSON.stringify(currentOccurrence.assigneeIds || []) !== JSON.stringify(data.assigneeIds || [])
+            : false,
+        };
       });
+
+      // Send occurrence_assigned notification if assignees changed
+      if (result.assigneesChanged && result.updatedOccurrence.task) {
+        try {
+          const notificationService = new NotificationService();
+          const task = result.updatedOccurrence.task as unknown as TaskDefinition;
+
+          const [actionUser, household] = await Promise.all([
+            prisma.user.findUnique({
+              where: { id: userId },
+              select: { id: true, name: true, email: true },
+            }),
+            prisma.household.findUnique({
+              where: { id: task.householdId },
+              select: { id: true, name: true },
+            }),
+          ]);
+
+          if (actionUser) {
+            await notificationService.sendNotification(
+              task.householdId,
+              "occurrence_assigned",
+              {
+                user: actionUser as any,
+                task,
+                occurrence: result.updatedOccurrence,
+                actionUser: actionUser as any,
+                household: { id: task.householdId, name: household?.name || "" },
+              },
+              userId // Exclude the person who made the assignment
+            );
+          }
+        } catch (notificationError) {
+          console.warn(
+            `[OccurrenceService] Failed to send occurrence assigned notification:`,
+            notificationError
+          );
+        }
+      }
+
+      return result.updatedOccurrence;
     } catch (error) {
       console.error(`[OccurrenceService] Unexpected error in update:`, error);
       throw error;
@@ -423,11 +469,17 @@ export class OccurrenceService {
         try {
           const notificationService = new NotificationService();
           
-          // Get the user who executed the task
-          const actionUser = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { id: true, name: true, email: true },
-          });
+          // Get the user who executed the task and the household
+          const [actionUser, household] = await Promise.all([
+            prisma.user.findUnique({
+              where: { id: userId },
+              select: { id: true, name: true, email: true },
+            }),
+            prisma.household.findUnique({
+              where: { id: updatedOccurrence.task.householdId },
+              select: { id: true, name: true },
+            }),
+          ]);
 
           if (actionUser) {
             await notificationService.sendNotification(
@@ -438,8 +490,9 @@ export class OccurrenceService {
                 task: updatedOccurrence.task as unknown as TaskDefinition,
                 occurrence: updatedOccurrence,
                 actionUser: actionUser as any,
-                household: { id: updatedOccurrence.task.householdId, name: "" },
-              }
+                household: { id: updatedOccurrence.task.householdId, name: household?.name || "" },
+              },
+              userId
             );
           }
         } catch (notificationError) {
@@ -554,11 +607,17 @@ export class OccurrenceService {
         try {
           const notificationService = new NotificationService();
           
-          // Get the user who skipped the task
-          const actionUser = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { id: true, name: true, email: true },
-          });
+          // Get the user who skipped the task and the household
+          const [actionUser, household] = await Promise.all([
+            prisma.user.findUnique({
+              where: { id: userId },
+              select: { id: true, name: true, email: true },
+            }),
+            prisma.household.findUnique({
+              where: { id: skippedOccurrence.task.householdId },
+              select: { id: true, name: true },
+            }),
+          ]);
 
           if (actionUser) {
             await notificationService.sendNotification(
@@ -569,8 +628,9 @@ export class OccurrenceService {
                 task: skippedOccurrence.task as unknown as TaskDefinition,
                 occurrence: skippedOccurrence,
                 actionUser: actionUser as any,
-                household: { id: skippedOccurrence.task.householdId, name: "" },
-              }
+                household: { id: skippedOccurrence.task.householdId, name: household?.name || "" },
+              },
+              userId
             );
           }
         } catch (notificationError) {
@@ -627,11 +687,28 @@ export class OccurrenceService {
         });
 
         if (occurrence?.task) {
-          // Get the user who commented
-          const actionUser = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { id: true, name: true, email: true },
+          // Get distinct user IDs who have commented on this occurrence
+          const commentLogs = await prisma.occurrenceHistoryLog.findMany({
+            where: {
+              occurrenceId: id,
+              logType: "comment",
+            },
+            select: { userId: true },
+            distinct: ["userId"],
           });
+          const commentUserIds = commentLogs.map(log => log.userId);
+
+          // Get the user who commented and the household
+          const [actionUser, household] = await Promise.all([
+            prisma.user.findUnique({
+              where: { id: userId },
+              select: { id: true, name: true, email: true },
+            }),
+            prisma.household.findUnique({
+              where: { id: occurrence.task.householdId },
+              select: { id: true, name: true },
+            }),
+          ]);
 
           if (actionUser) {
             await notificationService.sendNotification(
@@ -640,10 +717,12 @@ export class OccurrenceService {
               {
                 user: actionUser as any,
                 task: occurrence.task as unknown as TaskDefinition,
-                occurrence: occurrence as unknown as TaskOccurrence,
+                occurrence: { ...occurrence, commentUserIds } as unknown as TaskOccurrence,
                 actionUser: actionUser as any,
-                household: { id: occurrence.task.householdId, name: "" },
-              }
+                household: { id: occurrence.task.householdId, name: household?.name || "" },
+                comment: comment,
+              },
+              userId
             );
           }
         }

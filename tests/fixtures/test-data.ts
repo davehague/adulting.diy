@@ -75,9 +75,9 @@ export const testTaskDefinitions = {
       startDate: new Date('2024-02-01'),
     },
     reminderConfig: {
-      initialReminderDays: 1,
-      followUpReminderDays: 0,
-      overdueReminderDays: 1,
+      initialReminder: 1,
+      followUpReminder: 0,
+      overdueReminder: 1,
     },
     recurrencePattern: {
       type: 'once',

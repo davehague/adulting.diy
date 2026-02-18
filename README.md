@@ -164,6 +164,9 @@ MAILJET_API_KEY="your-mailjet-api-key"
 MAILJET_SECRET_KEY="your-mailjet-secret-key"
 MAILJET_FROM_EMAIL="noreply@yourdomain.com"
 
+# Vercel Cron
+CRON_SECRET="your-random-secret"        # Must match Vercel project settings
+
 # Development features (optional)
 DEV_LOGIN_BYPASS=true  # Enable development login bypass
 ```

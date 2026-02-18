@@ -5,10 +5,10 @@
         <img v-if="user?.picture" :src="user.picture" alt="Profile" class="w-8 h-8 rounded-full">
         <span>{{ user?.name }}</span>
         <NuxtLink to="/home">Home</NuxtLink>
-        <button @click="logout" class="text-red-500 hover:text-red-700">Logout</button>
+        <button @click="logout" class="inline-flex items-center gap-1.5 text-red-500 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors"><LogOut :size="16" />Logout</button>
       </div>
       <NuxtLink v-else to="/login"
-        class="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 font-semibold text-sm transition-colors duration-150">Login</NuxtLink>
+        class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors"><LogIn :size="16" />Login</NuxtLink>
     </div>
   </header>
 </template>
@@ -16,6 +16,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
+import { LogIn, LogOut } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/auth'
 
 const authStore = useAuthStore()

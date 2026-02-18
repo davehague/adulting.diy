@@ -34,9 +34,9 @@
 
           <div class="flex justify-end">
             <button type="submit"
-              class="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50"
+              class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50"
               :disabled="isLoading">
-              <span v-if="isLoading">Creating...</span>
+              <Check :size="16" /><span v-if="isLoading">Creating...</span>
               <span v-else>Create Household</span>
             </button>
           </div>
@@ -55,9 +55,9 @@
 
           <div class="flex justify-end">
             <button type="submit"
-              class="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50"
+              class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50"
               :disabled="isLoading">
-              <span v-if="isLoading">Joining...</span>
+              <Check :size="16" /><span v-if="isLoading">Joining...</span>
               <span v-else>Join Household</span>
             </button>
           </div>
@@ -82,6 +82,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { Check } from 'lucide-vue-next';
 import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();

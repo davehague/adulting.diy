@@ -97,7 +97,8 @@
             : 'No task occurrences exist yet. Create some tasks to see occurrences here.'
         }}
       </p>
-      <NuxtLink to="/tasks" class="inline-block bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700">
+      <NuxtLink to="/tasks" class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors">
+        <Plus :size="16" />
         Go to Tasks
       </NuxtLink>
     </div>
@@ -321,6 +322,7 @@ import { useApi } from '@/utils/api';
 import { useAuthStore } from '@/stores/auth';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
+import { Plus } from 'lucide-vue-next';
 import type { TaskOccurrence, Category, User } from '@/types';
 
 const api = useApi();

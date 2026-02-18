@@ -145,26 +145,26 @@ export function defineHouseholdProtectedEventHandler(
 }
 
 /**
- * Protect scheduler/internal endpoints with API key authentication.
- * Checks x-scheduler-key header or Authorization Bearer token against SCHEDULER_API_KEY env var.
+ * Protect scheduler/internal endpoints with CRON_SECRET authentication.
+ * Checks Authorization Bearer token against CRON_SECRET env var.
+ * Used by Vercel Cron Jobs and internal server-to-server calls.
  */
 export function defineSchedulerProtectedEventHandler(
   handler: (event: H3Event) => Promise<any>
 ) {
   return defineEventHandler(async (event: H3Event) => {
-    const apiKey = getHeader(event, 'x-scheduler-key') ||
-                   getHeader(event, 'authorization')?.replace('Bearer ', '');
-    const expectedKey = process.env.SCHEDULER_API_KEY;
+    const bearerToken = getHeader(event, 'authorization')?.replace('Bearer ', '');
+    const expectedCronSecret = process.env.CRON_SECRET;
 
-    if (!expectedKey) {
-      console.error('[Auth] SCHEDULER_API_KEY not configured');
+    if (!expectedCronSecret) {
+      console.error('[Auth] CRON_SECRET not configured');
       throw createError({
         statusCode: 500,
         message: 'Server configuration error',
       });
     }
 
-    if (!apiKey || apiKey !== expectedKey) {
+    if (!bearerToken || bearerToken !== expectedCronSecret) {
       throw createError({
         statusCode: 401,
         message: 'Unauthorized: Invalid or missing API key',

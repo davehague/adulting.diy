@@ -15,6 +15,7 @@ export interface NotificationContext {
     id: string;
     name: string;
   };
+  comment?: string;
 }
 
 export type NotificationEventType =
@@ -163,12 +164,18 @@ export class NotificationService {
         return preferences.occurrence_commented === "any" ||
                (preferences.occurrence_commented === "mine" && isMine);
 
-      case "task_reminder_initial":
-        return (preferences.reminder_initial || 'any') === 'any';
-      case "task_reminder_followup":
-        return (preferences.reminder_followup || 'any') === 'any';
-      case "task_reminder_overdue":
-        return (preferences.reminder_overdue || 'any') === 'any';
+      case "task_reminder_initial": {
+        const pref = preferences.reminder_initial || 'any';
+        return pref === 'any' || (pref === 'mine' && isMine);
+      }
+      case "task_reminder_followup": {
+        const pref = preferences.reminder_followup || 'any';
+        return pref === 'any' || (pref === 'mine' && isMine);
+      }
+      case "task_reminder_overdue": {
+        const pref = preferences.reminder_overdue || 'any';
+        return pref === 'any' || (pref === 'mine' && isMine);
+      }
 
       default:
         return false;
@@ -186,9 +193,11 @@ export class NotificationService {
       return true;
     }
 
-    // TODO: Check if user has commented on the occurrence
-    // This would require checking the occurrence history logs
-    // For now, just return false for comments
+    // Check if user has commented on the occurrence
+    if ((context.occurrence as any).commentUserIds?.includes(userId)) {
+      return true;
+    }
+
     return false;
   }
 
@@ -231,14 +240,15 @@ export class NotificationService {
         user: {} as User, // Will be populated for each recipient
         task,
         occurrence: occurrence as unknown as TaskOccurrence,
-        household: { id: task.householdId, name: "" },
+        household: { id: task.householdId, name: (task as any).household?.name || "" },
       };
 
       // Check for initial reminder
       if (task.reminderConfig.initialReminder) {
         const reminderDate = addDays(new Date(occurrence.dueDate), -task.reminderConfig.initialReminder);
-        if (this.isDateToday(reminderDate)) {
+        if (this.isDateToday(reminderDate) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_initial"))) {
           await this.sendNotification(task.householdId, "task_reminder_initial", context);
+          await this.logReminderSent(occurrence.id, "task_reminder_initial", task.createdByUserId);
           remindersSent++;
         }
       }
@@ -246,8 +256,9 @@ export class NotificationService {
       // Check for follow-up reminder
       if (task.reminderConfig.followUpReminder) {
         const reminderDate = addDays(new Date(occurrence.dueDate), -task.reminderConfig.followUpReminder);
-        if (this.isDateToday(reminderDate)) {
+        if (this.isDateToday(reminderDate) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_followup"))) {
           await this.sendNotification(task.householdId, "task_reminder_followup", context);
+          await this.logReminderSent(occurrence.id, "task_reminder_followup", task.createdByUserId);
           remindersSent++;
         }
       }
@@ -255,14 +266,54 @@ export class NotificationService {
       // Check for overdue reminder
       if (task.reminderConfig.overdueReminder) {
         const overdueDate = addDays(new Date(occurrence.dueDate), task.reminderConfig.overdueReminder);
-        if (this.isDateToday(overdueDate)) {
+        if (this.isDateToday(overdueDate) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_overdue"))) {
           await this.sendNotification(task.householdId, "task_reminder_overdue", context);
+          await this.logReminderSent(occurrence.id, "task_reminder_overdue", task.createdByUserId);
           remindersSent++;
         }
       }
     }
 
     return remindersSent;
+  }
+
+  /**
+   * Check if a reminder of a given type was already sent today for an occurrence
+   */
+  private async wasReminderSentToday(occurrenceId: string, reminderType: NotificationEventType): Promise<boolean> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const existingLog = await prisma.occurrenceHistoryLog.findFirst({
+      where: {
+        occurrenceId,
+        logType: "reminder_sent",
+        newValue: reminderType,
+        createdAt: {
+          gte: today,
+          lt: tomorrow,
+        },
+      },
+    });
+
+    return !!existingLog;
+  }
+
+  /**
+   * Log that a reminder was sent for deduplication
+   */
+  private async logReminderSent(occurrenceId: string, reminderType: NotificationEventType, userId: string): Promise<void> {
+    await prisma.occurrenceHistoryLog.create({
+      data: {
+        occurrenceId,
+        userId,
+        logType: "reminder_sent",
+        newValue: reminderType,
+        comment: `${reminderType} reminder sent`,
+      },
+    });
   }
 
   /**

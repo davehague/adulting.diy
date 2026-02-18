@@ -23,7 +23,7 @@ export class EmailProvider implements NotificationProvider {
     try {
       await $fetch("/api/sendEmail", {
         method: "POST",
-        headers: { "x-scheduler-key": process.env.SCHEDULER_API_KEY || "" },
+        headers: { authorization: `Bearer ${process.env.CRON_SECRET || ''}` },
         body: {
           to: recipient.email,
           subject: subject,
@@ -136,6 +136,64 @@ export class EmailProvider implements NotificationProvider {
           }),
         };
       }
+
+      case "task_paused":
+        return {
+          subject: `Task Paused: ${task?.name}`,
+          body: this.renderEmailTemplate("task_paused", {
+            userName: user.name,
+            taskName: task?.name,
+            pausedByName: actionUser?.name,
+            taskUrl: `${baseUrl}/tasks/${task?.id}`,
+          }),
+        };
+
+      case "task_deleted":
+        return {
+          subject: `Task Deleted: ${task?.name}`,
+          body: this.renderEmailTemplate("task_deleted", {
+            userName: user.name,
+            taskName: task?.name,
+            deletedByName: actionUser?.name,
+          }),
+        };
+
+      case "occurrence_executed":
+        return {
+          subject: `Task Completed: ${task?.name}`,
+          body: this.renderEmailTemplate("occurrence_executed", {
+            userName: user.name,
+            taskName: task?.name,
+            dueDate: occurrence?.dueDate ? format(new Date(occurrence.dueDate), "PPP") : "",
+            completedByName: actionUser?.name,
+            occurrenceUrl: `${baseUrl}/occurrences/${occurrence?.id}`,
+          }),
+        };
+
+      case "occurrence_skipped":
+        return {
+          subject: `Task Skipped: ${task?.name}`,
+          body: this.renderEmailTemplate("occurrence_skipped", {
+            userName: user.name,
+            taskName: task?.name,
+            dueDate: occurrence?.dueDate ? format(new Date(occurrence.dueDate), "PPP") : "",
+            skippedByName: actionUser?.name,
+            occurrenceUrl: `${baseUrl}/occurrences/${occurrence?.id}`,
+          }),
+        };
+
+      case "occurrence_commented":
+        return {
+          subject: `New Comment: ${task?.name}`,
+          body: this.renderEmailTemplate("occurrence_commented", {
+            userName: user.name,
+            taskName: task?.name,
+            commentedByName: actionUser?.name,
+            comment: context.comment || "",
+            occurrenceUrl: `${baseUrl}/occurrences/${occurrence?.id}`,
+          }),
+        };
+
       default:
         return {
           subject: `Adulting.DIY Notification`,
@@ -225,6 +283,80 @@ export class EmailProvider implements NotificationProvider {
             <p><strong>Due Date:</strong> {{dueDate}}</p>
           </div>
           <p><a href="{{occurrenceUrl}}" style="background: #dc2626; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">Complete Task</a></p>
+          <p>Best regards,<br>Adulting.DIY</p>
+        </div>
+      `,
+
+      task_paused: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #d97706;">Task Paused</h2>
+          <p>Hi {{userName}},</p>
+          <p>A task in your household has been paused:</p>
+          <div style="background: #fffbeb; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <h3 style="margin-top: 0;">{{taskName}}</h3>
+            <p><strong>Paused by:</strong> {{pausedByName}}</p>
+          </div>
+          <p>No new occurrences will be generated until the task is unpaused.</p>
+          <p><a href="{{taskUrl}}" style="background: #d97706; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">View Task</a></p>
+          <p>Best regards,<br>Adulting.DIY</p>
+        </div>
+      `,
+
+      task_deleted: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc2626;">Task Deleted</h2>
+          <p>Hi {{userName}},</p>
+          <p>A task in your household has been deleted:</p>
+          <div style="background: #fef2f2; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <h3 style="margin-top: 0;">{{taskName}}</h3>
+            <p><strong>Deleted by:</strong> {{deletedByName}}</p>
+          </div>
+          <p>All future occurrences have been cancelled.</p>
+          <p>Best regards,<br>Adulting.DIY</p>
+        </div>
+      `,
+
+      occurrence_executed: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #059669;">Task Completed</h2>
+          <p>Hi {{userName}},</p>
+          <p>A task has been completed in your household:</p>
+          <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <h3 style="margin-top: 0;">{{taskName}}</h3>
+            <p><strong>Due Date:</strong> {{dueDate}}</p>
+            <p><strong>Completed by:</strong> {{completedByName}}</p>
+          </div>
+          <p><a href="{{occurrenceUrl}}" style="background: #059669; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">View Details</a></p>
+          <p>Best regards,<br>Adulting.DIY</p>
+        </div>
+      `,
+
+      occurrence_skipped: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #d97706;">Task Skipped</h2>
+          <p>Hi {{userName}},</p>
+          <p>A task has been skipped in your household:</p>
+          <div style="background: #fffbeb; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <h3 style="margin-top: 0;">{{taskName}}</h3>
+            <p><strong>Due Date:</strong> {{dueDate}}</p>
+            <p><strong>Skipped by:</strong> {{skippedByName}}</p>
+          </div>
+          <p><a href="{{occurrenceUrl}}" style="background: #d97706; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">View Details</a></p>
+          <p>Best regards,<br>Adulting.DIY</p>
+        </div>
+      `,
+
+      occurrence_commented: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">New Comment</h2>
+          <p>Hi {{userName}},</p>
+          <p>A new comment was added to a task in your household:</p>
+          <div style="background: #eff6ff; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <h3 style="margin-top: 0;">{{taskName}}</h3>
+            <p><strong>Comment by:</strong> {{commentedByName}}</p>
+            <blockquote style="border-left: 3px solid #2563eb; margin: 8px 0; padding: 8px 12px; color: #4b5563;">{{comment}}</blockquote>
+          </div>
+          <p><a href="{{occurrenceUrl}}" style="background: #2563eb; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">View Task</a></p>
           <p>Best regards,<br>Adulting.DIY</p>
         </div>
       `,

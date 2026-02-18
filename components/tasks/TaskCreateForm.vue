@@ -51,6 +51,8 @@
                     <option value="specific_day_of_month">Specific Day of Month</option>
                     <option value="specific_weekday_of_month">Specific Weekday of Month</option>
                     <option value="variable_interval">Variable Interval (After Completion)</option>
+                    <option value="annual_fixed">Annual (Fixed Date)</option>
+                    <option value="annual_variable">Annual (After Completion)</option>
                 </select>
             </div>
 
@@ -149,6 +151,23 @@
                 </div>
             </div>
 
+            <!-- Annual Fixed / Annual Variable Options -->
+            <div v-if="formData.scheduleConfig.type === 'annual_fixed' || formData.scheduleConfig.type === 'annual_variable'" class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label for="annualMonth" class="block text-sm font-medium text-stone-700">Month*</label>
+                    <select id="annualMonth" v-model.number="formData.scheduleConfig.month" required
+                        class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
+                        <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="annualDay" class="block text-sm font-medium text-stone-700">Day of Month*</label>
+                    <input id="annualDay" v-model.number="formData.scheduleConfig.dayOfMonth" type="number" min="1"
+                        max="31" required
+                        class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
+                </div>
+            </div>
+
             <!-- End Condition -->
             <div class="mb-4">
                 <label for="endConditionType" class="block text-sm font-medium text-stone-700">End Condition*</label>
@@ -228,13 +247,13 @@
         <!-- Form Buttons -->
         <div class="flex justify-end space-x-3">
             <NuxtLink :to="cancelUrl"
-                class="px-4 py-2 border border-stone-300 rounded-lg shadow-sm text-sm font-medium text-stone-700 bg-white hover:bg-stone-50">
-                Cancel
+                class="inline-flex items-center gap-1.5 text-stone-600 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-stone-100 transition-colors">
+                <X :size="16" />Cancel
             </NuxtLink>
             <button type="submit"
-                class="px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors duration-150"
+                class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50"
                 :disabled="isSubmitting">
-                {{ isSubmitting ? 'Creating...' : submitButtonText }}
+                <Check :size="16" />{{ isSubmitting ? 'Creating...' : submitButtonText }}
             </button>
         </div>
 
@@ -248,6 +267,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'; // Removed computed as it wasn't used
 import { useApi } from '@/utils/api';
+import { Check, X } from 'lucide-vue-next';
 import type {
     Category,
     ScheduleConfig,
@@ -298,6 +318,7 @@ interface TaskFormData {
         intervalUnit?: ScheduleConfig extends { intervalUnit: any } ? ScheduleConfig['intervalUnit'] : 'day'; // Provide default for init
         daysOfWeek?: DaysOfWeek;
         dayOfMonth?: number;
+        month?: number;
         weekdayOfMonth?: ScheduleConfig extends { weekdayOfMonth: any } ? ScheduleConfig['weekdayOfMonth'] : { weekday: 'monday', occurrence: 'first' }; // Provide default for init
         variableInterval?: ScheduleConfig extends { variableInterval: any } ? ScheduleConfig['variableInterval'] : { interval: 1, unit: 'day' }; // Provide default for init
         endCondition: {
@@ -324,6 +345,7 @@ const formData = reactive<TaskFormData>({
         intervalUnit: 'day', // Default value matching interface fallback
         daysOfWeek: { monday: false, tuesday: false, wednesday: false, thursday: false, friday: false, saturday: false, sunday: false },
         dayOfMonth: 1,
+        month: 1,
         weekdayOfMonth: { weekday: 'monday', occurrence: 'first' }, // Default value
         variableInterval: { interval: 1, unit: 'day' }, // Default value matching interface fallback
         endCondition: {
@@ -350,6 +372,22 @@ const daysOfWeek = [
     { value: 'friday', label: 'Friday' },
     { value: 'saturday', label: 'Saturday' },
     { value: 'sunday', label: 'Sunday' }
+];
+
+// Months options for form
+const months = [
+    { value: 1, label: 'January' },
+    { value: 2, label: 'February' },
+    { value: 3, label: 'March' },
+    { value: 4, label: 'April' },
+    { value: 5, label: 'May' },
+    { value: 6, label: 'June' },
+    { value: 7, label: 'July' },
+    { value: 8, label: 'August' },
+    { value: 9, label: 'September' },
+    { value: 10, label: 'October' },
+    { value: 11, label: 'November' },
+    { value: 12, label: 'December' }
 ];
 
 // Type alias for day keys
@@ -431,6 +469,9 @@ const validateForm = () => {
         const variableConfig = sc as TaskFormData['scheduleConfig'] & { type: 'variable_interval' };
         if (!variableConfig.variableInterval?.interval || variableConfig.variableInterval.interval < 1) { validationError.value = 'Variable interval must be at least 1.'; return false; }
         if (!variableConfig.variableInterval?.unit) { validationError.value = 'Variable interval unit is required.'; return false; }
+    } else if (sc.type === 'annual_fixed' || sc.type === 'annual_variable') {
+        if (!sc.month || sc.month < 1 || sc.month > 12) { validationError.value = 'Month must be between 1 and 12.'; return false; }
+        if (!sc.dayOfMonth || sc.dayOfMonth < 1 || sc.dayOfMonth > 31) { validationError.value = 'Day of month must be between 1 and 31.'; return false; }
     }
 
     // End condition validation
@@ -518,6 +559,22 @@ const handleSubmit = () => {
             finalScheduleConfig = {
                 type: 'variable_interval',
                 variableInterval: formData.scheduleConfig.variableInterval!,
+                endCondition: baseEndCondition
+            };
+            break;
+        case 'annual_fixed':
+            finalScheduleConfig = {
+                type: 'annual_fixed',
+                month: formData.scheduleConfig.month!,
+                dayOfMonth: formData.scheduleConfig.dayOfMonth!,
+                endCondition: baseEndCondition
+            };
+            break;
+        case 'annual_variable':
+            finalScheduleConfig = {
+                type: 'annual_variable',
+                month: formData.scheduleConfig.month!,
+                dayOfMonth: formData.scheduleConfig.dayOfMonth!,
                 endCondition: baseEndCondition
             };
             break;

@@ -187,6 +187,16 @@ const formatSchedule = (scheduleConfig: any): string => {
         return `${interval} ${unit}${interval > 1 ? 's' : ''} after completion`;
       }
       return 'Variable schedule';
+    case 'annual_fixed': {
+      const monthNames = ['January','February','March','April','May','June',
+        'July','August','September','October','November','December'];
+      return `Annually on ${monthNames[(scheduleConfig.month || 1) - 1]} ${scheduleConfig.dayOfMonth}`;
+    }
+    case 'annual_variable': {
+      const monthNames = ['January','February','March','April','May','June',
+        'July','August','September','October','November','December'];
+      return `~Annually around ${monthNames[(scheduleConfig.month || 1) - 1]} ${scheduleConfig.dayOfMonth}`;
+    }
     default:
       return 'Custom schedule';
   }

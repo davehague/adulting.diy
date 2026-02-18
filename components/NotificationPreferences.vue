@@ -141,7 +141,8 @@
           <div class="flex items-center justify-between">
             <label class="text-sm text-stone-700">Initial Reminder</label>
             <select v-model="preferences.reminder_initial" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
-              <option value="any">Enabled</option>
+              <option value="any">All tasks</option>
+              <option value="mine">My tasks only</option>
               <option value="none">Disabled</option>
             </select>
           </div>
@@ -149,7 +150,8 @@
           <div class="flex items-center justify-between">
             <label class="text-sm text-stone-700">Follow-up Reminder</label>
             <select v-model="preferences.reminder_followup" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
-              <option value="any">Enabled</option>
+              <option value="any">All tasks</option>
+              <option value="mine">My tasks only</option>
               <option value="none">Disabled</option>
             </select>
           </div>
@@ -157,7 +159,8 @@
           <div class="flex items-center justify-between">
             <label class="text-sm text-stone-700">Overdue Reminder</label>
             <select v-model="preferences.reminder_overdue" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
-              <option value="any">Enabled</option>
+              <option value="any">All tasks</option>
+              <option value="mine">My tasks only</option>
               <option value="none">Disabled</option>
             </select>
           </div>
@@ -166,12 +169,12 @@
 
       <!-- Save Button -->
       <div class="pt-4 border-t border-stone-200">
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           :disabled="saving"
-          class="w-full sm:w-auto px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+          class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto"
         >
-          {{ saving ? 'Saving...' : 'Save Preferences' }}
+          <Check :size="16" />{{ saving ? 'Saving...' : 'Save Preferences' }}
         </button>
         
         <div v-if="saveMessage" class="mt-2 text-sm" :class="saveError ? 'text-red-600' : 'text-green-600'">
@@ -184,6 +187,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { Check } from 'lucide-vue-next';
 import type { NotificationPreferences } from '@/types/notification';
 
 const loading = ref(true);
@@ -200,9 +204,9 @@ const preferences = ref<NotificationPreferences>({
   occurrence_executed: 'mine',
   occurrence_skipped: 'mine',
   occurrence_commented: 'mine',
-  reminder_initial: 'any',
-  reminder_followup: 'any',
-  reminder_overdue: 'any',
+  reminder_initial: 'mine',
+  reminder_followup: 'mine',
+  reminder_overdue: 'mine',
   channels: {
     email: true,
     slack: false,

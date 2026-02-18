@@ -8,8 +8,8 @@
       </div>
       <div class="flex gap-3">
         <NuxtLink to="/tasks/create"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">
-          <span class="text-lg leading-none">+</span> New Task
+          class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50">
+          <Plus :size="16" /> New Task
         </NuxtLink>
       </div>
     </div>
@@ -67,25 +67,26 @@
         </div>
       </div>
 
-      <!-- Needs Attention -->
+      <!-- Coming Up -->
       <div class="bg-white rounded-xl shadow-sm border border-stone-100 mb-8">
         <div class="px-6 py-4 border-b border-stone-100">
-          <h2 class="font-heading font-semibold text-stone-900">Needs Attention</h2>
+          <h2 class="font-heading font-semibold text-stone-900">Coming Up</h2>
         </div>
-        <div v-if="needsAttention.length === 0" class="px-6 py-8 text-center text-stone-400">
-          All caught up — nothing needs attention right now.
+        <div v-if="comingUp.length === 0" class="px-6 py-8 text-center text-stone-400">
+          Nothing coming up — you're all clear!
         </div>
         <div v-else class="divide-y divide-stone-50">
-          <NuxtLink v-for="occ in needsAttention" :key="occ.id" :to="`/occurrences/${occ.id}`"
+          <NuxtLink v-for="occ in comingUp" :key="occ.id" :to="`/occurrences/${occ.id}`"
             class="flex items-center gap-4 px-6 py-3.5 hover:bg-stone-50 transition-colors">
             <span v-if="isOverdue(occ)" class="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="Overdue"></span>
-            <span v-else class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" title="Due today"></span>
+            <span v-else-if="isDueToday(occ)" class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" title="Due today"></span>
+            <span v-else class="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" title="Upcoming"></span>
             <div class="flex-1 min-w-0">
               <span class="text-sm font-medium text-stone-900 truncate block">{{ occ.task?.name || 'Unnamed task' }}</span>
               <span v-if="occ.task?.category" class="text-xs text-stone-400">{{ occ.task.category.name }}</span>
             </div>
             <div class="text-right flex-shrink-0">
-              <span class="text-xs font-medium" :class="isOverdue(occ) ? 'text-red-500' : 'text-amber-600'">
+              <span class="text-xs font-medium" :class="isOverdue(occ) ? 'text-red-500' : isDueToday(occ) ? 'text-amber-600' : 'text-blue-500'">
                 {{ formatDueLabel(occ) }}
               </span>
             </div>
@@ -94,7 +95,7 @@
             </div>
           </NuxtLink>
         </div>
-        <div v-if="needsAttention.length > 0" class="px-6 py-3 border-t border-stone-100">
+        <div v-if="comingUp.length > 0" class="px-6 py-3 border-t border-stone-100">
           <NuxtLink to="/occurrences?status=pending" class="text-sm text-amber-700 hover:text-amber-700 font-medium">
             View all occurrences &rarr;
           </NuxtLink>
@@ -171,6 +172,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useApi } from '@/utils/api';
 import type { TaskOccurrence, TaskDefinition } from '@/types/task';
+import { Plus } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
 const api = useApi();
@@ -227,10 +229,10 @@ const dueTodayOccurrences = computed(() =>
   pendingOccurrences.value.filter(isDueToday)
 );
 
-const needsAttention = computed(() => {
-  const items = [...overdueOccurrences.value, ...dueTodayOccurrences.value];
+const comingUp = computed(() => {
+  const items = [...pendingOccurrences.value];
   items.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-  return items.slice(0, 8);
+  return items.slice(0, 5);
 });
 
 // Bar widths for stat cards (relative to a reasonable max of ~20)
@@ -285,7 +287,8 @@ const formatDueLabel = (occ: TaskOccurrence): string => {
   if (diffDays === 0) return 'Due today';
   if (diffDays === 1) return '1 day late';
   if (diffDays > 1) return `${diffDays}d late`;
-  return 'Due today';
+  if (diffDays === -1) return 'Tomorrow';
+  return `In ${Math.abs(diffDays)}d`;
 };
 
 const assigneeLabel = (occ: TaskOccurrence): string => {
@@ -302,16 +305,15 @@ const fetchDashboardData = async () => {
   loading.value = true;
   try {
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
     const sevenDaysAgo = new Date(today);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
 
     const fetches: Promise<void>[] = [];
 
-    // Fetch pending occurrences (due up to today — includes overdue + today)
+    // Fetch pending occurrences (overdue + today + upcoming)
     fetches.push(
-      api.get<TaskOccurrence[]>(`/api/occurrences?statusIn=created,assigned&dueDateTo=${todayStr}`)
+      api.get<TaskOccurrence[]>(`/api/occurrences?statusIn=created,assigned`)
         .then(data => { pendingOccurrences.value = data; })
         .catch(err => { console.error('Error fetching pending occurrences:', err); })
     );

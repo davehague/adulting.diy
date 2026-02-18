@@ -8,6 +8,8 @@ import type {
   SpecificDayOfMonthScheduleConfig,
   SpecificWeekdayOfMonthScheduleConfig,
   VariableIntervalScheduleConfig,
+  AnnualFixedScheduleConfig,
+  AnnualVariableScheduleConfig,
   ScheduleConfig,
 } from '@/types'
 
@@ -282,6 +284,97 @@ describe('calculateNextDueDate', () => {
       // Dec 15 2024 → Jan 2025, first Monday is Jan 6
       const result = calculateNextDueDate(config, localDate(2024, 12, 15))
       expect(result).toEqual(startOfDay(localDate(2025, 1, 6)))
+    })
+  })
+
+  describe('annual_fixed', () => {
+    it('returns this year\'s date when it is still in the future', () => {
+      const config: AnnualFixedScheduleConfig = {
+        type: 'annual_fixed',
+        month: 12,
+        dayOfMonth: 25,
+        endCondition: never,
+      }
+      // Completed Jan 1 2024 → Dec 25 2024 is in the future
+      const result = calculateNextDueDate(config, localDate(2024, 1, 1))
+      expect(result).toEqual(startOfDay(localDate(2024, 12, 25)))
+    })
+
+    it('rolls to next year when date has passed', () => {
+      const config: AnnualFixedScheduleConfig = {
+        type: 'annual_fixed',
+        month: 3,
+        dayOfMonth: 15,
+        endCondition: never,
+      }
+      // Completed Jul 1 2024 → Mar 15 2024 has passed → Mar 15 2025
+      const result = calculateNextDueDate(config, localDate(2024, 7, 1))
+      expect(result).toEqual(startOfDay(localDate(2025, 3, 15)))
+    })
+
+    it('rolls to next year when completed on the same date', () => {
+      const config: AnnualFixedScheduleConfig = {
+        type: 'annual_fixed',
+        month: 4,
+        dayOfMonth: 29,
+        endCondition: never,
+      }
+      // Completed on Apr 29 2024 → Apr 29 is not after Apr 29 → next Apr 29 2025
+      const result = calculateNextDueDate(config, localDate(2024, 4, 29))
+      expect(result).toEqual(startOfDay(localDate(2025, 4, 29)))
+    })
+
+    it('preserves fixed date even when completed late', () => {
+      const config: AnnualFixedScheduleConfig = {
+        type: 'annual_fixed',
+        month: 4,
+        dayOfMonth: 29,
+        endCondition: never,
+      }
+      // Due Apr 29, completed Jul 15 → next Apr 29 (next year since Jul 15 > Apr 29)
+      const result = calculateNextDueDate(config, localDate(2024, 7, 15))
+      expect(result).toEqual(startOfDay(localDate(2025, 4, 29)))
+    })
+  })
+
+  describe('annual_variable', () => {
+    it('returns 1 year from completion date', () => {
+      const config: AnnualVariableScheduleConfig = {
+        type: 'annual_variable',
+        month: 4,
+        dayOfMonth: 29,
+        endCondition: never,
+      }
+      // Completed Aug 10 2024 → next due Aug 10 2025
+      const result = calculateNextDueDate(config, localDate(2024, 8, 10))
+      expect(result).toEqual(startOfDay(localDate(2025, 8, 10)))
+    })
+
+    it('uses anchor date when no completion date provided', () => {
+      const config: AnnualVariableScheduleConfig = {
+        type: 'annual_variable',
+        month: 12,
+        dayOfMonth: 25,
+        endCondition: never,
+      }
+      // No completion date, today is mocked implicitly — use anchor
+      // Since we can't control "today", test that it returns a Dec 25
+      const result = calculateNextDueDate(config)
+      expect(result).not.toBeNull()
+      expect(result!.getMonth()).toBe(11) // December = month 11 in JS
+      expect(result!.getDate()).toBe(25)
+    })
+
+    it('shifts date when done late', () => {
+      const config: AnnualVariableScheduleConfig = {
+        type: 'annual_variable',
+        month: 4,
+        dayOfMonth: 29,
+        endCondition: never,
+      }
+      // Due Apr 29, done Aug 10 → next Aug 10 (not Apr 29)
+      const result = calculateNextDueDate(config, localDate(2024, 8, 10))
+      expect(result).toEqual(startOfDay(localDate(2025, 8, 10)))
     })
   })
 
@@ -673,6 +766,48 @@ describe('generateFutureOccurrences', () => {
       expect(result[0]).toEqual(startOfDay(localDate(2024, 2, 5)))
       expect(result[1]).toEqual(startOfDay(localDate(2024, 3, 4)))
       expect(result[2]).toEqual(startOfDay(localDate(2024, 4, 1)))
+    })
+  })
+
+  describe('annual_fixed schedule', () => {
+    it('generates yearly occurrences on the same date', () => {
+      const config: AnnualFixedScheduleConfig = {
+        type: 'annual_fixed',
+        month: 4,
+        dayOfMonth: 29,
+        endCondition: never,
+      }
+      const lastCompleted = localDate(2024, 1, 1)
+      const horizon = localDate(2027, 12, 31)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // Apr 29 2024, Apr 29 2025, Apr 29 2026, Apr 29 2027
+      expect(result).toHaveLength(4)
+      expect(result[0]).toEqual(startOfDay(localDate(2024, 4, 29)))
+      expect(result[1]).toEqual(startOfDay(localDate(2025, 4, 29)))
+      expect(result[2]).toEqual(startOfDay(localDate(2026, 4, 29)))
+      expect(result[3]).toEqual(startOfDay(localDate(2027, 4, 29)))
+    })
+  })
+
+  describe('annual_variable schedule', () => {
+    it('generates yearly occurrences chained from completion', () => {
+      const config: AnnualVariableScheduleConfig = {
+        type: 'annual_variable',
+        month: 4,
+        dayOfMonth: 29,
+        endCondition: never,
+      }
+      // "Completed" on Aug 10 2024 → next Aug 10 2025 → Aug 10 2026 → etc
+      const lastCompleted = localDate(2024, 8, 10)
+      const horizon = localDate(2027, 12, 31)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // Aug 10 2025, Aug 10 2026, Aug 10 2027
+      expect(result).toHaveLength(3)
+      expect(result[0]).toEqual(startOfDay(localDate(2025, 8, 10)))
+      expect(result[1]).toEqual(startOfDay(localDate(2026, 8, 10)))
+      expect(result[2]).toEqual(startOfDay(localDate(2027, 8, 10)))
     })
   })
 

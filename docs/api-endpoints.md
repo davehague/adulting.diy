@@ -62,10 +62,14 @@ The API uses three authentication levels:
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| `POST` | `/api/scheduler/run` | Public⚠️ | Generate task occurrences (automated) |
-| `POST` | `/api/scheduler/reminders` | Public⚠️ | Send reminder notifications (automated) |
+| `GET/POST` | `/api/scheduler/run` | API Key | Generate task occurrences (automated) |
+| `GET/POST` | `/api/scheduler/reminders` | API Key | Send reminder notifications (automated) |
 
-⚠️ *These endpoints should be secured for production use*
+Scheduler endpoints are protected by `CRON_SECRET` via `Authorization: Bearer` token. This is used by Vercel Cron Jobs automatically and for any manual triggers.
+
+These endpoints are called automatically by Vercel Cron Jobs (configured in `vercel.json`):
+- `/api/scheduler/run` — daily at 06:00 UTC
+- `/api/scheduler/reminders` — daily at 13:00 UTC
 
 ## Request/Response Patterns
 

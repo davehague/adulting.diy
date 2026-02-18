@@ -155,6 +155,44 @@ describe('NotificationService.shouldSendNotification', () => {
     })
   })
 
+  // --- "mine" reminder preference sends only to assignees ---
+  describe('reminder notifications with mine preference', () => {
+    it('sends reminder when preference is mine and user is assignee', () => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_initial: 'mine' }
+      expect(service.shouldSendNotification(
+        'task_reminder_initial', prefs, contextWithOccurrenceAssignedToUser, userId
+      )).toBe(true)
+    })
+
+    it('does NOT send reminder when preference is mine and user is not assignee', () => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_initial: 'mine' }
+      expect(service.shouldSendNotification(
+        'task_reminder_initial', prefs, contextWithOccurrenceAssignedToOther, userId
+      )).toBe(false)
+    })
+
+    it('sends followup reminder when preference is mine and user is assignee', () => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_followup: 'mine' }
+      expect(service.shouldSendNotification(
+        'task_reminder_followup', prefs, contextWithOccurrenceAssignedToUser, userId
+      )).toBe(true)
+    })
+
+    it('sends overdue reminder when preference is mine and user is assignee', () => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_overdue: 'mine' }
+      expect(service.shouldSendNotification(
+        'task_reminder_overdue', prefs, contextWithOccurrenceAssignedToUser, userId
+      )).toBe(true)
+    })
+
+    it('still sends when preference is any regardless of assignment', () => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_initial: 'any' }
+      expect(service.shouldSendNotification(
+        'task_reminder_initial', prefs, contextWithOccurrenceAssignedToOther, userId
+      )).toBe(true)
+    })
+  })
+
   // --- Default preferences are snake_case and correct ---
   describe('getDefaultPreferences', () => {
     it('returns snake_case keys matching the NotificationPreferences type', () => {
@@ -218,6 +256,7 @@ describe('checkAndSendTaskReminders', () => {
     const task = {
       id: 'task-1',
       householdId: 'household-1',
+      createdByUserId: 'user-1',
       metaStatus: 'active',
       reminderConfig: { overdueReminder: 3 },
     }
@@ -235,6 +274,11 @@ describe('checkAndSendTaskReminders', () => {
         updatedAt: threeDaysAgo,
       },
     ] as any)
+
+    // No prior reminder sent today
+    vi.mocked(prisma.occurrenceHistoryLog.findFirst).mockResolvedValueOnce(null)
+    // Mock the log creation for dedup tracking
+    vi.mocked(prisma.occurrenceHistoryLog.create).mockResolvedValueOnce({} as any)
 
     // Mock sendNotification to track calls
     const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue()
@@ -329,6 +373,79 @@ describe('renderEmailTemplate', () => {
     expect(html).not.toContain('color: ;')
   })
 
+  it('task_paused renders with warning styling', () => {
+    const html = provider.renderEmailTemplate('task_paused', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      pausedByName: 'Bob',
+      taskUrl: 'http://localhost/tasks/1',
+    })
+    expect(html).toContain('Alice')
+    expect(html).toContain('Clean Kitchen')
+    expect(html).toContain('Task Paused')
+    expect(html).toContain('Bob')
+    expect(html).not.toContain('{{')
+  })
+
+  it('task_deleted renders with red styling', () => {
+    const html = provider.renderEmailTemplate('task_deleted', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      deletedByName: 'Bob',
+    })
+    expect(html).toContain('Alice')
+    expect(html).toContain('Clean Kitchen')
+    expect(html).toContain('Task Deleted')
+    expect(html).toContain('Bob')
+    expect(html).not.toContain('{{')
+  })
+
+  it('occurrence_executed renders with green styling', () => {
+    const html = provider.renderEmailTemplate('occurrence_executed', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      completedByName: 'Bob',
+      dueDate: 'January 20, 2025',
+      occurrenceUrl: 'http://localhost/occurrences/1',
+    })
+    expect(html).toContain('Alice')
+    expect(html).toContain('Clean Kitchen')
+    expect(html).toContain('Task Completed')
+    expect(html).toContain('Bob')
+    expect(html).not.toContain('{{')
+  })
+
+  it('occurrence_skipped renders with amber styling', () => {
+    const html = provider.renderEmailTemplate('occurrence_skipped', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      skippedByName: 'Bob',
+      dueDate: 'January 20, 2025',
+      occurrenceUrl: 'http://localhost/occurrences/1',
+    })
+    expect(html).toContain('Alice')
+    expect(html).toContain('Clean Kitchen')
+    expect(html).toContain('Task Skipped')
+    expect(html).toContain('Bob')
+    expect(html).not.toContain('{{')
+  })
+
+  it('occurrence_commented renders with comment content', () => {
+    const html = provider.renderEmailTemplate('occurrence_commented', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      commentedByName: 'Bob',
+      comment: 'Need to buy supplies first',
+      occurrenceUrl: 'http://localhost/occurrences/1',
+    })
+    expect(html).toContain('Alice')
+    expect(html).toContain('Clean Kitchen')
+    expect(html).toContain('New Comment')
+    expect(html).toContain('Bob')
+    expect(html).toContain('Need to buy supplies first')
+    expect(html).not.toContain('{{')
+  })
+
   it('unknown template falls back to generic', () => {
     const html = provider.renderEmailTemplate('unknown_template', {
       userName: 'Alice',
@@ -377,6 +494,187 @@ describe('generateEmailContent', () => {
     }
     const result = provider.generateEmailContent('task_created', noDescContext, baseContext.user)
     expect(result.body).not.toContain('Description:')
+  })
+
+  it('task_paused returns proper subject and body', () => {
+    const result = provider.generateEmailContent('task_paused', baseContext, baseContext.user)
+    expect(result.subject).toContain('Task Paused')
+    expect(result.subject).toContain('Clean Kitchen')
+    expect(result.body).toContain('Task Paused')
+    expect(result.body).not.toContain('Adulting.DIY Notification')
+  })
+
+  it('task_deleted returns proper subject and body', () => {
+    const result = provider.generateEmailContent('task_deleted', baseContext, baseContext.user)
+    expect(result.subject).toContain('Task Deleted')
+    expect(result.body).toContain('Task Deleted')
+    expect(result.body).not.toContain('Adulting.DIY Notification')
+  })
+
+  it('occurrence_executed returns proper subject and body', () => {
+    const result = provider.generateEmailContent('occurrence_executed', baseContext, baseContext.user)
+    expect(result.subject).toContain('Task Completed')
+    expect(result.body).toContain('Task Completed')
+    expect(result.body).not.toContain('Adulting.DIY Notification')
+  })
+
+  it('occurrence_skipped returns proper subject and body', () => {
+    const result = provider.generateEmailContent('occurrence_skipped', baseContext, baseContext.user)
+    expect(result.subject).toContain('Task Skipped')
+    expect(result.body).toContain('Task Skipped')
+    expect(result.body).not.toContain('Adulting.DIY Notification')
+  })
+
+  it('occurrence_commented returns proper subject with comment content', () => {
+    const commentContext = { ...baseContext, comment: 'Test comment' }
+    const result = provider.generateEmailContent('occurrence_commented', commentContext, baseContext.user)
+    expect(result.subject).toContain('New Comment')
+    expect(result.body).toContain('New Comment')
+    expect(result.body).toContain('Test comment')
+    expect(result.body).not.toContain('Adulting.DIY Notification')
+  })
+})
+
+describe('isUserRelatedToOccurrence with comment history', () => {
+  const service = new NotificationService()
+
+  it('returns true when user is an assignee', () => {
+    const context: NotificationContext = {
+      user: { id: 'u1' } as any,
+      occurrence: { assigneeIds: ['u1'] } as any,
+    }
+    expect(service.isUserRelatedToOccurrence('u1', context)).toBe(true)
+  })
+
+  it('returns true when user has commented (via commentUserIds)', () => {
+    const context: NotificationContext = {
+      user: { id: 'u1' } as any,
+      occurrence: { assigneeIds: ['u2'], commentUserIds: ['u1'] } as any,
+    }
+    expect(service.isUserRelatedToOccurrence('u1', context)).toBe(true)
+  })
+
+  it('returns false when user is neither assignee nor commenter', () => {
+    const context: NotificationContext = {
+      user: { id: 'u3' } as any,
+      occurrence: { assigneeIds: ['u1'], commentUserIds: ['u2'] } as any,
+    }
+    expect(service.isUserRelatedToOccurrence('u3', context)).toBe(false)
+  })
+
+  it('returns false when no occurrence in context', () => {
+    const context: NotificationContext = {
+      user: { id: 'u1' } as any,
+    }
+    expect(service.isUserRelatedToOccurrence('u1', context)).toBe(false)
+  })
+
+  it('returns false when commentUserIds is not present', () => {
+    const context: NotificationContext = {
+      user: { id: 'u1' } as any,
+      occurrence: { assigneeIds: ['u2'] } as any,
+    }
+    expect(service.isUserRelatedToOccurrence('u1', context)).toBe(false)
+  })
+})
+
+describe('duplicate reminder prevention', () => {
+  it('does not send reminder if one was already sent today', async () => {
+    const service = new NotificationService()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const dueDate = new Date()
+    dueDate.setDate(dueDate.getDate() + 3)
+    dueDate.setHours(0, 0, 0, 0)
+
+    const task = {
+      id: 'task-1',
+      householdId: 'household-1',
+      createdByUserId: 'user-1',
+      reminderConfig: { initialReminder: 3 },
+    }
+
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+
+    vi.mocked(prisma.taskOccurrence.findMany).mockResolvedValueOnce([
+      {
+        id: 'occ-1',
+        taskId: 'task-1',
+        dueDate: dueDate,
+        status: 'assigned',
+        assigneeIds: ['user-1'],
+        createdAt: today,
+        updatedAt: today,
+      },
+    ] as any)
+
+    // Simulate that a reminder was already sent today
+    vi.mocked(prisma.occurrenceHistoryLog.findFirst).mockResolvedValueOnce({
+      id: 'log-1',
+      occurrenceId: 'occ-1',
+      userId: 'user-1',
+      logType: 'reminder_sent',
+      newValue: 'task_reminder_initial',
+      createdAt: new Date(),
+    } as any)
+
+    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue()
+    const count = await service.checkAndSendTaskReminders(task as any)
+
+    expect(count).toBe(0)
+    expect(sendSpy).not.toHaveBeenCalled()
+
+    sendSpy.mockRestore()
+  })
+
+  it('sends reminder if none was sent today', async () => {
+    const service = new NotificationService()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const dueDate = new Date()
+    dueDate.setDate(dueDate.getDate() + 3)
+    dueDate.setHours(0, 0, 0, 0)
+
+    const task = {
+      id: 'task-1',
+      householdId: 'household-1',
+      createdByUserId: 'user-1',
+      reminderConfig: { initialReminder: 3 },
+    }
+
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+
+    vi.mocked(prisma.taskOccurrence.findMany).mockResolvedValueOnce([
+      {
+        id: 'occ-1',
+        taskId: 'task-1',
+        dueDate: dueDate,
+        status: 'assigned',
+        assigneeIds: ['user-1'],
+        createdAt: today,
+        updatedAt: today,
+      },
+    ] as any)
+
+    // No prior reminder sent
+    vi.mocked(prisma.occurrenceHistoryLog.findFirst).mockResolvedValueOnce(null)
+
+    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue()
+    // Mock the log creation
+    vi.mocked(prisma.occurrenceHistoryLog.create).mockResolvedValueOnce({} as any)
+
+    const count = await service.checkAndSendTaskReminders(task as any)
+
+    expect(count).toBe(1)
+    expect(sendSpy).toHaveBeenCalledWith(
+      'household-1',
+      'task_reminder_initial',
+      expect.any(Object)
+    )
+
+    sendSpy.mockRestore()
   })
 })
 

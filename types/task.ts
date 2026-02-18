@@ -9,7 +9,9 @@ export type RecurrenceType =
   | "specific_days_of_week"
   | "specific_day_of_month"
   | "specific_weekday_of_month"
-  | "variable_interval";
+  | "variable_interval"
+  | "annual_fixed"
+  | "annual_variable";
 
 export type IntervalUnit = "day" | "week" | "month" | "year";
 
@@ -82,6 +84,18 @@ export interface VariableIntervalScheduleConfig extends BaseScheduleConfig {
   };
 }
 
+export interface AnnualFixedScheduleConfig extends BaseScheduleConfig {
+  type: "annual_fixed";
+  month: number;      // 1-12
+  dayOfMonth: number;  // 1-31
+}
+
+export interface AnnualVariableScheduleConfig extends BaseScheduleConfig {
+  type: "annual_variable";
+  month: number;      // 1-12
+  dayOfMonth: number;  // 1-31
+}
+
 // Discriminated Union Type
 export type ScheduleConfig =
   | OnceScheduleConfig
@@ -89,7 +103,9 @@ export type ScheduleConfig =
   | SpecificDaysScheduleConfig
   | SpecificDayOfMonthScheduleConfig
   | SpecificWeekdayOfMonthScheduleConfig
-  | VariableIntervalScheduleConfig;
+  | VariableIntervalScheduleConfig
+  | AnnualFixedScheduleConfig
+  | AnnualVariableScheduleConfig;
 
 export interface ReminderConfig {
   initialReminder?: number; // Days before due date
@@ -145,7 +161,8 @@ export type HistoryLogType =
   | "status_change"
   | "comment"
   | "assignment_change"
-  | "date_change";
+  | "date_change"
+  | "reminder_sent";
 
 export interface OccurrenceHistoryLog {
   id: string;
