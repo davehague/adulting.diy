@@ -110,11 +110,9 @@
                 <div class="mb-4">
                   <label class="block text-sm font-medium text-stone-700 mb-2">Share Household</label>
                   <div class="space-y-3">
-                    <button @click="copyHouseholdInfo" 
-                            class="w-full flex items-center justify-center px-4 py-2 border border-stone-300 rounded-md hover:bg-stone-50">
-                      <svg class="w-4 h-4 mr-2 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                      </svg>
+                    <button @click="copyHouseholdInfo"
+                            class="w-full inline-flex items-center justify-center gap-1.5 text-stone-600 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-stone-100 transition-colors">
+                      <Copy :size="16" />
                       {{ copiedHouseholdInfo ? 'Copied!' : 'Copy Invitation' }}
                     </button>
                     <p class="text-xs text-stone-500">Share household invitation with others</p>
