@@ -22,7 +22,6 @@ export interface NotificationContext {
 export type NotificationEventType =
   | "task_created"
   | "task_paused"
-  | "task_completed"
   | "task_deleted"
   | "occurrence_assigned"
   | "occurrence_executed"
@@ -142,9 +141,6 @@ export class NotificationService {
 
       case "task_paused":
         return preferences.task_paused === "any";
-
-      case "task_completed":
-        return preferences.task_completed === "any";
 
       case "task_deleted":
         return preferences.task_deleted === "any";

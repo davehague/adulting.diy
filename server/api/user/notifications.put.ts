@@ -8,7 +8,6 @@ const validPreferenceValues = ["any", "mine", "none"] as const;
 const requiredFields = [
   "task_created",
   "task_paused",
-  "task_completed",
   "task_deleted",
   "occurrence_assigned",
   "occurrence_executed",

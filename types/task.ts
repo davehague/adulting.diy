@@ -1,7 +1,7 @@
 // types/task.ts
 import type { Category } from "."; // Import Category via index barrel file
 import type { User } from "./user"; // Import User type
-export type TaskMetaStatus = "active" | "paused" | "soft-deleted" | "completed";
+export type TaskMetaStatus = "active" | "paused" | "soft-deleted";
 
 export type RecurrenceType =
   | "once"
