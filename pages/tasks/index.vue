@@ -171,7 +171,18 @@
                       </svg>
                       View Occurrences
                     </NuxtLink>
-                    
+
+                    <button
+                      v-if="task.metaStatus === 'active' && isTaskOverdue(task)"
+                      @click="openCatchUp(task)"
+                      class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
+                    >
+                      <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Catch Up
+                    </button>
+
                     <button
                       v-if="task.metaStatus === 'active'"
                       @click="pauseTask(task.id)"
@@ -215,6 +226,16 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Catch Up Modal -->
+    <CatchUpModal
+      ref="catchUpModalRef"
+      :visible="showCatchUpModal"
+      :task-name="catchUpTask?.name || ''"
+      :overdue-count="catchUpOverdueCount"
+      @confirm="handleCatchUp"
+      @cancel="closeCatchUpModal"
+    />
   </div>
 </template>
 
@@ -438,6 +459,64 @@ const deleteTask = async (taskId: string) => {
   } catch (err) {
     console.error('Error deleting task:', err);
     // error.value = 'Failed to delete task. Please try again.'; // Store handles errors
+  }
+};
+
+// Catch-up state
+const showCatchUpModal = ref(false);
+const catchUpTask = ref<TaskDefinition | null>(null);
+const catchUpModalRef = ref<any>(null);
+const catchUpOverdueCount = ref(0);
+
+const isTaskOverdue = (task: TaskDefinition): boolean => {
+  if (!task.nextOccurrence) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(task.nextOccurrence.dueDate);
+  due.setHours(0, 0, 0, 0);
+  return due < today;
+};
+
+const openCatchUp = async (task: TaskDefinition) => {
+  closeDropdown();
+  catchUpTask.value = task;
+  try {
+    const occurrences = await api.get<any[]>(`/api/tasks/${task.id}/occurrences`);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    catchUpOverdueCount.value = occurrences.filter((occ: any) => {
+      const dueDate = new Date(occ.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      return (occ.status === 'created' || occ.status === 'assigned') && dueDate < now;
+    }).length;
+  } catch {
+    catchUpOverdueCount.value = 0;
+  }
+  showCatchUpModal.value = true;
+};
+
+const closeCatchUpModal = () => {
+  showCatchUpModal.value = false;
+  catchUpTask.value = null;
+  catchUpModalRef.value?.reset();
+};
+
+const handleCatchUp = async (comment: string) => {
+  if (!catchUpTask.value) return;
+  try {
+    const result = await api.post<{ occurrencesSkipped: number; newDueDate: string | null }>(
+      `/api/tasks/${catchUpTask.value.id}/catch-up`,
+      { comment: comment || undefined }
+    );
+
+    closeCatchUpModal();
+    await taskStore.fetchTasks(filters);
+
+    alert(`Caught up — ${result.occurrencesSkipped} occurrence${result.occurrencesSkipped !== 1 ? 's' : ''} skipped.${result.newDueDate ? ' Next due: ' + new Date(result.newDueDate).toLocaleDateString() : ''}`);
+  } catch (err: any) {
+    console.error('Error catching up task:', err);
+    alert(err.data?.message || 'Failed to catch up task');
+    catchUpModalRef.value?.reset();
   }
 };
 

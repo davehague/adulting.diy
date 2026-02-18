@@ -21,6 +21,10 @@
           <h1 class="font-heading text-2xl font-bold text-stone-900">{{ task.name }}</h1>
         </div>
         <div class="flex space-x-2">
+          <button v-if="hasOverdueOccurrences" @click="showCatchUpModal = true"
+            class="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700">
+            Catch Up
+          </button>
           <NuxtLink :to="`/tasks/${task.id}/edit`"
             class="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700">
             Edit Task
@@ -133,6 +137,16 @@
 
       <!-- Task Activity Timeline -->
       <TaskTimeline ref="taskTimelineRef" :task-id="taskId" />
+
+      <!-- Catch Up Modal -->
+      <CatchUpModal
+        ref="catchUpModalRef"
+        :visible="showCatchUpModal"
+        :task-name="task.name"
+        :overdue-count="overdueOccurrenceCount"
+        @confirm="handleCatchUp"
+        @cancel="showCatchUpModal = false"
+      />
 
       <!-- Back to Tasks List -->
       <div class="mt-8">
@@ -357,6 +371,55 @@ const getAssigneeNames = (assigneeIds: string[] | undefined): string => {
     .filter(name => !!name); // Filter out undefined names if user not found
 
   return names.length > 0 ? names.join(', ') : 'Unknown User(s)';
+};
+
+// Catch-up state
+const showCatchUpModal = ref(false);
+const catchUpModalRef = ref<any>(null);
+
+const hasOverdueOccurrences = computed(() => {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return occurrences.value.some(occ => {
+    const dueDate = new Date(occ.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
+    return (occ.status === 'created' || occ.status === 'assigned') && dueDate < now;
+  });
+});
+
+const overdueOccurrenceCount = computed(() => {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return occurrences.value.filter(occ => {
+    const dueDate = new Date(occ.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
+    return (occ.status === 'created' || occ.status === 'assigned') && dueDate < now;
+  }).length;
+});
+
+const handleCatchUp = async (comment: string) => {
+  try {
+    const result = await api.post<{ occurrencesSkipped: number; newDueDate: string | null }>(
+      `/api/tasks/${taskId}/catch-up`,
+      { comment: comment || undefined }
+    );
+
+    showCatchUpModal.value = false;
+    catchUpModalRef.value?.reset();
+
+    // Refresh data
+    await Promise.all([
+      taskStore.fetchTaskById(taskId),
+      fetchOccurrences(),
+    ]);
+    taskTimelineRef.value?.fetchHistory();
+
+    alert(`Caught up — ${result.occurrencesSkipped} occurrence${result.occurrencesSkipped !== 1 ? 's' : ''} skipped.${result.newDueDate ? ' Next due: ' + new Date(result.newDueDate).toLocaleDateString() : ''}`);
+  } catch (err: any) {
+    console.error('Error catching up task:', err);
+    alert(err.data?.message || 'Failed to catch up task');
+    catchUpModalRef.value?.reset();
+  }
 };
 
 </script>
