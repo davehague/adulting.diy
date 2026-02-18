@@ -442,16 +442,24 @@ const showDeleteModal = ref(false);
 const deleteTargetId = ref<string | null>(null);
 const isSubmittingDelete = ref(false);
 
+// Restore persisted state from localStorage
+const savedFilters = import.meta.client
+  ? JSON.parse(localStorage.getItem('adulting-tasks-filters') || 'null')
+  : null;
+const savedSort = import.meta.client
+  ? JSON.parse(localStorage.getItem('adulting-tasks-sort') || 'null')
+  : null;
+
 // Filters
 const filters = reactive({
-  status: '',
-  categoryId: '',
-  search: ''
+  status: savedFilters?.status ?? '',
+  categoryId: savedFilters?.categoryId ?? '',
+  search: savedFilters?.search ?? ''
 });
 
 // Sort state
-const sortColumn = ref<string>('name');
-const sortDirection = ref<'asc' | 'desc'>('asc');
+const sortColumn = ref<string>(savedSort?.column ?? 'name');
+const sortDirection = ref<'asc' | 'desc'>(savedSort?.direction ?? 'asc');
 
 const toggleSort = (column: string) => {
   if (sortColumn.value === column) {
@@ -529,6 +537,22 @@ watch(filters, async () => {
     await taskStore.fetchTasks(apiFilters(filters));
   }
 }, { deep: true });
+
+// Persist filters and sort state to localStorage
+watch(filters, () => {
+  if (import.meta.client) {
+    localStorage.setItem('adulting-tasks-filters', JSON.stringify({ ...filters }));
+  }
+}, { deep: true });
+
+watch([sortColumn, sortDirection], () => {
+  if (import.meta.client) {
+    localStorage.setItem('adulting-tasks-sort', JSON.stringify({
+      column: sortColumn.value,
+      direction: sortDirection.value,
+    }));
+  }
+});
 
 // Helper functions
 const getCategoryName = (categoryId: string): string => {

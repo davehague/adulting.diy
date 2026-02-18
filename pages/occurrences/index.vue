@@ -423,9 +423,17 @@ const loading = ref(false);
 const rawOccurrences = ref<TaskOccurrence[]>([]);
 const categories = ref<Category[]>([]);
 const householdUsers = ref<User[]>([]);
+// Restore persisted state from localStorage
+const savedFilters = import.meta.client
+  ? JSON.parse(localStorage.getItem('adulting-occurrences-filters') || 'null')
+  : null;
+const savedSort = import.meta.client
+  ? JSON.parse(localStorage.getItem('adulting-occurrences-sort') || 'null')
+  : null;
+
 // Sort state (replaces sortBy dropdown)
-const sortColumn = ref<string>('dueDate');
-const sortDirection = ref<'asc' | 'desc'>('asc');
+const sortColumn = ref<string>(savedSort?.column ?? 'dueDate');
+const sortDirection = ref<'asc' | 'desc'>(savedSort?.direction ?? 'asc');
 
 const toggleSort = (column: string) => {
   if (sortColumn.value === column) {
@@ -459,16 +467,16 @@ const editError = ref<string | null>(null);
 
 // Filters - Default to showing only pending occurrences (created/assigned)
 const filters = reactive({
-  status: 'pending', // Default to pending (will be converted to created,assigned in API)
-  categoryId: '',
-  assigneeId: '',
-  search: '',
-  dueDateFrom: '',
-  dueDateTo: ''
+  status: savedFilters?.status ?? 'pending',
+  categoryId: savedFilters?.categoryId ?? '',
+  assigneeId: savedFilters?.assigneeId ?? '',
+  search: savedFilters?.search ?? '',
+  dueDateFrom: savedFilters?.dueDateFrom ?? '',
+  dueDateTo: savedFilters?.dueDateTo ?? ''
 });
 
-// Date filter panel toggle
-const showDateFilters = ref(false);
+// Date filter panel toggle (auto-open if saved dates exist)
+const showDateFilters = ref(!!(filters.dueDateFrom || filters.dueDateTo));
 
 const activeFilterCount = computed(() => {
   let count = 0;
@@ -578,6 +586,22 @@ watch(filters, async () => {
     await fetchOccurrences();
   }
 }, { deep: true });
+
+// Persist filters and sort state to localStorage
+watch(filters, () => {
+  if (import.meta.client) {
+    localStorage.setItem('adulting-occurrences-filters', JSON.stringify({ ...filters }));
+  }
+}, { deep: true });
+
+watch([sortColumn, sortDirection], () => {
+  if (import.meta.client) {
+    localStorage.setItem('adulting-occurrences-sort', JSON.stringify({
+      column: sortColumn.value,
+      direction: sortDirection.value,
+    }));
+  }
+});
 
 // Fetch occurrences from API
 const fetchOccurrences = async () => {
