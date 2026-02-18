@@ -112,13 +112,88 @@ export class HouseholdService {
    */
   async removeUser(userId: string): Promise<void> {
     try {
-      await prisma.user.update({
+      // Look up user first to get name and householdId
+      const user = await prisma.user.findUnique({
         where: { id: userId },
-        data: {
-          householdId: null,
-          isAdmin: false,
-          updatedAt: new Date()
+        select: { name: true, householdId: true }
+      });
+
+      if (!user || !user.householdId) {
+        throw new Error('User not found or not in a household');
+      }
+
+      const householdId = user.householdId;
+
+      await prisma.$transaction(async (tx) => {
+        // 1. Upsert former member record
+        await tx.formerHouseholdMember.upsert({
+          where: {
+            userId_householdId: { userId, householdId }
+          },
+          update: {
+            name: user.name,
+            leftAt: new Date()
+          },
+          create: {
+            userId,
+            householdId,
+            name: user.name
+          }
+        });
+
+        // 2. Remove from defaultAssigneeIds on all task definitions in household
+        const tasks = await tx.taskDefinition.findMany({
+          where: { householdId },
+          select: { id: true, defaultAssigneeIds: true }
+        });
+
+        for (const task of tasks) {
+          if (task.defaultAssigneeIds.includes(userId)) {
+            await tx.taskDefinition.update({
+              where: { id: task.id },
+              data: {
+                defaultAssigneeIds: task.defaultAssigneeIds.filter(id => id !== userId)
+              }
+            });
+          }
         }
+
+        // 3. Remove from assigneeIds on future actionable occurrences
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const taskIds = tasks.map(t => t.id);
+        if (taskIds.length > 0) {
+          const occurrences = await tx.taskOccurrence.findMany({
+            where: {
+              taskId: { in: taskIds },
+              status: { in: ['created', 'assigned'] },
+              dueDate: { gte: today }
+            },
+            select: { id: true, assigneeIds: true }
+          });
+
+          for (const occ of occurrences) {
+            if (occ.assigneeIds.includes(userId)) {
+              await tx.taskOccurrence.update({
+                where: { id: occ.id },
+                data: {
+                  assigneeIds: occ.assigneeIds.filter(id => id !== userId)
+                }
+              });
+            }
+          }
+        }
+
+        // 4. Remove user from household
+        await tx.user.update({
+          where: { id: userId },
+          data: {
+            householdId: null,
+            isAdmin: false,
+            updatedAt: new Date()
+          }
+        });
       });
     } catch (error) {
       console.error(`[HouseholdService] Unexpected error in removeUser:`, error);
