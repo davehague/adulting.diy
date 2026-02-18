@@ -8,9 +8,9 @@ This project is a task management system built with Nuxt 3, Vue.js, Prisma, and 
 - Recurring and non-recurring task management (based on schedules)
 - Task occurrences tracking (completion, skipping, comments)
 - Custom categorization system for tasks
-- Flexible notification system (planned)
+- Flexible notification system (email + Slack) with configurable reminders
 - Task pausing and soft deletion
-- User authentication (Email/Password)
+- User authentication (Google OAuth)
 - Persistent authentication state
 
 ## Tech Stack
@@ -100,39 +100,23 @@ To change the title and favicon, update `nuxt.config.ts`. Create your own favico
 
 ## Testing
 
-The project includes a comprehensive testing framework built with Vitest:
-
-### Running Tests
-
 ```bash
-# Run all tests
-npm run test
-
-# Run tests in watch mode (auto-rerun on file changes)
-npm run test:watch
-
-# Generate coverage report
-npm run test:coverage
-
-# Run tests with interactive UI
-npm run test:ui
+npm run test              # Run all tests (excludes e2e)
+npm run test:watch        # Watch mode
+npm run test:coverage     # Coverage report
 ```
 
-### Test Structure
+See [docs/tech/testing.md](docs/tech/testing.md) for full details on test structure and coverage.
 
-- **Unit Tests**: Core business logic (scheduling, notifications)
-- **Integration Tests**: API endpoints and service interactions
-- **Fixtures**: Shared test data and mocks
+## Documentation
 
-### Coverage Areas
+Project documentation is organized in `docs/`:
 
-- ✅ Task scheduling algorithms (all 6 recurrence patterns)
-- ✅ Notification preference logic
-- ✅ Date calculations and edge cases
-- ✅ Scheduler integration and horizon calculations
-- ✅ Business rule validation
-
-The test suite includes 41+ tests covering critical functionality and edge cases to ensure reliability.
+- **[Functionality docs](docs/functionality/)** - Feature descriptions from a product perspective
+- **[Tech docs](docs/tech/)** - Implementation details for developers
+- **[API reference](docs/tech/api-endpoints.md)** - Full API endpoint documentation
+- **[Brand guide](docs/brand.md)** - Colors, typography, component patterns
+- **[Changelog](docs/functionality/changelog.md)** - Record of changes
 
 ## Development Features
 

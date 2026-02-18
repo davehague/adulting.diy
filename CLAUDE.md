@@ -35,6 +35,20 @@ The application follows a typical full-stack architecture with:
 3. **API-first Design**: RESTful API endpoints for all operations
 4. **Type Safety**: Comprehensive TypeScript types throughout
 
+## Documentation
+
+Detailed documentation lives in `docs/` and is organized by audience:
+
+- **`docs/functionality/`** - Feature docs from a product perspective (what it does, how users interact)
+- **`docs/tech/`** - Technical docs for developers (architecture, algorithms, how to extend)
+- **`docs/adrs/`** - Architectural Decision Records
+- **`docs/specs/`** - Original project specs (idea, functional spec, blueprint)
+- **`docs/brand.md`** - Brand guide (colors, typography, component patterns)
+- **`docs/next-up.md`** - Roadmap and future enhancements
+- **`docs/plans/`** - Implementation plans (`completed/` subfolder for archived plans)
+
+After completing feature work, use the `update-docs` skill to update relevant documentation.
+
 ## Key Concepts
 
 ### Data Models
@@ -48,13 +62,7 @@ The application follows a typical full-stack architecture with:
 
 ### Task Scheduling System
 
-Tasks support various recurrence patterns:
-- **Once**: Single occurrence tasks
-- **Fixed Interval**: Every X days/weeks/months/years
-- **Specific Days of Week**: e.g., Every Monday and Friday
-- **Specific Day of Month**: e.g., 15th of each month
-- **Specific Weekday of Month**: e.g., First Monday of each month
-- **Variable Interval**: X days after last completion
+Tasks support 6 recurrence patterns (once, fixed interval, specific days of week, specific day of month, specific weekday of month, variable interval). See [docs/tech/task-scheduling.md](docs/tech/task-scheduling.md) for details.
 
 ### Authentication Flow
 
@@ -85,11 +93,22 @@ adulting.diy/
 │   └── onClickOutside.ts
 ├── docs/                 # Project documentation
 │   ├── adrs/             # Architectural Decision Records
-│   ├── api-endpoints.md
-│   ├── development-login-bypass-guide.md
-│   ├── next-up.md
+│   ├── brand.md          # Brand guide (colors, typography, components)
+│   ├── functionality/    # Feature docs (product perspective)
+│   │   ├── changelog.md
+│   │   ├── household-management.md
+│   │   ├── notifications-and-reminders.md
+│   │   └── task-management.md
+│   ├── next-up.md        # Roadmap and future enhancements
 │   ├── plans/            # Implementation plans
-│   └── specs/            # Project specs (idea, functional spec, blueprint)
+│   │   └── completed/    # Archived completed plans
+│   ├── specs/            # Project specs (idea, functional spec, blueprint)
+│   └── tech/             # Technical docs (developer perspective)
+│       ├── api-endpoints.md
+│       ├── dev-login-bypass.md
+│       ├── notification-system.md
+│       ├── task-scheduling.md
+│       └── testing.md
 ├── layouts/              # Nuxt layouts
 │   ├── default.vue
 │   └── landing.vue
@@ -181,28 +200,10 @@ const tasks = await taskService.findForHousehold(householdId, filters);
 
 ## Key Features
 
-### Task Management
-- Create, edit, pause, and soft-delete tasks
-- Assign default assignees
-- Add instructions and descriptions
-- Categorize tasks for organization
-
-### Occurrence Handling
-- Automatic generation based on schedules
-- Execute (complete) or skip with comments
-- Reassign to different household members
-- Change due dates
-- Comment thread for communication
-
-### Notification System
-- Email reminders before due dates
-- Event-based notifications (configurable)
-- User preference management
-
-### Household Management
-- Create or join households with invite codes
-- Admin role for user management
-- Custom category creation
+See `docs/functionality/` for detailed feature documentation:
+- [Task Management](docs/functionality/task-management.md) - Tasks, scheduling, occurrences, lifecycle
+- [Notifications and Reminders](docs/functionality/notifications-and-reminders.md) - Events, channels, flexible reminders
+- [Household Management](docs/functionality/household-management.md) - Households, roles, categories
 
 ## Database Schema Highlights
 
@@ -227,47 +228,17 @@ The project includes a development-only login bypass system for faster testing:
 - **Enable**: Set `DEV_LOGIN_BYPASS=true` in `.env`
 - **Usage**: Click the red "🧪 Dev" button in the top-right corner to switch users
 - **Security**: Only works when `NODE_ENV=development` and `DEV_LOGIN_BYPASS=true`
-- **Implementation**: See `/docs/development-login-bypass-guide.md` for details
+- **Implementation**: See [docs/tech/dev-login-bypass.md](docs/tech/dev-login-bypass.md) for details
 
-## Testing Framework
+## Testing
 
-The project includes a comprehensive testing framework using **Vitest** with **@nuxt/test-utils**:
+See [docs/tech/testing.md](docs/tech/testing.md) for full details. Quick reference:
 
-### Test Structure
-```
-tests/
-├── unit/                    # Unit tests for business logic
-│   ├── utils/              # Date calculations, scheduling algorithms
-│   └── logic/              # Notification preferences, business rules
-├── integration/            # Integration tests for system components
-├── e2e/                    # End-to-end tests (excluded from default test run)
-│   └── task-lifecycle.test.ts
-├── fixtures/               # Shared test data and mocks
-│   └── test-data.ts
-└── setup.ts               # Global test configuration
-```
-
-### Coverage Areas
-- **Schedule Logic**: All 6 recurrence patterns, date calculations, edge cases
-- **Notification Logic**: User preferences, email templates, reminder timing
-- **Integration**: Scheduler endpoints, business rule validation
-- **E2E**: Task lifecycle (excluded from default vitest run)
-- **Edge Cases**: Timezone handling, month boundaries, leap years
-
-### Running Tests
 ```bash
 npm run test              # Run all tests (excludes e2e)
 npm run test:watch        # Watch mode
 npm run test:coverage     # Coverage report
 ```
-
-### Test Philosophy
-1. **Unit Tests**: Core business logic (services, utilities, algorithms)
-2. **Integration Tests**: API endpoints and service interactions
-3. **E2E Tests**: Task lifecycle workflows (exist but excluded from default run via vitest.config.ts)
-4. **Type Tests**: TypeScript type validation
-
-The test suite includes 41+ tests ensuring reliability of critical functionality including task scheduling, notification systems, and occurrence management.
 
 ## Common Tasks
 
@@ -308,59 +279,9 @@ The test suite includes 41+ tests ensuring reliability of critical functionality
 - Client-side state caching with Pinia
 - Optimistic UI updates where appropriate
 
-## API Endpoints Overview
+## API Endpoints
 
-### Categories
-- `GET /api/categories` - List categories
-- `POST /api/categories/create` - Create category
-
-### Household
-- `POST /api/household/create` - Create household
-- `GET /api/household` - Get household details
-- `PUT /api/household` - Update household
-- `POST /api/household/join` - Join via invite code
-- `POST /api/household/leave` - Leave household
-- `GET /api/household/users` - List household members
-- `DELETE /api/household/users/[userId]` - Remove member
-- `PUT /api/household/users/[userId]/admin` - Toggle admin
-- `POST /api/household/invite-code/regenerate` - Regenerate invite code
-
-### Tasks
-- `GET /api/tasks` - List tasks
-- `POST /api/tasks` - Create task
-- `GET /api/tasks/[id]` - Get task
-- `PUT /api/tasks/[id]` - Update task
-- `DELETE /api/tasks/[id]` - Soft-delete task
-- `POST /api/tasks/[id]/pause` - Pause task
-- `POST /api/tasks/[id]/unpause` - Unpause task
-- `GET /api/tasks/[id]/occurrences` - List task occurrences
-
-### Occurrences
-- `GET /api/occurrences` - List occurrences
-- `GET /api/occurrences/[id]` - Get occurrence
-- `PUT /api/occurrences/[id]` - Update occurrence
-- `POST /api/occurrences/[id]/execute` - Complete occurrence
-- `POST /api/occurrences/[id]/skip` - Skip occurrence
-- `POST /api/occurrences/[id]/comments` - Add comment
-- `GET /api/occurrences/[id]/history` - Get history log
-
-### User
-- `POST /api/user/register` - Register user
-- `GET /api/user/profile` - Get profile
-- `GET /api/user/notifications` - Get notification preferences
-- `PUT /api/user/notifications` - Update notification preferences
-
-### Scheduler
-- `POST /api/scheduler/run` - Generate occurrences
-- `POST /api/scheduler/reminders` - Send reminders
-
-### Dev (development only)
-- `POST /api/dev/login` - Dev login bypass
-- `POST /api/dev/logout` - Dev logout
-- `GET /api/dev/users` - List dev users
-
-### Other
-- `POST /api/sendEmail` - Send email
+See [docs/tech/api-endpoints.md](docs/tech/api-endpoints.md) for the full API reference.
 
 ## Architectural Decision Records (ADRs)
 
@@ -368,47 +289,15 @@ Architectural decisions are documented in `docs/adrs/`. Consult these before pro
 
 - **ADR-0001**: Defer Prisma 7 upgrade (decided 2026-02-18, revisit Q3 2026)
 
-## Future Enhancements
-
-The project documentation mentions several post-MVP features:
-- File attachments for tasks
-- Rich text support in descriptions
-- Granular permissions within households
-- Enhanced dashboard with widgets
-- Calendar view
-- Task dependencies
-- Mobile app with push notifications
-
 ## Important Notes
 
 - The project uses Google OAuth exclusively (no password-based auth currently)
 - CockroachDB is used but treated as PostgreSQL for most purposes
-- Email notifications are the only notification method currently
+- Notifications support email (Mailjet) and Slack (incoming webhooks)
 - All times are stored in UTC in the database
 
-# Business logic details
-  Task-Occurrence Relationship
+## Business Logic Details
 
-  TaskDefinition is the template/blueprint that defines:
-  - What the task is (name, description, instructions)
-  - How often it recurs (scheduleConfig)
-  - Who normally does it (defaultAssigneeIds)
-  - When to send reminders (reminderConfig)
+For the task-occurrence relationship and scheduling internals, see [docs/tech/task-scheduling.md](docs/tech/task-scheduling.md).
 
-  TaskOccurrence is a specific instance of that task that needs to be done:
-  - Links back to the TaskDefinition (taskId)
-  - Has a specific due date
-  - Can be assigned to specific people (assigneeIds)
-  - Has a status (Created, Assigned, Completed, Skipped, Deleted)
-  - Tracks completion/skip timestamps
-
-  Key Correlation Points:
-
-  1. One-to-Many: One TaskDefinition generates many TaskOccurrences over time based on its schedule
-  2. Generation: The scheduler creates future occurrences automatically (3 months ahead) based on the task's recurrence rules
-  3. Inheritance: New occurrences inherit default assignees from the parent task
-  4. Variable Recurrence: For "X days after completion" tasks, the next occurrence is generated using the completion/skip date
-  5. End Conditions: Task can stop generating occurrences after N completions or a specific date
-  6. Lifecycle Management: When a task is paused/deleted, future occurrences are marked as 'Deleted'
-
-  The system separates the "what/how" (TaskDefinition) from the "when/who" (TaskOccurrence), allowing flexible scheduling while maintaining the core task template.
+Key concept: **TaskDefinition** (template: what/how/who) generates many **TaskOccurrence** instances (specific: when/status/assignees). The scheduler creates occurrences 3 months ahead based on recurrence rules. See the tech doc for full details on generation, variable recurrence, end conditions, and lifecycle management.
