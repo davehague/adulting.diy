@@ -389,8 +389,30 @@
       </div>
     </div>
 
+    <!-- Confirmation Modal -->
+    <Teleport to="body">
+      <div v-if="confirmModal.show" class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="fixed inset-0 bg-black/50" @click="confirmModal.show = false"></div>
+        <div class="relative bg-white rounded-xl shadow-xl border border-stone-200 max-w-md w-full mx-4 p-6">
+          <h3 class="text-lg font-semibold text-stone-900 font-heading mb-2">{{ confirmModal.title }}</h3>
+          <p class="text-sm text-stone-600 mb-6">{{ confirmModal.message }}</p>
+          <div class="flex justify-end gap-3">
+            <button @click="confirmModal.show = false"
+                    class="px-4 py-2 text-sm font-medium text-stone-700 bg-stone-100 rounded-lg hover:bg-stone-200 transition-colors">
+              Cancel
+            </button>
+            <button @click="confirmModal.onConfirm"
+                    class="px-4 py-2 text-sm font-medium text-white rounded-lg transition-colors"
+                    :class="confirmModal.destructive ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'">
+              {{ confirmModal.confirmLabel }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <!-- Success/Error Messages -->
-    <div v-if="successMessage" 
+    <div v-if="successMessage"
          class="fixed bottom-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-md shadow-lg">
       {{ successMessage }}
     </div>
@@ -429,6 +451,14 @@ const editingTimezone = ref(false);
 const editedTimezone = ref('');
 const copiedInviteCode = ref(false);
 const copiedHouseholdInfo = ref(false);
+const confirmModal = ref({
+  show: false,
+  title: '',
+  message: '',
+  confirmLabel: 'Confirm',
+  destructive: false,
+  onConfirm: () => {},
+});
 
 const commonTimezones = [
   'UTC',
@@ -506,6 +536,20 @@ const showSuccess = (message: string) => {
   }, 5000);
 };
 
+const showConfirm = (opts: { title: string; message: string; confirmLabel: string; destructive?: boolean; onConfirm: () => void }) => {
+  confirmModal.value = {
+    show: true,
+    title: opts.title,
+    message: opts.message,
+    confirmLabel: opts.confirmLabel,
+    destructive: opts.destructive ?? false,
+    onConfirm: () => {
+      confirmModal.value.show = false;
+      opts.onConfirm();
+    },
+  };
+};
+
 const isOnlyAdmin = (userId: string): boolean => {
   const adminCount = members.value.filter(m => m.isAdmin).length;
   const userIsAdmin = members.value.find(m => m.id === userId)?.isAdmin || false;
@@ -577,19 +621,22 @@ const copyInviteCode = async () => {
   }
 };
 
-const regenerateInviteCode = async () => {
-  if (!confirm('Are you sure you want to generate a new invite code? The current code will stop working.')) {
-    return;
-  }
-  
-  try {
-    const response = await api.post('/api/household/invite-code/regenerate', {});
-    householdInfo.value.inviteCode = response.inviteCode;
-    showSuccess('New invite code generated successfully');
-  } catch (err: any) {
-    console.error('Error regenerating invite code:', err);
-    error.value = err.data?.message || 'Failed to regenerate invite code';
-  }
+const regenerateInviteCode = () => {
+  showConfirm({
+    title: 'Generate New Invite Code',
+    message: 'The current invite code will stop working immediately. Anyone who has the old code will no longer be able to join.',
+    confirmLabel: 'Generate New Code',
+    onConfirm: async () => {
+      try {
+        const response = await api.post('/api/household/invite-code/regenerate', {});
+        householdInfo.value.inviteCode = response.inviteCode;
+        showSuccess('New invite code generated successfully');
+      } catch (err: any) {
+        console.error('Error regenerating invite code:', err);
+        error.value = err.data?.message || 'Failed to regenerate invite code';
+      }
+    },
+  });
 };
 
 const copyHouseholdInfo = async () => {
@@ -670,24 +717,26 @@ const removeMember = async (userId: string, userName: string) => {
   }
 };
 
-const leaveHousehold = async () => {
+const leaveHousehold = () => {
   const message = householdInfo.value.isCurrentUserAdmin && householdInfo.value.memberCount > 1
-    ? 'Are you sure you want to leave? As the admin, you may need to transfer admin privileges to another member first.'
-    : 'Are you sure you want to leave this household? You will lose access to all tasks and data.';
-    
-  if (!confirm(message)) {
-    return;
-  }
-  
-  try {
-    const response = await api.post('/api/household/leave', {});
-    
-    // Redirect to setup page
-    await navigateTo('/setup-household');
-  } catch (err: any) {
-    console.error('Error leaving household:', err);
-    error.value = err.data?.message || 'Failed to leave household';
-  }
+    ? 'As an admin, you may need to transfer admin privileges to another member first. You will lose access to all household tasks and data.'
+    : 'You will lose access to all household tasks and data. You can rejoin later using the household invite code.';
+
+  showConfirm({
+    title: 'Leave Household',
+    message,
+    confirmLabel: 'Leave Household',
+    destructive: true,
+    onConfirm: async () => {
+      try {
+        await api.post('/api/household/leave', {});
+        await navigateTo('/setup-household');
+      } catch (err: any) {
+        console.error('Error leaving household:', err);
+        error.value = err.data?.message || 'Failed to leave household';
+      }
+    },
+  });
 };
 
 // Page metadata
