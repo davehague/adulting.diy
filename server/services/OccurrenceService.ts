@@ -745,6 +745,62 @@ export class OccurrenceService {
   }
 
   /**
+   * Update a comment on an occurrence (only the comment author can edit)
+   */
+  async updateComment(
+    commentId: string,
+    userId: string,
+    newComment: string
+  ): Promise<OccurrenceHistoryLog> {
+    try {
+      // Find the existing comment log
+      const existing = await prisma.occurrenceHistoryLog.findUnique({
+        where: { id: commentId },
+      });
+
+      if (!existing) {
+        const err = new Error("Comment not found") as any;
+        err.statusCode = 404;
+        throw err;
+      }
+
+      if (existing.logType !== "comment") {
+        const err = new Error("Only comments can be edited") as any;
+        err.statusCode = 400;
+        throw err;
+      }
+
+      if (existing.userId !== userId) {
+        const err = new Error("You can only edit your own comments") as any;
+        err.statusCode = 403;
+        throw err;
+      }
+
+      const updated = await prisma.occurrenceHistoryLog.update({
+        where: { id: commentId },
+        data: {
+          comment: newComment,
+          updatedAt: new Date(),
+        },
+        include: {
+          user: true,
+        },
+      });
+
+      return updated as unknown as OccurrenceHistoryLog;
+    } catch (error) {
+      if ((error as any).statusCode) {
+        throw error;
+      }
+      console.error(
+        `[OccurrenceService] Unexpected error in updateComment:`,
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Get history logs for an occurrence
    */
   async getHistory(occurrenceId: string): Promise<OccurrenceHistoryLog[]> {
