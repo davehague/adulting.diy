@@ -1,6 +1,7 @@
 import { defineHouseholdProtectedEventHandler } from '@/server/utils/auth';
 import { OccurrenceService } from '@/server/services/OccurrenceService';
 import { createError, getQuery } from 'h3';
+import { parseDateOnly } from '@/server/utils/dates';
 
 export default defineHouseholdProtectedEventHandler(async (event, authUser, householdId) => {
   try {
@@ -12,11 +13,11 @@ export default defineHouseholdProtectedEventHandler(async (event, authUser, hous
     let dueDateTo: Date | undefined;
     
     if (query.dueDateFrom) {
-      dueDateFrom = new Date(query.dueDateFrom as string);
+      dueDateFrom = parseDateOnly(query.dueDateFrom as string);
     }
     
     if (query.dueDateTo) {
-      dueDateTo = new Date(query.dueDateTo as string);
+      dueDateTo = parseDateOnly(query.dueDateTo as string);
     }
     
     // Build filters object

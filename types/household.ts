@@ -3,6 +3,7 @@ export interface Household {
   id: string;
   name: string;
   inviteCode: string;
+  timezone: string;
   createdAt: Date;
   updatedAt: Date;
 }

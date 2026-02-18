@@ -1,7 +1,8 @@
 import type { User, TaskDefinition, TaskOccurrence, NotificationPreferences } from "@/types";
 import { defaultNotificationPreferences } from "@/types/notification";
 import prisma from "@/server/utils/prisma/client";
-import { addDays } from "date-fns";
+import { format, addDays } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { EmailProvider } from "./notifications/EmailProvider";
 import { SlackProvider } from "./notifications/SlackProvider";
 import type { NotificationProvider, NotificationRecipient } from "./notifications/NotificationProvider";
@@ -236,6 +237,8 @@ export class NotificationService {
     });
 
     for (const occurrence of upcomingOccurrences) {
+      const householdTimezone = (task as any).household?.timezone || 'UTC';
+
       const context: NotificationContext = {
         user: {} as User, // Will be populated for each recipient
         task,
@@ -246,7 +249,7 @@ export class NotificationService {
       // Check for initial reminder
       if (task.reminderConfig.initialReminder) {
         const reminderDate = addDays(new Date(occurrence.dueDate), -task.reminderConfig.initialReminder);
-        if (this.isDateToday(reminderDate) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_initial"))) {
+        if (this.isDateToday(reminderDate, householdTimezone) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_initial", householdTimezone))) {
           await this.sendNotification(task.householdId, "task_reminder_initial", context);
           await this.logReminderSent(occurrence.id, "task_reminder_initial", task.createdByUserId);
           remindersSent++;
@@ -256,7 +259,7 @@ export class NotificationService {
       // Check for follow-up reminder
       if (task.reminderConfig.followUpReminder) {
         const reminderDate = addDays(new Date(occurrence.dueDate), -task.reminderConfig.followUpReminder);
-        if (this.isDateToday(reminderDate) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_followup"))) {
+        if (this.isDateToday(reminderDate, householdTimezone) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_followup", householdTimezone))) {
           await this.sendNotification(task.householdId, "task_reminder_followup", context);
           await this.logReminderSent(occurrence.id, "task_reminder_followup", task.createdByUserId);
           remindersSent++;
@@ -266,7 +269,7 @@ export class NotificationService {
       // Check for overdue reminder
       if (task.reminderConfig.overdueReminder) {
         const overdueDate = addDays(new Date(occurrence.dueDate), task.reminderConfig.overdueReminder);
-        if (this.isDateToday(overdueDate) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_overdue"))) {
+        if (this.isDateToday(overdueDate, householdTimezone) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_overdue", householdTimezone))) {
           await this.sendNotification(task.householdId, "task_reminder_overdue", context);
           await this.logReminderSent(occurrence.id, "task_reminder_overdue", task.createdByUserId);
           remindersSent++;
@@ -280,10 +283,11 @@ export class NotificationService {
   /**
    * Check if a reminder of a given type was already sent today for an occurrence
    */
-  private async wasReminderSentToday(occurrenceId: string, reminderType: NotificationEventType): Promise<boolean> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
+  private async wasReminderSentToday(occurrenceId: string, reminderType: NotificationEventType, timezone: string = 'UTC'): Promise<boolean> {
+    const nowInTz = toZonedTime(new Date(), timezone);
+    const todayStart = new Date(nowInTz);
+    todayStart.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(todayStart);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
     const existingLog = await prisma.occurrenceHistoryLog.findFirst({
@@ -292,7 +296,7 @@ export class NotificationService {
         logType: "reminder_sent",
         newValue: reminderType,
         createdAt: {
-          gte: today,
+          gte: todayStart,
           lt: tomorrow,
         },
       },
@@ -319,9 +323,10 @@ export class NotificationService {
   /**
    * Helper to check if a date is today
    */
-  public isDateToday(date: Date): boolean {
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
+  public isDateToday(date: Date, timezone: string = 'UTC'): boolean {
+    const nowInTz = toZonedTime(new Date(), timezone);
+    const dateInTz = toZonedTime(date, timezone);
+    return format(nowInTz, 'yyyy-MM-dd') === format(dateInTz, 'yyyy-MM-dd');
   }
 
   /**

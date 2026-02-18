@@ -1,6 +1,7 @@
 import { defineHouseholdProtectedEventHandler } from "@/server/utils/auth";
 import { TaskService } from "@/server/services/TaskService";
 import { createError, readBody } from "h3";
+import { parseDateOnly } from "@/server/utils/dates";
 
 export default defineHouseholdProtectedEventHandler(
   async (event, authUser, householdId) => {
@@ -37,7 +38,7 @@ export default defineHouseholdProtectedEventHandler(
       const body = await readBody(event).catch(() => ({}));
       const comment = body?.comment as string | undefined;
       const overrideNextDueDate = body?.overrideNextDueDate
-        ? new Date(body.overrideNextDueDate as string)
+        ? parseDateOnly(body.overrideNextDueDate as string)
         : undefined;
 
       // Validate override date is in the future if provided

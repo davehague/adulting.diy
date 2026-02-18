@@ -26,6 +26,7 @@ export default defineHouseholdProtectedEventHandler(async (event, authUser, hous
       id: household.id,
       name: household.name,
       inviteCode: household.inviteCode,
+      timezone: household.timezone,
       memberCount,
       isCurrentUserAdmin: isAdmin,
       createdAt: household.createdAt,

@@ -2,6 +2,7 @@ import { defineHouseholdProtectedEventHandler } from "@/server/utils/auth";
 import { OccurrenceService } from "@/server/services/OccurrenceService";
 import { createError, readBody } from "h3";
 import type { TaskOccurrence } from "@/types"; // Import type
+import { parseDateOnly } from "@/server/utils/dates";
 
 export default defineHouseholdProtectedEventHandler(
   async (event, authUser, householdId) => {
@@ -26,7 +27,7 @@ export default defineHouseholdProtectedEventHandler(
       if (body.dueDate) {
         // Validate date format if needed, or rely on Prisma/service validation
         try {
-          updateData.dueDate = new Date(body.dueDate); // Use camelCase
+          updateData.dueDate = parseDateOnly(body.dueDate); // Use camelCase
         } catch (e) {
           throw createError({
             statusCode: 400,
