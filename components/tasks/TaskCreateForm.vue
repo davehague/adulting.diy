@@ -353,7 +353,10 @@ const formData = reactive<TaskFormData>({
             date: undefined // Default string date
         }
     },
-    reminders: [{ days: 0, timing: 'on' as ReminderTiming }] as ReminderEntry[],
+    reminders: [
+        { days: 0, timing: 'on' as ReminderTiming },
+        { days: 3, timing: 'after' as ReminderTiming },
+    ] as ReminderEntry[],
     defaultAssigneeIds: []
 });
 
