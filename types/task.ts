@@ -158,3 +158,22 @@ export interface OccurrenceHistoryLog {
   createdAt: Date; // Use camelCase
   user?: User; // Add optional user based on service include
 }
+
+export type TaskHistoryLogType =
+  | "catch_up"
+  | "created"
+  | "edited"
+  | "paused"
+  | "unpaused"
+  | "soft_deleted";
+
+export interface TaskHistoryLog {
+  id: string;
+  taskId: string;
+  userId: string;
+  logType: TaskHistoryLogType;
+  details?: Record<string, any>;
+  comment?: string;
+  createdAt: Date;
+  user?: User;
+}

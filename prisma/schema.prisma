@@ -25,6 +25,7 @@ model User {
   updatedAt              DateTime                @updatedAt
   createdTasks           TaskDefinition[]
   historyLogs            OccurrenceHistoryLog[]
+  taskHistoryLogs        TaskHistoryLog[]
 
   @@map("users")
 }
@@ -75,6 +76,7 @@ model TaskDefinition {
   createdByUserId   String
   defaultAssigneeIds String[]         @default([])
   occurrences       TaskOccurrence[]
+  historyLogs       TaskHistoryLog[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
@@ -112,4 +114,19 @@ model OccurrenceHistoryLog {
   createdAt     DateTime        @default(now())
 
   @@map("occurrence_history_logs")
+}
+
+// Task History Log model
+model TaskHistoryLog {
+  id        String         @id @default(uuid())
+  task      TaskDefinition @relation(fields: [taskId], references: [id])
+  taskId    String
+  user      User           @relation(fields: [userId], references: [id])
+  userId    String
+  logType   String         // catch_up, created, edited, paused, unpaused, soft_deleted
+  details   Json?
+  comment   String?
+  createdAt DateTime       @default(now())
+
+  @@map("task_history_logs")
 }
