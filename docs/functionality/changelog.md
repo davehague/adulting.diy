@@ -2,6 +2,13 @@
 
 ## 2026-02-18
 
+### Task-Occurrence Lifecycle Improvements
+- Unpausing a task now immediately generates the next occurrence (previously required waiting for the daily scheduler)
+- Editing a task's schedule now reconciles occurrences: future pending occurrences are deleted and regenerated based on the new schedule
+- Completed and skipped occurrences are preserved during schedule changes
+- Added invariant test ensuring catch-up never leaves a recurring task without an active occurrence
+- Fixed 3 orphaned active tasks in production that had no active occurrences
+
 ### Flexible Reminders
 - Tasks can now have up to 5 reminder rules with independent timing
 - Reminders support before, on, and after due date timing

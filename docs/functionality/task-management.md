@@ -77,8 +77,18 @@ active ──→ paused ──→ active (unpause)
 | **Paused** | No | Marked as deleted |
 | **Soft-deleted** | No | Marked as deleted |
 
-- **Pausing**: All future pending occurrences are deleted. Unpausing re-activates the task and the next scheduler run creates new occurrences.
+- **Pausing**: All future pending occurrences are deleted. Current/overdue occurrences can still be completed or skipped.
+- **Unpausing**: Re-activates the task and immediately generates the next occurrence based on the task's schedule. For variable interval tasks, the next date is calculated from the last completed/skipped occurrence.
 - **Deleting**: Same as pausing, but the task is hidden from queries and cannot be restored.
+
+## Editing a Task's Schedule
+
+When a task's schedule configuration is changed:
+
+1. All future pending occurrences (`created`/`assigned`) are deleted
+2. A new occurrence is generated based on the updated schedule
+3. Completed and skipped occurrences are preserved (they are historical records)
+4. Non-schedule changes (name, description, category, instructions) do not affect existing occurrences
 
 ## Catch-Up Feature
 

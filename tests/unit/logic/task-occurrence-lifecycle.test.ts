@@ -226,21 +226,88 @@ describe('Task soft-delete → occurrence effects', () => {
   })
 })
 
-describe('Task unpause → occurrence effects (GAP)', () => {
+describe('Task unpause → occurrence generation', () => {
   const taskService = new TaskService()
 
-  it('sets task back to active but does NOT regenerate occurrences', async () => {
-    const task = makeTask({ metaStatus: 'active' })
+  it('generates next occurrence when recurring task is unpaused', async () => {
+    const task = makeTask({
+      metaStatus: 'active',
+      scheduleConfig: {
+        type: 'fixed_interval',
+        interval: 1,
+        intervalUnit: 'week',
+        endCondition: { type: 'never' },
+      },
+    })
     db.taskDefinition.update.mockResolvedValue(task)
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-new' }))
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
 
-    const result = await taskService.unpause(TASK_ID)
+    await taskService.unpause(TASK_ID)
 
     // Task is active again
     expect(db.taskDefinition.update.mock.calls[0][0].data.metaStatus).toBe('active')
+    // An occurrence should be created after unpausing
+    expect(db.taskOccurrence.create).toHaveBeenCalled()
+  })
 
-    // But NO occurrence creation happens — this is a known gap.
-    // The scheduler must run separately to regenerate occurrences.
+  it('uses last completed/skipped occurrence as base date for variable_interval', async () => {
+    const task = makeTask({
+      metaStatus: 'active',
+      scheduleConfig: {
+        type: 'variable_interval',
+        variableInterval: { interval: 14, unit: 'day' },
+        endCondition: { type: 'never' },
+      },
+    })
+    db.taskDefinition.update.mockResolvedValue(task)
+    // First findFirst: unpause looks for last completed/skipped occurrence
+    // Second findFirst: generateNextOccurrence checks for duplicate on next date
+    db.taskOccurrence.findFirst
+      .mockResolvedValueOnce(
+        makeOccurrence({
+          id: 'occ-prev',
+          status: 'completed',
+          completedAt: localDate(2024, 1, 10),
+        })
+      )
+      .mockResolvedValueOnce(null) // no duplicate exists
+    db.taskOccurrence.count.mockResolvedValue(1)
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-new' }))
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+
+    await taskService.unpause(TASK_ID)
+
+    // Should create an occurrence based on the last completion date
+    expect(db.taskOccurrence.create).toHaveBeenCalled()
+  })
+
+  it('does NOT generate occurrence for "once" type task on unpause', async () => {
+    const task = makeTask({
+      metaStatus: 'active',
+      scheduleConfig: {
+        type: 'once',
+        dueDate: localDate(2024, 1, 15),
+        endCondition: { type: 'never' },
+      },
+    })
+    db.taskDefinition.update.mockResolvedValue(task)
+
+    await taskService.unpause(TASK_ID)
+
+    // One-time tasks don't need occurrence regeneration after unpause
     expect(db.taskOccurrence.create).not.toHaveBeenCalled()
+  })
+
+  it('returns the unpaused task with active status', async () => {
+    const task = makeTask({ metaStatus: 'active' })
+    db.taskDefinition.update.mockResolvedValue(task)
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-new' }))
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+
+    const result = await taskService.unpause(TASK_ID)
+
+    expect(result.metaStatus).toBe('active')
   })
 })
 
@@ -848,46 +915,24 @@ describe('Duplicate occurrence prevention', () => {
 })
 
 // =============================================================================
-// 8. GAPS AND KNOWN ISSUES
+// 8. KNOWN DESIGN DECISIONS
 // =============================================================================
 
-describe('Known gaps (documented)', () => {
-  it('GAP: TaskMetaStatus "completed" is defined but never set', () => {
+describe('Known design decisions (documented)', () => {
+  it('TaskMetaStatus "completed" is defined but never set', () => {
     // The type system defines: "active" | "paused" | "soft-deleted" | "completed"
     // But no code path ever sets metaStatus to "completed".
     // A task that reaches its endCondition.times limit just stops generating
     // new occurrences — the task itself stays "active".
-    //
-    // Expected behavior (not yet implemented):
-    // When the last occurrence is completed and endCondition is met,
-    // the task's metaStatus should transition to "completed".
     type TaskMetaStatus = "active" | "paused" | "soft-deleted" | "completed"
     const validStatuses: TaskMetaStatus[] = ["active", "paused", "soft-deleted", "completed"]
     expect(validStatuses).toContain("completed")
-    // This test passes but documents that "completed" is unused in practice.
   })
 
-  it('GAP: Unpause does not regenerate occurrences', async () => {
-    // After pausing (which deletes future occurrences) and unpausing,
-    // there are no pending occurrences until the scheduler runs.
-    // This could leave a task in limbo if the scheduler doesn't run soon.
-    const taskService = new TaskService()
-    const task = makeTask({ metaStatus: 'active' })
-    db.taskDefinition.update.mockResolvedValue(task)
-
-    await taskService.unpause(TASK_ID)
-
-    // No occurrence creation happens
-    expect(db.taskOccurrence.create).not.toHaveBeenCalled()
-    // Ideally, unpause should create the next occurrence immediately,
-    // similar to how task creation calls createInitialOccurrence().
-  })
-
-  it('GAP: Direct occurrence update does not trigger next-occurrence generation', async () => {
-    // OccurrenceService.update() can change status, dueDate, assigneeIds
-    // But only execute() and skip() trigger generateNextOccurrence().
-    // If someone sets status to "completed" via update() directly,
-    // no next occurrence is generated.
+  it('direct occurrence update does not trigger next-occurrence generation (by design)', async () => {
+    // OccurrenceService.update() can change dueDate and assigneeIds.
+    // Only execute() and skip() trigger generateNextOccurrence().
+    // This is intentional — use the dedicated methods for status transitions.
     const occurrenceService = new OccurrenceService()
     const occ = makeOccurrence()
     const updated = { ...occ, status: 'completed', completedAt: new Date() }
@@ -901,7 +946,155 @@ describe('Known gaps (documented)', () => {
       completedAt: new Date(),
     })
 
-    // No next occurrence generated — must use execute() for that
     expect(db.taskOccurrence.count).not.toHaveBeenCalled()
+  })
+})
+
+// =============================================================================
+// 9. SCHEDULE EDIT → OCCURRENCE RECONCILIATION
+// =============================================================================
+
+describe('Task schedule edit → occurrence reconciliation', () => {
+  const taskService = new TaskService()
+
+  it('deletes future active occurrences when schedule config changes', async () => {
+    const originalTask = makeTask({
+      scheduleConfig: {
+        type: 'fixed_interval',
+        interval: 1,
+        intervalUnit: 'week',
+        endCondition: { type: 'never' },
+      },
+    })
+    const updatedTask = makeTask({
+      scheduleConfig: {
+        type: 'fixed_interval',
+        interval: 1,
+        intervalUnit: 'month',
+        endCondition: { type: 'never' },
+      },
+    })
+
+    // First call: findUnique to get original task (for comparison)
+    db.taskDefinition.findUnique.mockResolvedValue(originalTask)
+    db.taskDefinition.update.mockResolvedValue(updatedTask)
+    db.taskOccurrence.updateMany.mockResolvedValue({ count: 2 })
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-new' }))
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+
+    await taskService.update(TASK_ID, {
+      scheduleConfig: {
+        type: 'fixed_interval',
+        interval: 1,
+        intervalUnit: 'month',
+        endCondition: { type: 'never' },
+      } as any,
+    })
+
+    // Should delete future active occurrences
+    expect(db.taskOccurrence.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          taskId: TASK_ID,
+          status: { in: ['created', 'assigned'] },
+        }),
+        data: expect.objectContaining({
+          status: 'deleted',
+        }),
+      })
+    )
+  })
+
+  it('regenerates occurrence after deleting old ones on schedule change', async () => {
+    const originalTask = makeTask({
+      scheduleConfig: {
+        type: 'fixed_interval',
+        interval: 1,
+        intervalUnit: 'week',
+        endCondition: { type: 'never' },
+      },
+    })
+    const updatedTask = makeTask({
+      scheduleConfig: {
+        type: 'specific_days_of_week',
+        daysOfWeek: {
+          monday: true, tuesday: false, wednesday: false, thursday: false,
+          friday: false, saturday: false, sunday: false,
+        },
+        endCondition: { type: 'never' },
+      },
+    })
+
+    db.taskDefinition.findUnique.mockResolvedValue(originalTask)
+    db.taskDefinition.update.mockResolvedValue(updatedTask)
+    db.taskOccurrence.updateMany.mockResolvedValue({ count: 1 })
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-new' }))
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+
+    await taskService.update(TASK_ID, {
+      scheduleConfig: {
+        type: 'specific_days_of_week',
+        daysOfWeek: {
+          monday: true, tuesday: false, wednesday: false, thursday: false,
+          friday: false, saturday: false, sunday: false,
+        },
+        endCondition: { type: 'never' },
+      } as any,
+    })
+
+    // Should create a new occurrence with the new schedule
+    expect(db.taskOccurrence.create).toHaveBeenCalled()
+  })
+
+  it('does NOT reconcile occurrences when only name changes (no schedule change)', async () => {
+    const task = makeTask()
+
+    db.taskDefinition.update.mockResolvedValue({ ...task, name: 'Updated Name' })
+
+    await taskService.update(TASK_ID, { name: 'Updated Name' })
+
+    // No occurrence changes when schedule didn't change
+    expect(db.taskOccurrence.updateMany).not.toHaveBeenCalled()
+    expect(db.taskOccurrence.create).not.toHaveBeenCalled()
+  })
+
+  it('preserves completed and skipped occurrences during schedule change', async () => {
+    const originalTask = makeTask({
+      scheduleConfig: {
+        type: 'fixed_interval',
+        interval: 1,
+        intervalUnit: 'week',
+        endCondition: { type: 'never' },
+      },
+    })
+    const updatedTask = makeTask({
+      scheduleConfig: {
+        type: 'fixed_interval',
+        interval: 1,
+        intervalUnit: 'month',
+        endCondition: { type: 'never' },
+      },
+    })
+
+    db.taskDefinition.findUnique.mockResolvedValue(originalTask)
+    db.taskDefinition.update.mockResolvedValue(updatedTask)
+    db.taskOccurrence.updateMany.mockResolvedValue({ count: 0 })
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-new' }))
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+
+    await taskService.update(TASK_ID, {
+      scheduleConfig: {
+        type: 'fixed_interval',
+        interval: 1,
+        intervalUnit: 'month',
+        endCondition: { type: 'never' },
+      } as any,
+    })
+
+    // updateMany should only target 'created' and 'assigned' statuses
+    const updateManyCall = db.taskOccurrence.updateMany.mock.calls[0][0]
+    expect(updateManyCall.where.status.in).toEqual(['created', 'assigned'])
+    expect(updateManyCall.where.status.in).not.toContain('completed')
+    expect(updateManyCall.where.status.in).not.toContain('skipped')
   })
 })

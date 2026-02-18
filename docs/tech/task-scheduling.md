@@ -111,6 +111,35 @@ OccurrenceService.execute() / skip()
   └→ Create next TaskOccurrence
 ```
 
+## Task Lifecycle and Occurrence Cascading
+
+When a task's lifecycle state changes, occurrences are affected:
+
+### Pause
+- Sets `metaStatus` to `"paused"`
+- All future `created`/`assigned` occurrences are set to `"deleted"` status
+- Current/overdue occurrences remain actionable (can be completed or skipped)
+- Completing/skipping an occurrence on a paused task does NOT generate the next occurrence
+
+### Unpause
+- Sets `metaStatus` back to `"active"`
+- Immediately generates the next occurrence:
+  - For `variable_interval`: finds last completed/skipped occurrence as base date, calls `generateNextOccurrence()`
+  - For all other recurring types: calls `createInitialOccurrence()` to calculate and create the next due date
+  - For `once` type: no occurrence generated (one-time tasks don't recur)
+
+### Soft Delete
+- Same occurrence cleanup as pause
+- Task is hidden from all queries
+
+### Schedule Config Edit
+- When `scheduleConfig` changes in `TaskService.update()`:
+  1. Original task fetched for comparison
+  2. Future active occurrences (`created`/`assigned`, `dueDate > now`) set to `"deleted"`
+  3. New occurrence generated based on updated schedule via `createInitialOccurrence()`
+  4. Completed/skipped occurrences are never touched
+- Non-schedule field changes (name, description, category) do not trigger reconciliation
+
 ## Catch-Up Feature
 
 When overdue occurrences accumulate, `TaskService.catchUp()` handles bulk resolution:

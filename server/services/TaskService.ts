@@ -273,6 +273,20 @@ export class TaskService {
     data: Partial<TaskDefinition>
   ): Promise<TaskDefinition> {
     try {
+      // Check if schedule config is changing — need original task for comparison
+      const scheduleChanging = data.scheduleConfig !== undefined;
+      let originalTask: TaskDefinition | null = null;
+
+      if (scheduleChanging) {
+        const original = await prisma.taskDefinition.findUnique({
+          where: { id },
+          include: { category: true },
+        });
+        if (original) {
+          originalTask = mapPrismaTaskToDefinition(original);
+        }
+      }
+
       // Manually construct the data payload for Prisma, mapping fields
       const prismaUpdateData: Prisma.TaskDefinitionUpdateInput = {
         updatedAt: new Date(),
@@ -296,10 +310,6 @@ export class TaskService {
         // Use camelCase
         prismaUpdateData.category = { connect: { id: data.categoryId } };
       }
-      // Note: Updating household_id might require similar logic if allowed
-      // if (data.household_id !== undefined) {
-      //   prismaUpdateData.household = { connect: { id: data.household_id } };
-      // }
 
       // Handle JSON fields
       if (data.scheduleConfig !== undefined) {
@@ -330,9 +340,46 @@ export class TaskService {
         },
       });
 
-      // Map the result (which includes the category) back to our TaskDefinition type
-      // Use the corrected mapping function
-      return mapPrismaTaskToDefinition(task);
+      const taskDefinition = mapPrismaTaskToDefinition(task);
+
+      // Reconcile occurrences when schedule config changes
+      if (
+        scheduleChanging &&
+        originalTask &&
+        JSON.stringify(originalTask.scheduleConfig) !==
+          JSON.stringify(data.scheduleConfig)
+      ) {
+        try {
+          // Delete future active occurrences (preserve completed/skipped)
+          await prisma.taskOccurrence.updateMany({
+            where: {
+              taskId: id,
+              status: { in: ["created", "assigned"] },
+              dueDate: { gt: new Date() },
+            },
+            data: {
+              status: "deleted",
+              updatedAt: new Date(),
+            },
+          });
+
+          // Regenerate occurrence based on new schedule
+          if (taskDefinition.metaStatus === "active") {
+            const occurrenceService = new OccurrenceService();
+            await occurrenceService.createInitialOccurrence(
+              taskDefinition,
+              taskDefinition.createdByUserId
+            );
+          }
+        } catch (reconcileError) {
+          console.error(
+            `[TaskService] Failed to reconcile occurrences after schedule change for task ${id}:`,
+            reconcileError
+          );
+        }
+      }
+
+      return taskDefinition;
     } catch (error) {
       console.error(`[TaskService] Unexpected error in update:`, error);
       throw error;
@@ -440,8 +487,50 @@ export class TaskService {
         },
       });
 
-      // Use the corrected mapping function
-      return mapPrismaTaskToDefinition(task);
+      const taskDefinition = mapPrismaTaskToDefinition(task);
+
+      // Generate next occurrence for recurring tasks after unpausing
+      if (taskDefinition.scheduleConfig.type !== "once") {
+        try {
+          const occurrenceService = new OccurrenceService();
+
+          // For variable_interval, find last completed/skipped as base date
+          if (taskDefinition.scheduleConfig.type === "variable_interval") {
+            const lastOccurrence = await prisma.taskOccurrence.findFirst({
+              where: {
+                taskId: id,
+                status: { in: ["completed", "skipped"] },
+              },
+              orderBy: { dueDate: "desc" },
+            });
+
+            const lastCompletedDate =
+              lastOccurrence?.completedAt ||
+              lastOccurrence?.skippedAt ||
+              null;
+
+            if (lastCompletedDate) {
+              await occurrenceService.generateNextOccurrence(
+                taskDefinition,
+                lastCompletedDate,
+                taskDefinition.createdByUserId
+              );
+            }
+          } else {
+            await occurrenceService.createInitialOccurrence(
+              taskDefinition,
+              taskDefinition.createdByUserId
+            );
+          }
+        } catch (occError) {
+          console.error(
+            `[TaskService] Failed to generate occurrence after unpause for task ${id}:`,
+            occError
+          );
+        }
+      }
+
+      return taskDefinition;
     } catch (error) {
       console.error(`[TaskService] Unexpected error in unpause:`, error);
       throw error;

@@ -295,4 +295,44 @@ describe('TaskService.catchUp', () => {
     // Variable interval: today (Feb 17) + 10 days = Feb 27
     expect(result.newDueDate).toEqual(new Date(2026, 1, 27, 0, 0, 0, 0))
   })
+
+  it('always creates an occurrence for recurring tasks (never leaves task orphaned)', async () => {
+    // This is the key invariant: after catch-up, a recurring task
+    // should always have an active occurrence (newDueDate is not null)
+    const recurringConfigs = [
+      {
+        type: 'fixed_interval' as const,
+        interval: 1,
+        intervalUnit: 'month' as const,
+        endCondition: never,
+      },
+      {
+        type: 'specific_days_of_week' as const,
+        daysOfWeek: {
+          monday: true, tuesday: false, wednesday: false, thursday: false,
+          friday: false, saturday: false, sunday: false,
+        },
+        endCondition: never,
+      },
+    ]
+
+    for (const config of recurringConfigs) {
+      vi.clearAllMocks()
+      vi.mocked(prisma.taskDefinition.findUnique).mockResolvedValue(mockTask(config) as any)
+      vi.mocked(prisma.taskOccurrence.findMany).mockResolvedValue([
+        mockOverdueOccurrence('occ-1', new Date(2025, 6, 1)),
+      ] as any)
+      vi.mocked(prisma.taskOccurrence.findFirst).mockResolvedValue(null) // no existing future
+      vi.mocked(prisma.taskOccurrence.update).mockResolvedValue({} as any)
+      vi.mocked(prisma.occurrenceHistoryLog.create).mockResolvedValue({} as any)
+      vi.mocked((prisma as any).taskHistoryLog.create).mockResolvedValue({} as any)
+      vi.mocked(prisma.taskOccurrence.create).mockResolvedValue({} as any)
+      vi.mocked(prisma.taskOccurrence.count).mockResolvedValue(1)
+
+      const result = await taskService.catchUp('task-1', 'user-1')
+
+      expect(result.newDueDate).not.toBeNull()
+      expect(prisma.taskOccurrence.create).toHaveBeenCalled()
+    }
+  })
 })
