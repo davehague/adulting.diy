@@ -19,15 +19,46 @@
                             </span>
                         </div>
                         <div class="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
-                            <div>
+                            <div class="flex-1 min-w-0">
                                 <p class="text-sm text-stone-500">
                                     {{ formatLogMessage(log) }}
                                     <span class="font-medium text-stone-900">{{ log.user?.name || 'System' }}</span>
                                 </p>
-                                <p v-if="log.logType === 'comment' && log.comment"
-                                    class="mt-1 text-sm text-stone-700 italic">
-                                    "{{ log.comment }}"
-                                </p>
+                                <!-- Comment display / edit -->
+                                <div v-if="log.logType === 'comment' && log.comment">
+                                    <!-- Edit mode -->
+                                    <div v-if="editingCommentId === log.id" class="mt-1">
+                                        <textarea v-model="editCommentText" rows="2"
+                                            class="block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm p-2"
+                                        ></textarea>
+                                        <div class="mt-1.5 flex items-center gap-2">
+                                            <button @click="saveEdit(log)"
+                                                :disabled="isSavingEdit || !editCommentText.trim()"
+                                                class="text-xs font-medium text-amber-700 hover:text-amber-800 disabled:opacity-50">
+                                                {{ isSavingEdit ? 'Saving...' : 'Save' }}
+                                            </button>
+                                            <button @click="cancelEdit"
+                                                :disabled="isSavingEdit"
+                                                class="text-xs font-medium text-stone-500 hover:text-stone-700 disabled:opacity-50">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                        <p v-if="editError" class="mt-1 text-xs text-red-600">{{ editError }}</p>
+                                    </div>
+                                    <!-- Read mode -->
+                                    <div v-else class="mt-1 group flex items-start gap-1.5">
+                                        <p class="text-sm text-stone-700 italic">
+                                            "{{ log.comment }}"
+                                            <span v-if="log.updatedAt" class="text-xs text-stone-400 not-italic">(edited)</span>
+                                        </p>
+                                        <button v-if="isOwnComment(log)"
+                                            @click="startEdit(log)"
+                                            class="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5 text-stone-400 hover:text-stone-600"
+                                            title="Edit comment">
+                                            <PencilIcon class="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div class="whitespace-nowrap text-right text-sm text-stone-500">
                                 <time :datetime="log.createdAt.toISOString()">{{ formatRelativeTime(log.createdAt)
@@ -43,22 +74,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue';
+import { ref, watch } from 'vue';
 import { useApi } from '@/utils/api';
+import { useAuthStore } from '@/stores/auth';
 import type { OccurrenceHistoryLog } from '@/types';
-import { formatDistanceToNow } from 'date-fns'; // For relative time formatting
+import { formatDistanceToNow } from 'date-fns';
 
-// Import icons (assuming Heroicons v1 - adjust path/import if using v2 or other library)
-// @ts-ignore - Suppress type error as @types/heroicons__vue is unavailable
 import {
-    ChatBubbleLeftEllipsisIcon, // Renamed from ChatAltIcon for v2
+    ChatBubbleLeftEllipsisIcon,
     CheckCircleIcon,
-    XCircleIcon, // Note: XCircleIcon might be needed for skipped/deleted status changes later
+    XCircleIcon,
     PencilIcon,
     UserGroupIcon,
     CalendarIcon,
-    PlusCircleIcon // Note: PlusCircleIcon might be needed for 'created' status later
-} from '@heroicons/vue/24/solid'; // Updated to v2 path
+    PlusCircleIcon
+} from '@heroicons/vue/24/solid';
 
 // Props
 const props = defineProps<{
@@ -70,6 +100,13 @@ const historyLogs = ref<OccurrenceHistoryLog[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
 const api = useApi();
+const authStore = useAuthStore();
+
+// Edit state
+const editingCommentId = ref<string | null>(null);
+const editCommentText = ref('');
+const isSavingEdit = ref(false);
+const editError = ref<string | null>(null);
 
 // Fetch history function
 const fetchHistory = async () => {
@@ -82,10 +119,10 @@ const fetchHistory = async () => {
     error.value = null;
     try {
         const data = await api.get<OccurrenceHistoryLog[]>(`/api/occurrences/${props.occurrenceId}/history`);
-        // Ensure dates are Date objects
         historyLogs.value = data.map(log => ({
             ...log,
-            createdAt: new Date(log.createdAt) // Convert string date from API to Date object
+            createdAt: new Date(log.createdAt),
+            ...(log.updatedAt && { updatedAt: new Date(log.updatedAt) }),
         }));
     } catch (err: any) {
         console.error("Error fetching occurrence history:", err);
@@ -98,7 +135,43 @@ const fetchHistory = async () => {
 
 // Watch for occurrenceId changes and fetch initial data
 watch(() => props.occurrenceId, fetchHistory, { immediate: true });
-// onMounted(fetchHistory); // immediate: true in watch handles initial load
+
+// --- Comment editing ---
+
+const isOwnComment = (log: OccurrenceHistoryLog): boolean => {
+    return log.userId === authStore.user?.id;
+};
+
+const startEdit = (log: OccurrenceHistoryLog) => {
+    editingCommentId.value = log.id;
+    editCommentText.value = log.comment || '';
+    editError.value = null;
+};
+
+const cancelEdit = () => {
+    editingCommentId.value = null;
+    editCommentText.value = '';
+    editError.value = null;
+};
+
+const saveEdit = async (log: OccurrenceHistoryLog) => {
+    if (!editCommentText.value.trim()) return;
+    isSavingEdit.value = true;
+    editError.value = null;
+    try {
+        await api.put(`/api/occurrences/${props.occurrenceId}/comments/${log.id}`, {
+            comment: editCommentText.value.trim()
+        });
+        editingCommentId.value = null;
+        editCommentText.value = '';
+        await fetchHistory();
+    } catch (err: any) {
+        console.error("Error updating comment:", err);
+        editError.value = err.data?.message || 'Failed to update comment';
+    } finally {
+        isSavingEdit.value = false;
+    }
+};
 
 // --- Formatting and Icon Helpers ---
 
@@ -111,24 +184,21 @@ const formatRelativeTime = (date: Date): string => {
 
 const getIcon = (logType: OccurrenceHistoryLog['logType']) => {
     switch (logType) {
-        case 'comment': return ChatBubbleLeftEllipsisIcon; // Use renamed icon
+        case 'comment': return ChatBubbleLeftEllipsisIcon;
         case 'status_change':
-            // Could refine based on newValue (e.g., completed, skipped)
-            return CheckCircleIcon; // Default status change icon
+            return CheckCircleIcon;
         case 'assignment_change': return UserGroupIcon;
         case 'date_change': return CalendarIcon;
-        // Add case for initial creation if logged that way
-        // case 'created': return PlusCircleIcon;
-        default: return PencilIcon; // Generic change
+        default: return PencilIcon;
     }
 };
 
 const getIconBackground = (logType: OccurrenceHistoryLog['logType']) => {
     switch (logType) {
         case 'comment': return 'bg-stone-400';
-        case 'status_change': return 'bg-amber-600'; // Example: blue for status
-        case 'assignment_change': return 'bg-yellow-500'; // Example: yellow for assignment
-        case 'date_change': return 'bg-purple-500'; // Example: purple for date
+        case 'status_change': return 'bg-amber-600';
+        case 'assignment_change': return 'bg-yellow-500';
+        case 'date_change': return 'bg-purple-500';
         default: return 'bg-stone-400';
     }
 };
@@ -146,15 +216,13 @@ const formatLogMessage = (log: OccurrenceHistoryLog): string => {
             if (log.oldValue && log.newValue) {
                 return `changed status from ${log.oldValue} to ${log.newValue}`;
             } else if (log.newValue) {
-                // Handle initial creation log
                 if (log.newValue === 'created' || log.newValue === 'assigned') {
                     return `created occurrence (status: ${log.newValue})`;
                 }
                 return `changed status to ${log.newValue}`;
             }
-            return 'changed status'; // Fallback
+            return 'changed status';
         case 'assignment_change':
-            // Could potentially parse oldValue/newValue JSON for better message
             return 'changed assignees';
         case 'date_change':
             return `changed due date from ${log.oldValue ? new Date(log.oldValue).toLocaleDateString() : '?'} to ${log.newValue ? new Date(log.newValue).toLocaleDateString() : '?'}`;

@@ -204,6 +204,7 @@ export interface OccurrenceHistoryLog {
   newValue?: string; // Use camelCase
   comment?: string;
   createdAt: Date; // Use camelCase
+  updatedAt?: Date;
   user?: User; // Add optional user based on service include
 }
 

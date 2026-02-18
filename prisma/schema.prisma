@@ -116,6 +116,7 @@ model OccurrenceHistoryLog {
   newValue      String?
   comment       String?
   createdAt     DateTime        @default(now())
+  updatedAt     DateTime?
 
   @@map("occurrence_history_logs")
 }
