@@ -9,16 +9,7 @@
         </div>
 
         <!-- Category Field -->
-        <div>
-            <label for="categoryId" class="block text-sm font-medium text-stone-700">Category*</label>
-            <select id="categoryId" v-model="formData.categoryId" required
-                class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
-                <option disabled value="">Select a category</option>
-                <option v-for="category in categories" :key="category.id" :value="category.id">
-                    {{ category.name }}
-                </option>
-            </select>
-        </div>
+        <CategorySelect v-model="formData.categoryId" :categories="categories" @category-created="onCategoryCreated" />
 
         <!-- Description Field -->
         <div>
@@ -265,6 +256,7 @@
 import { ref, reactive, onMounted } from 'vue'; // Removed computed as it wasn't used
 import { useApi } from '@/utils/api';
 import { Check, X, Plus } from 'lucide-vue-next';
+import CategorySelect from '@/components/tasks/CategorySelect.vue';
 import type {
     Category,
     ScheduleConfig,
@@ -298,6 +290,10 @@ const emit = defineEmits<{
 // Setup
 const api = useApi();
 const categories = ref<Category[]>([]);
+const onCategoryCreated = (category: Category) => {
+  categories.value.push(category);
+  categories.value.sort((a, b) => a.name.localeCompare(b.name));
+};
 const householdUsers = ref<Pick<User, 'id' | 'name' | 'email'>[]>([]);
 const isSubmitting = ref(false);
 const validationError = ref('');
