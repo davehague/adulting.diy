@@ -12,9 +12,7 @@ export interface NotificationPreferences {
   occurrence_commented: 'any' | 'mine' | 'none';
 
   // Reminder notifications
-  reminder_initial: 'any' | 'mine' | 'none';
-  reminder_followup: 'any' | 'mine' | 'none';
-  reminder_overdue: 'any' | 'mine' | 'none';
+  reminders: 'any' | 'mine' | 'none';
 
   // Channel toggles
   channels?: {
@@ -41,9 +39,7 @@ export const defaultNotificationPreferences: NotificationPreferences = {
   occurrence_commented: 'mine',
 
   // Reminder notifications - defaults to 'mine'
-  reminder_initial: 'mine',
-  reminder_followup: 'mine',
-  reminder_overdue: 'mine',
+  reminders: 'mine',
 
   // Channel defaults - email on, slack off
   channels: {

@@ -75,9 +75,11 @@ export const testTaskDefinitions = {
       startDate: new Date('2024-02-01'),
     },
     reminderConfig: {
-      initialReminder: 1,
-      followUpReminder: 0,
-      overdueReminder: 1,
+      reminders: [
+        { days: 1, timing: 'before' },
+        { days: 0, timing: 'on' },
+        { days: 1, timing: 'after' },
+      ],
     },
     recurrencePattern: {
       type: 'once',
@@ -152,9 +154,7 @@ export const testNotificationPreferences = {
     occurrence_executed: 'mine' as const,
     occurrence_skipped: 'mine' as const,
     occurrence_commented: 'mine' as const,
-    reminder_initial: 'any' as const,
-    reminder_followup: 'any' as const,
-    reminder_overdue: 'any' as const,
+    reminders: 'any' as const,
     channels: { email: true, slack: false },
     channelConfig: {},
   },
@@ -168,9 +168,7 @@ export const testNotificationPreferences = {
     occurrence_executed: 'any' as const,
     occurrence_skipped: 'any' as const,
     occurrence_commented: 'any' as const,
-    reminder_initial: 'any' as const,
-    reminder_followup: 'any' as const,
-    reminder_overdue: 'any' as const,
+    reminders: 'any' as const,
     channels: { email: true, slack: false },
     channelConfig: {},
   }

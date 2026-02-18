@@ -73,9 +73,6 @@ export class SlackProvider implements NotificationProvider {
       case "task_paused":
         return this.buildBlocks("Task Paused", `*${taskName}*`);
 
-      case "task_completed":
-        return this.buildBlocks("Task Completed", `*${taskName}*`);
-
       case "task_deleted":
         return this.buildBlocks("Task Deleted", `*${taskName}*`);
 
@@ -119,31 +116,27 @@ export class SlackProvider implements NotificationProvider {
           "View Task"
         );
 
-      case "task_reminder_initial":
-        return this.buildBlocks(
-          "Task Reminder",
-          `*${taskName}*${dueDate ? `\nDue: ${dueDate}` : ""}`,
-          occurrence?.id
-            ? `${baseUrl}/occurrences/${occurrence.id}`
-            : undefined,
-          "View Task"
-        );
+      case "task_reminder": {
+        const reminderEntry = context.reminderEntry;
+        const timing = reminderEntry?.timing || 'before';
+        let header: string;
+        let sectionBody: string;
 
-      case "task_reminder_followup":
-        return this.buildBlocks(
-          "Follow-up Reminder",
-          `*${taskName}*${dueDate ? `\nDue: ${dueDate}` : ""}`,
-          occurrence?.id
-            ? `${baseUrl}/occurrences/${occurrence.id}`
-            : undefined,
-          "View Task"
-        );
+        if (timing === 'after') {
+          const daysOverdue = reminderEntry?.days || this.getDaysOverdue(occurrence?.dueDate);
+          header = "Task Overdue";
+          sectionBody = `*${taskName}*${dueDate ? `\nDue: ${dueDate}` : ""}\nOverdue by ${daysOverdue} day${daysOverdue !== 1 ? "s" : ""}`;
+        } else if (timing === 'on') {
+          header = "Due Today";
+          sectionBody = `*${taskName}*${dueDate ? `\nDue: ${dueDate}` : ""}`;
+        } else {
+          header = "Task Reminder";
+          sectionBody = `*${taskName}*${dueDate ? `\nDue: ${dueDate}` : ""}`;
+        }
 
-      case "task_reminder_overdue": {
-        const daysOverdue = this.getDaysOverdue(occurrence?.dueDate);
         return this.buildBlocks(
-          "Task Overdue",
-          `*${taskName}*${dueDate ? `\nDue: ${dueDate}` : ""}\nOverdue by ${daysOverdue} day${daysOverdue !== 1 ? "s" : ""}`,
+          header,
+          sectionBody,
           occurrence?.id
             ? `${baseUrl}/occurrences/${occurrence.id}`
             : undefined,

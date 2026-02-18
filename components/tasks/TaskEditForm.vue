@@ -187,34 +187,31 @@
 
     <!-- Reminder Configuration -->
     <div class="border rounded-lg p-4 bg-stone-50">
-      <h3 class="text-lg font-medium text-stone-700 mb-4 font-heading">Reminder Configuration</h3>
+      <h3 class="text-lg font-medium text-stone-700 mb-4 font-heading">Reminders</h3>
 
-      <!-- Initial Reminder -->
-      <div class="mb-4">
-        <label for="initialReminder" class="block text-sm font-medium text-stone-700">Initial Reminder (days
-          before)</label>
-        <input id="initialReminder" v-model.number="formData.reminderConfig.initialReminder" type="number" min="0"
-          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
-          placeholder="Optional" />
+      <div v-for="(reminder, index) in formData.reminders" :key="index" class="mb-3 flex items-center gap-2">
+        <input v-if="reminder.timing !== 'on'" v-model.number="reminder.days" type="number" min="0"
+          class="w-20 rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
+          placeholder="0" />
+        <span v-if="reminder.timing !== 'on'" class="text-sm text-stone-600">days</span>
+        <select v-model="reminder.timing"
+          class="rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-sm"
+          @change="onTimingChange(index)">
+          <option value="before">before due date</option>
+          <option value="on">on due date</option>
+          <option value="after">after due date</option>
+        </select>
+        <button type="button" @click="removeReminder(index)"
+          class="text-stone-400 hover:text-red-500 transition-colors p-1">
+          <X :size="16" />
+        </button>
       </div>
 
-      <!-- Follow-up Reminder -->
-      <div class="mb-4">
-        <label for="followUpReminder" class="block text-sm font-medium text-stone-700">Follow-up Reminder (days
-          before)</label>
-        <input id="followUpReminder" v-model.number="formData.reminderConfig.followUpReminder" type="number" min="0"
-          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
-          placeholder="Optional" />
-      </div>
-
-      <!-- Overdue Reminder -->
-      <div>
-        <label for="overdueReminder" class="block text-sm font-medium text-stone-700">Overdue Reminder (days
-          after)</label>
-        <input id="overdueReminder" v-model.number="formData.reminderConfig.overdueReminder" type="number" min="0"
-          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
-          placeholder="Optional" />
-      </div>
+      <button v-if="formData.reminders.length < 5" type="button" @click="addReminder"
+        class="inline-flex items-center gap-1 text-sm text-amber-700 hover:text-amber-800 font-medium mt-1">
+        <Plus :size="16" /> Add Reminder
+      </button>
+      <p v-if="formData.reminders.length === 0" class="text-sm text-stone-400">No reminders configured.</p>
     </div>
 
     <!-- Default Assignees -->
@@ -246,12 +243,14 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watchEffect, computed } from 'vue';
 import { useApi } from '@/utils/api';
-import { Check, X } from 'lucide-vue-next';
+import { Check, X, Plus } from 'lucide-vue-next';
 import type {
   Category,
   TaskDefinition,
   ScheduleConfig,
   ReminderConfig,
+  ReminderEntry,
+  ReminderTiming,
   FixedIntervalScheduleConfig,
   SpecificDaysScheduleConfig,
   SpecificDayOfMonthScheduleConfig,
@@ -306,11 +305,7 @@ const formData = reactive({
     // Other properties (interval, daysOfWeek, etc.) will be added dynamically
     // when the type changes, but we need a valid initial state.
   } as ScheduleConfig, // Assert as the union type
-  reminderConfig: {
-    initialReminder: undefined,
-    followUpReminder: undefined,
-    overdueReminder: undefined
-  } as ReminderConfig,
+  reminders: [] as ReminderEntry[],
   defaultAssigneeIds: [] as string[]
 });
 
@@ -424,8 +419,8 @@ const populateFormFromTask = () => {
   }
 
   // Handle reminderConfig
-  if (props.task.reminderConfig) {
-    formData.reminderConfig = { ...props.task.reminderConfig };
+  if (props.task.reminderConfig?.reminders) {
+    formData.reminders = props.task.reminderConfig.reminders.map(r => ({ ...r }));
   }
 
   // Handle defaultAssigneeIds
@@ -534,11 +529,9 @@ const handleSubmit = async () => {
       instructions: formData.instructions ?? undefined, // Use ?? undefined
       // Deep copy schedule config to avoid modifying reactive formData directly
       scheduleConfig: JSON.parse(JSON.stringify(formData.scheduleConfig)),
-      reminderConfig: {
-        initialReminder: formData.reminderConfig.initialReminder ?? undefined, // Use ?? undefined
-        followUpReminder: formData.reminderConfig.followUpReminder ?? undefined, // Use ?? undefined
-        overdueReminder: formData.reminderConfig.overdueReminder ?? undefined // Use ?? undefined
-      },
+      reminderConfig: formData.reminders.length > 0
+        ? { reminders: formData.reminders.map(r => ({ ...r })) }
+        : undefined,
       defaultAssigneeIds: formData.defaultAssigneeIds
     };
 
@@ -561,6 +554,22 @@ const handleSubmit = async () => {
     validationError.value = 'An error occurred while submitting the form. Please try again.';
   } finally {
     isSubmitting.value = false;
+  }
+};
+
+// --- Reminder helpers ---
+const addReminder = () => {
+  if (formData.reminders.length >= 5) return;
+  formData.reminders.push({ days: 1, timing: 'before' });
+};
+
+const removeReminder = (index: number) => {
+  formData.reminders.splice(index, 1);
+};
+
+const onTimingChange = (index: number) => {
+  if (formData.reminders[index].timing === 'on') {
+    formData.reminders[index].days = 0;
   }
 };
 </script>

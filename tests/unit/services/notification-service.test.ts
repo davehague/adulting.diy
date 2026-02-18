@@ -14,9 +14,7 @@ const allAnyPrefs: NotificationPreferences = {
   occurrence_executed: 'any',
   occurrence_skipped: 'any',
   occurrence_commented: 'any',
-  reminder_initial: 'any',
-  reminder_followup: 'any',
-  reminder_overdue: 'any',
+  reminders: 'any',
 }
 
 const allNonePrefs: NotificationPreferences = {
@@ -27,9 +25,7 @@ const allNonePrefs: NotificationPreferences = {
   occurrence_executed: 'none',
   occurrence_skipped: 'none',
   occurrence_commented: 'none',
-  reminder_initial: 'none',
-  reminder_followup: 'none',
-  reminder_overdue: 'none',
+  reminders: 'none',
 }
 
 const minePrefs: NotificationPreferences = {
@@ -40,9 +36,7 @@ const minePrefs: NotificationPreferences = {
   occurrence_executed: 'mine',
   occurrence_skipped: 'mine',
   occurrence_commented: 'mine',
-  reminder_initial: 'any',
-  reminder_followup: 'any',
-  reminder_overdue: 'any',
+  reminders: 'any',
 }
 
 const userId = 'user-1'
@@ -120,85 +114,50 @@ describe('NotificationService.shouldSendNotification', () => {
     })
   })
 
-  // --- Reminders respect reminder-specific preferences ---
-  describe('reminder notifications', () => {
-    it.each([
-      ['task_reminder_initial', 'reminder_initial'],
-      ['task_reminder_followup', 'reminder_followup'],
-      ['task_reminder_overdue', 'reminder_overdue'],
-    ] as [NotificationEventType, string][])('%s sends when preference is "any"', (eventType, prefKey) => {
-      const prefs: NotificationPreferences = { ...allNonePrefs, [prefKey]: 'any' }
-      expect(service.shouldSendNotification(eventType, prefs, baseContext, userId)).toBe(true)
+  // --- Reminders respect single reminders preference ---
+  describe('task_reminder notifications', () => {
+    it('sends when preference is "any"', () => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, reminders: 'any' }
+      expect(service.shouldSendNotification('task_reminder', prefs, baseContext, userId)).toBe(true)
     })
 
-    it.each([
-      ['task_reminder_initial', 'reminder_initial'],
-      ['task_reminder_followup', 'reminder_followup'],
-      ['task_reminder_overdue', 'reminder_overdue'],
-    ] as [NotificationEventType, string][])('%s blocks when preference is "none"', (eventType, prefKey) => {
-      const prefs: NotificationPreferences = { ...allAnyPrefs, [prefKey]: 'none' }
-      expect(service.shouldSendNotification(eventType, prefs, baseContext, userId)).toBe(false)
+    it('blocks when preference is "none"', () => {
+      const prefs: NotificationPreferences = { ...allAnyPrefs, reminders: 'none' }
+      expect(service.shouldSendNotification('task_reminder', prefs, baseContext, userId)).toBe(false)
     })
 
-    it('defaults to sending when preference fields are missing (backward compat)', () => {
-      // Simulate old stored prefs without reminder_* fields
-      const legacyPrefs = { ...allAnyPrefs } as any
-      delete legacyPrefs.reminder_initial
-      delete legacyPrefs.reminder_followup
-      delete legacyPrefs.reminder_overdue
-      expect(service.shouldSendNotification('task_reminder_initial', legacyPrefs, baseContext, userId)).toBe(true)
-      expect(service.shouldSendNotification('task_reminder_followup', legacyPrefs, baseContext, userId)).toBe(true)
-      expect(service.shouldSendNotification('task_reminder_overdue', legacyPrefs, baseContext, userId)).toBe(true)
-    })
-  })
-
-  // --- "mine" reminder preference sends only to assignees ---
-  describe('reminder notifications with mine preference', () => {
-    it('sends reminder when preference is mine and user is assignee', () => {
-      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_initial: 'mine' }
+    it('sends when preference is "mine" and user is assignee', () => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, reminders: 'mine' }
       expect(service.shouldSendNotification(
-        'task_reminder_initial', prefs, contextWithOccurrenceAssignedToUser, userId
+        'task_reminder', prefs, contextWithOccurrenceAssignedToUser, userId
       )).toBe(true)
     })
 
-    it('does NOT send reminder when preference is mine and user is not assignee', () => {
-      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_initial: 'mine' }
+    it('does NOT send when preference is "mine" and user is not assignee', () => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, reminders: 'mine' }
       expect(service.shouldSendNotification(
-        'task_reminder_initial', prefs, contextWithOccurrenceAssignedToOther, userId
+        'task_reminder', prefs, contextWithOccurrenceAssignedToOther, userId
       )).toBe(false)
     })
 
-    it('sends followup reminder when preference is mine and user is assignee', () => {
-      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_followup: 'mine' }
-      expect(service.shouldSendNotification(
-        'task_reminder_followup', prefs, contextWithOccurrenceAssignedToUser, userId
-      )).toBe(true)
-    })
-
-    it('sends overdue reminder when preference is mine and user is assignee', () => {
-      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_overdue: 'mine' }
-      expect(service.shouldSendNotification(
-        'task_reminder_overdue', prefs, contextWithOccurrenceAssignedToUser, userId
-      )).toBe(true)
-    })
-
-    it('still sends when preference is any regardless of assignment', () => {
-      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_initial: 'any' }
-      expect(service.shouldSendNotification(
-        'task_reminder_initial', prefs, contextWithOccurrenceAssignedToOther, userId
-      )).toBe(true)
+    it('defaults to sending when reminders preference is missing (backward compat)', () => {
+      const legacyPrefs = { ...allAnyPrefs } as any
+      delete legacyPrefs.reminders
+      expect(service.shouldSendNotification('task_reminder', legacyPrefs, baseContext, userId)).toBe(true)
     })
   })
 
-  // --- Default preferences are snake_case and correct ---
+  // --- Default preferences are correct ---
   describe('getDefaultPreferences', () => {
-    it('returns snake_case keys matching the NotificationPreferences type', () => {
+    it('returns keys matching the NotificationPreferences type', () => {
       const defaults = service.getDefaultPreferences()
       expect(defaults).toHaveProperty('task_created')
       expect(defaults).toHaveProperty('occurrence_assigned')
-      // Should NOT have camelCase keys
-      expect(defaults).not.toHaveProperty('taskCreated')
-      expect(defaults).not.toHaveProperty('occurrenceAssigned')
+      expect(defaults).toHaveProperty('reminders')
+      // Should NOT have old keys
+      expect(defaults).not.toHaveProperty('reminder_initial')
+      expect(defaults).not.toHaveProperty('reminder_followup')
+      expect(defaults).not.toHaveProperty('reminder_overdue')
     })
 
     it('returns values matching defaultNotificationPreferences from types/notification.ts', () => {
@@ -244,6 +203,13 @@ describe('checkAndSendTaskReminders', () => {
     expect(count).toBe(0)
   })
 
+  it('returns 0 when reminderConfig has empty reminders array', async () => {
+    const service = new NotificationService()
+    const task = { id: 'task-1', reminderConfig: { reminders: [] } } as any
+    const count = await service.checkAndSendTaskReminders(task)
+    expect(count).toBe(0)
+  })
+
   it('sends overdue reminder for occurrence with dueDate in the past', async () => {
     const service = new NotificationService()
     const threeDaysAgo = new Date()
@@ -255,7 +221,7 @@ describe('checkAndSendTaskReminders', () => {
       householdId: 'household-1',
       createdByUserId: 'user-1',
       metaStatus: 'active',
-      reminderConfig: { overdueReminder: 3 },
+      reminderConfig: { reminders: [{ days: 3, timing: 'after' }] },
     }
 
     // Mock prisma to return the overdue occurrence
@@ -285,9 +251,110 @@ describe('checkAndSendTaskReminders', () => {
     expect(count).toBe(1)
     expect(sendSpy).toHaveBeenCalledWith(
       'household-1',
-      'task_reminder_overdue',
-      expect.any(Object)
+      'task_reminder',
+      expect.objectContaining({
+        reminderEntry: { days: 3, timing: 'after' },
+      })
     )
+
+    sendSpy.mockRestore()
+  })
+
+  it('sends before reminder for upcoming occurrence', async () => {
+    const service = new NotificationService()
+    const threeDaysFromNow = new Date()
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3)
+    threeDaysFromNow.setHours(0, 0, 0, 0)
+
+    const task = {
+      id: 'task-1',
+      householdId: 'household-1',
+      createdByUserId: 'user-1',
+      metaStatus: 'active',
+      reminderConfig: { reminders: [{ days: 3, timing: 'before' }] },
+    }
+
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+    vi.mocked(prisma.taskOccurrence.findMany).mockResolvedValueOnce([
+      {
+        id: 'occ-1',
+        taskId: 'task-1',
+        dueDate: threeDaysFromNow,
+        status: 'assigned',
+        assigneeIds: ['user-1'],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ] as any)
+
+    vi.mocked(prisma.occurrenceHistoryLog.findFirst).mockResolvedValueOnce(null)
+    vi.mocked(prisma.occurrenceHistoryLog.create).mockResolvedValueOnce({} as any)
+
+    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue(true)
+
+    const count = await service.checkAndSendTaskReminders(task as any)
+
+    expect(count).toBe(1)
+    expect(sendSpy).toHaveBeenCalledWith(
+      'household-1',
+      'task_reminder',
+      expect.objectContaining({
+        reminderEntry: { days: 3, timing: 'before' },
+      })
+    )
+
+    sendSpy.mockRestore()
+  })
+
+  it('processes multiple reminders in config', async () => {
+    const service = new NotificationService()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Due in 3 days - should match the "3 days before" reminder
+    const threeDaysFromNow = new Date()
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3)
+    threeDaysFromNow.setHours(0, 0, 0, 0)
+
+    const task = {
+      id: 'task-1',
+      householdId: 'household-1',
+      createdByUserId: 'user-1',
+      metaStatus: 'active',
+      reminderConfig: {
+        reminders: [
+          { days: 3, timing: 'before' },
+          { days: 1, timing: 'before' },
+          { days: 2, timing: 'after' },
+        ],
+      },
+    }
+
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+    vi.mocked(prisma.taskOccurrence.findMany).mockResolvedValueOnce([
+      {
+        id: 'occ-1',
+        taskId: 'task-1',
+        dueDate: threeDaysFromNow,
+        status: 'assigned',
+        assigneeIds: ['user-1'],
+        createdAt: today,
+        updatedAt: today,
+      },
+    ] as any)
+
+    // First reminder (3 days before) - no prior sent, should send
+    vi.mocked(prisma.occurrenceHistoryLog.findFirst).mockResolvedValueOnce(null)
+    vi.mocked(prisma.occurrenceHistoryLog.create).mockResolvedValueOnce({} as any)
+    // Second reminder (1 day before) - not today, won't be checked
+    // Third reminder (2 days after) - not today, won't be checked
+
+    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue(true)
+
+    const count = await service.checkAndSendTaskReminders(task as any)
+
+    // Only the "3 days before" reminder should fire today
+    expect(count).toBe(1)
 
     sendSpy.mockRestore()
   })
@@ -327,11 +394,15 @@ describe('renderEmailTemplate', () => {
     expect(html).not.toContain('{{')
   })
 
-  it('task_reminder_initial uses amber colors and Task Reminder heading', () => {
-    const html = provider.renderEmailTemplate('task_reminder_initial', {
+  it('task_reminder uses amber colors for before timing', () => {
+    const html = provider.renderEmailTemplate('task_reminder', {
       userName: 'Alice',
       taskName: 'Clean Kitchen',
       dueDate: 'January 20, 2025',
+      heading: 'Task Reminder',
+      headingColor: '#d97706',
+      bgColor: '#fffbeb',
+      buttonColor: '#d97706',
       dueSummary: 'Your task is due in 3 days:',
       occurrenceUrl: 'http://localhost/occurrences/1',
     })
@@ -339,35 +410,42 @@ describe('renderEmailTemplate', () => {
     expect(html).toContain('Task Reminder')
     expect(html).toContain('due in 3 days')
     expect(html).not.toContain('{{')
-    expect(html).not.toContain('color: ;')
   })
 
-  it('task_reminder_followup uses amber colors and Follow-up heading', () => {
-    const html = provider.renderEmailTemplate('task_reminder_followup', {
+  it('task_reminder uses amber colors for on-day timing', () => {
+    const html = provider.renderEmailTemplate('task_reminder', {
       userName: 'Alice',
       taskName: 'Clean Kitchen',
       dueDate: 'January 20, 2025',
-      dueSummary: 'Your task is due in 1 days:',
+      heading: 'Due Today',
+      headingColor: '#d97706',
+      bgColor: '#fffbeb',
+      buttonColor: '#d97706',
+      dueSummary: 'Your task is due today:',
       occurrenceUrl: 'http://localhost/occurrences/1',
     })
     expect(html).toContain('#d97706')
-    expect(html).toContain('Follow-up Reminder')
+    expect(html).toContain('Due Today')
+    expect(html).toContain('due today')
     expect(html).not.toContain('{{')
   })
 
-  it('task_reminder_overdue uses red colors and Task Overdue heading', () => {
-    const html = provider.renderEmailTemplate('task_reminder_overdue', {
+  it('task_reminder uses red colors for after timing (overdue)', () => {
+    const html = provider.renderEmailTemplate('task_reminder', {
       userName: 'Alice',
       taskName: 'Clean Kitchen',
       dueDate: 'January 15, 2025',
-      daysOverdue: 5,
+      heading: 'Task Overdue',
+      headingColor: '#dc2626',
+      bgColor: '#fef2f2',
+      buttonColor: '#dc2626',
+      dueSummary: 'Your task is 5 days overdue:',
       occurrenceUrl: 'http://localhost/occurrences/1',
     })
     expect(html).toContain('#dc2626')
     expect(html).toContain('Task Overdue')
     expect(html).toContain('5 days overdue')
     expect(html).not.toContain('{{')
-    expect(html).not.toContain('color: ;')
   })
 
   it('task_paused renders with warning styling', () => {
@@ -464,17 +542,36 @@ describe('generateEmailContent', () => {
     household: { id: 'h1', name: 'Test House' },
   }
 
-  it('task_reminder_followup returns proper subject and body (not generic)', () => {
-    const result = provider.generateEmailContent('task_reminder_followup', baseContext, baseContext.user)
-    expect(result.subject).toContain('Follow-up')
+  it('task_reminder with before timing returns proper subject and body', () => {
+    const ctx = { ...baseContext, reminderEntry: { days: 3, timing: 'before' as const } }
+    const result = provider.generateEmailContent('task_reminder', ctx, baseContext.user)
+    expect(result.subject).toContain('Reminder')
     expect(result.subject).toContain('Clean Kitchen')
-    expect(result.body).toContain('Follow-up Reminder')
-    expect(result.body).not.toContain('Adulting.DIY Notification') // NOT the generic template
+    expect(result.body).toContain('Task Reminder')
+    expect(result.body).toContain('#d97706')
+    expect(result.body).not.toContain('Adulting.DIY Notification')
   })
 
-  it('task_reminder_overdue includes days overdue in subject', () => {
-    const result = provider.generateEmailContent('task_reminder_overdue', baseContext, baseContext.user)
+  it('task_reminder with before timing=1 shows "due tomorrow"', () => {
+    const ctx = { ...baseContext, reminderEntry: { days: 1, timing: 'before' as const } }
+    const result = provider.generateEmailContent('task_reminder', ctx, baseContext.user)
+    expect(result.subject).toContain('due tomorrow')
+    expect(result.body).toContain('due tomorrow')
+  })
+
+  it('task_reminder with on timing returns "Due Today" subject', () => {
+    const ctx = { ...baseContext, reminderEntry: { days: 0, timing: 'on' as const } }
+    const result = provider.generateEmailContent('task_reminder', ctx, baseContext.user)
+    expect(result.subject).toContain('Due Today')
+    expect(result.body).toContain('Due Today')
+    expect(result.body).toContain('#d97706')
+  })
+
+  it('task_reminder with after timing returns "Overdue" subject with red', () => {
+    const ctx = { ...baseContext, reminderEntry: { days: 5, timing: 'after' as const } }
+    const result = provider.generateEmailContent('task_reminder', ctx, baseContext.user)
     expect(result.subject).toContain('Overdue')
+    expect(result.subject).toContain('5 days overdue')
     expect(result.body).toContain('Task Overdue')
     expect(result.body).toContain('#dc2626')
   })
@@ -589,7 +686,7 @@ describe('duplicate reminder prevention', () => {
       id: 'task-1',
       householdId: 'household-1',
       createdByUserId: 'user-1',
-      reminderConfig: { initialReminder: 3 },
+      reminderConfig: { reminders: [{ days: 3, timing: 'before' }] },
     }
 
     const { default: prisma } = await import('@/server/utils/prisma/client')
@@ -606,13 +703,13 @@ describe('duplicate reminder prevention', () => {
       },
     ] as any)
 
-    // Simulate that a reminder was already sent today
+    // Simulate that a reminder was already sent today with new dedup key
     vi.mocked(prisma.occurrenceHistoryLog.findFirst).mockResolvedValueOnce({
       id: 'log-1',
       occurrenceId: 'occ-1',
       userId: 'user-1',
       logType: 'reminder_sent',
-      newValue: 'task_reminder_initial',
+      newValue: 'task_reminder:before:3',
       createdAt: new Date(),
     } as any)
 
@@ -638,7 +735,7 @@ describe('duplicate reminder prevention', () => {
       id: 'task-1',
       householdId: 'household-1',
       createdByUserId: 'user-1',
-      reminderConfig: { initialReminder: 3 },
+      reminderConfig: { reminders: [{ days: 3, timing: 'before' }] },
     }
 
     const { default: prisma } = await import('@/server/utils/prisma/client')
@@ -667,8 +764,10 @@ describe('duplicate reminder prevention', () => {
     expect(count).toBe(1)
     expect(sendSpy).toHaveBeenCalledWith(
       'household-1',
-      'task_reminder_initial',
-      expect.any(Object)
+      'task_reminder',
+      expect.objectContaining({
+        reminderEntry: { days: 3, timing: 'before' },
+      })
     )
 
     sendSpy.mockRestore()
@@ -687,7 +786,7 @@ describe('duplicate reminder prevention', () => {
       id: 'task-1',
       householdId: 'household-1',
       createdByUserId: 'user-1',
-      reminderConfig: { initialReminder: 3 },
+      reminderConfig: { reminders: [{ days: 3, timing: 'before' }] },
     }
 
     const { default: prisma } = await import('@/server/utils/prisma/client')
@@ -738,13 +837,13 @@ describe('Notification preferences vs reminder config interaction', () => {
     expect(result).toBe(false)
   })
 
-  it('reminder notification respects reminder-specific preferences', () => {
+  it('task_reminder respects "none" reminders preference', () => {
     const prefsWithRemindersOff: NotificationPreferences = {
       ...allAnyPrefs,
-      reminder_initial: 'none',
+      reminders: 'none',
     }
     expect(service.shouldSendNotification(
-      'task_reminder_initial', prefsWithRemindersOff, baseContext, userId
+      'task_reminder', prefsWithRemindersOff, baseContext, userId
     )).toBe(false)
   })
 

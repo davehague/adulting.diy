@@ -1,4 +1,4 @@
-import type { User, TaskDefinition, TaskOccurrence, NotificationPreferences } from "@/types";
+import type { User, TaskDefinition, TaskOccurrence, NotificationPreferences, ReminderEntry } from "@/types";
 import { defaultNotificationPreferences } from "@/types/notification";
 import prisma from "@/server/utils/prisma/client";
 import { format, addDays } from "date-fns";
@@ -17,6 +17,7 @@ export interface NotificationContext {
     name: string;
   };
   comment?: string;
+  reminderEntry?: ReminderEntry;
 }
 
 export type NotificationEventType =
@@ -27,9 +28,7 @@ export type NotificationEventType =
   | "occurrence_executed"
   | "occurrence_skipped"
   | "occurrence_commented"
-  | "task_reminder_initial"
-  | "task_reminder_followup"
-  | "task_reminder_overdue";
+  | "task_reminder";
 
 export class NotificationService {
   /**
@@ -164,16 +163,8 @@ export class NotificationService {
         return preferences.occurrence_commented === "any" ||
                (preferences.occurrence_commented === "mine" && isMine);
 
-      case "task_reminder_initial": {
-        const pref = preferences.reminder_initial || 'any';
-        return pref === 'any' || (pref === 'mine' && isMine);
-      }
-      case "task_reminder_followup": {
-        const pref = preferences.reminder_followup || 'any';
-        return pref === 'any' || (pref === 'mine' && isMine);
-      }
-      case "task_reminder_overdue": {
-        const pref = preferences.reminder_overdue || 'any';
+      case "task_reminder": {
+        const pref = preferences.reminders || 'any';
         return pref === 'any' || (pref === 'mine' && isMine);
       }
 
@@ -220,11 +211,16 @@ export class NotificationService {
   public async checkAndSendTaskReminders(task: TaskDefinition): Promise<number> {
     let remindersSent = 0;
 
-    if (!task.reminderConfig) return 0;
+    if (!task.reminderConfig || !task.reminderConfig.reminders?.length) return 0;
 
-    // Include past-due occurrences so overdue reminders can fire
-    const lookbackDays = task.reminderConfig.overdueReminder || 0;
-    const earliestDate = addDays(new Date(), -lookbackDays);
+    // Compute max lookback for after-type reminders
+    const maxAfterDays = Math.max(
+      0,
+      ...task.reminderConfig.reminders
+        .filter(r => r.timing === 'after')
+        .map(r => r.days)
+    );
+    const earliestDate = addDays(new Date(), -maxAfterDays);
 
     const upcomingOccurrences = await prisma.taskOccurrence.findMany({
       where: {
@@ -238,44 +234,32 @@ export class NotificationService {
     for (const occurrence of upcomingOccurrences) {
       const householdTimezone = (task as any).household?.timezone || 'UTC';
 
-      const context: NotificationContext = {
-        user: {} as User, // Will be populated for each recipient
-        task,
-        occurrence: occurrence as unknown as TaskOccurrence,
-        household: { id: task.householdId, name: (task as any).household?.name || "" },
-      };
-
-      // Check for initial reminder
-      if (task.reminderConfig.initialReminder) {
-        const reminderDate = addDays(new Date(occurrence.dueDate), -task.reminderConfig.initialReminder);
-        if (this.isDateToday(reminderDate, householdTimezone) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_initial", householdTimezone))) {
-          const sent = await this.sendNotification(task.householdId, "task_reminder_initial", context);
-          if (sent) {
-            await this.logReminderSent(occurrence.id, "task_reminder_initial", task.createdByUserId);
-            remindersSent++;
-          }
+      for (const reminder of task.reminderConfig.reminders) {
+        // Compute target date based on timing
+        let targetDate: Date;
+        if (reminder.timing === 'before') {
+          targetDate = addDays(new Date(occurrence.dueDate), -reminder.days);
+        } else if (reminder.timing === 'on') {
+          targetDate = new Date(occurrence.dueDate);
+        } else {
+          // after
+          targetDate = addDays(new Date(occurrence.dueDate), reminder.days);
         }
-      }
 
-      // Check for follow-up reminder
-      if (task.reminderConfig.followUpReminder) {
-        const reminderDate = addDays(new Date(occurrence.dueDate), -task.reminderConfig.followUpReminder);
-        if (this.isDateToday(reminderDate, householdTimezone) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_followup", householdTimezone))) {
-          const sent = await this.sendNotification(task.householdId, "task_reminder_followup", context);
-          if (sent) {
-            await this.logReminderSent(occurrence.id, "task_reminder_followup", task.createdByUserId);
-            remindersSent++;
-          }
-        }
-      }
+        const dedupKey = `task_reminder:${reminder.timing}:${reminder.days}`;
 
-      // Check for overdue reminder
-      if (task.reminderConfig.overdueReminder) {
-        const overdueDate = addDays(new Date(occurrence.dueDate), task.reminderConfig.overdueReminder);
-        if (this.isDateToday(overdueDate, householdTimezone) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_overdue", householdTimezone))) {
-          const sent = await this.sendNotification(task.householdId, "task_reminder_overdue", context);
+        if (this.isDateToday(targetDate, householdTimezone) && !(await this.wasReminderSentToday(occurrence.id, dedupKey, householdTimezone))) {
+          const context: NotificationContext = {
+            user: {} as User,
+            task,
+            occurrence: occurrence as unknown as TaskOccurrence,
+            household: { id: task.householdId, name: (task as any).household?.name || "" },
+            reminderEntry: reminder,
+          };
+
+          const sent = await this.sendNotification(task.householdId, "task_reminder", context);
           if (sent) {
-            await this.logReminderSent(occurrence.id, "task_reminder_overdue", task.createdByUserId);
+            await this.logReminderSent(occurrence.id, dedupKey, task.createdByUserId);
             remindersSent++;
           }
         }
@@ -286,9 +270,9 @@ export class NotificationService {
   }
 
   /**
-   * Check if a reminder of a given type was already sent today for an occurrence
+   * Check if a reminder was already sent today for an occurrence
    */
-  private async wasReminderSentToday(occurrenceId: string, reminderType: NotificationEventType, timezone: string = 'UTC'): Promise<boolean> {
+  private async wasReminderSentToday(occurrenceId: string, dedupKey: string, timezone: string = 'UTC'): Promise<boolean> {
     const nowInTz = toZonedTime(new Date(), timezone);
     const todayStart = new Date(nowInTz);
     todayStart.setHours(0, 0, 0, 0);
@@ -299,7 +283,7 @@ export class NotificationService {
       where: {
         occurrenceId,
         logType: "reminder_sent",
-        newValue: reminderType,
+        newValue: dedupKey,
         createdAt: {
           gte: todayStart,
           lt: tomorrow,
@@ -313,14 +297,14 @@ export class NotificationService {
   /**
    * Log that a reminder was sent for deduplication
    */
-  private async logReminderSent(occurrenceId: string, reminderType: NotificationEventType, userId: string): Promise<void> {
+  private async logReminderSent(occurrenceId: string, dedupKey: string, userId: string): Promise<void> {
     await prisma.occurrenceHistoryLog.create({
       data: {
         occurrenceId,
         userId,
         logType: "reminder_sent",
-        newValue: reminderType,
-        comment: `${reminderType} reminder sent`,
+        newValue: dedupKey,
+        comment: `${dedupKey} reminder sent`,
       },
     });
   }

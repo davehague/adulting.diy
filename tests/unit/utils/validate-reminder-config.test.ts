@@ -23,81 +23,196 @@ describe('validateReminderConfig', () => {
     expect(validateReminderConfig({})).toBeNull()
   })
 
-  // --- Strips legacy format fields ---
-  it('returns null for legacy daysBeforeDue format (no valid new fields)', () => {
+  it('returns null for object with empty reminders array', () => {
+    expect(validateReminderConfig({ reminders: [] })).toBeNull()
+  })
+
+  // --- Accepts valid new format ---
+  it('accepts a single before reminder', () => {
+    expect(validateReminderConfig({
+      reminders: [{ days: 3, timing: 'before' }],
+    })).toEqual({
+      reminders: [{ days: 3, timing: 'before' }],
+    })
+  })
+
+  it('accepts a single on reminder', () => {
+    expect(validateReminderConfig({
+      reminders: [{ days: 0, timing: 'on' }],
+    })).toEqual({
+      reminders: [{ days: 0, timing: 'on' }],
+    })
+  })
+
+  it('accepts a single after reminder', () => {
+    expect(validateReminderConfig({
+      reminders: [{ days: 2, timing: 'after' }],
+    })).toEqual({
+      reminders: [{ days: 2, timing: 'after' }],
+    })
+  })
+
+  it('accepts multiple reminders', () => {
+    expect(validateReminderConfig({
+      reminders: [
+        { days: 7, timing: 'before' },
+        { days: 0, timing: 'on' },
+        { days: 3, timing: 'after' },
+      ],
+    })).toEqual({
+      reminders: [
+        { days: 7, timing: 'before' },
+        { days: 0, timing: 'on' },
+        { days: 3, timing: 'after' },
+      ],
+    })
+  })
+
+  // --- Forces days=0 for 'on' timing ---
+  it('forces days to 0 when timing is on', () => {
+    expect(validateReminderConfig({
+      reminders: [{ days: 5, timing: 'on' }],
+    })).toEqual({
+      reminders: [{ days: 0, timing: 'on' }],
+    })
+  })
+
+  // --- Caps at 5 ---
+  it('caps at 5 reminders', () => {
+    const result = validateReminderConfig({
+      reminders: [
+        { days: 1, timing: 'before' },
+        { days: 2, timing: 'before' },
+        { days: 3, timing: 'before' },
+        { days: 0, timing: 'on' },
+        { days: 1, timing: 'after' },
+        { days: 2, timing: 'after' },
+        { days: 3, timing: 'after' },
+      ],
+    })
+    expect(result!.reminders).toHaveLength(5)
+  })
+
+  // --- Deduplicates ---
+  it('deduplicates identical entries', () => {
+    expect(validateReminderConfig({
+      reminders: [
+        { days: 3, timing: 'before' },
+        { days: 3, timing: 'before' },
+        { days: 1, timing: 'after' },
+      ],
+    })).toEqual({
+      reminders: [
+        { days: 3, timing: 'before' },
+        { days: 1, timing: 'after' },
+      ],
+    })
+  })
+
+  // --- Rejects invalid entries ---
+  it('rejects entries with invalid timing', () => {
+    expect(validateReminderConfig({
+      reminders: [{ days: 3, timing: 'invalid' }],
+    })).toBeNull()
+  })
+
+  it('rejects entries with negative days', () => {
+    expect(validateReminderConfig({
+      reminders: [{ days: -1, timing: 'before' }],
+    })).toBeNull()
+  })
+
+  it('rejects entries with non-integer days', () => {
+    expect(validateReminderConfig({
+      reminders: [{ days: 1.5, timing: 'before' }],
+    })).toBeNull()
+  })
+
+  it('rejects entries with non-number days', () => {
+    expect(validateReminderConfig({
+      reminders: [{ days: '3', timing: 'before' }],
+    })).toBeNull()
+  })
+
+  it('filters invalid entries but keeps valid ones', () => {
+    expect(validateReminderConfig({
+      reminders: [
+        { days: 3, timing: 'before' },
+        { days: -1, timing: 'before' },
+        { days: 2, timing: 'invalid' },
+        { days: 1, timing: 'after' },
+      ],
+    })).toEqual({
+      reminders: [
+        { days: 3, timing: 'before' },
+        { days: 1, timing: 'after' },
+      ],
+    })
+  })
+
+  it('skips non-object entries in array', () => {
+    expect(validateReminderConfig({
+      reminders: [null, 'bad', 42, { days: 3, timing: 'before' }],
+    })).toEqual({
+      reminders: [{ days: 3, timing: 'before' }],
+    })
+  })
+
+  // --- Legacy format auto-conversion ---
+  it('converts legacy initialReminder to before', () => {
+    expect(validateReminderConfig({ initialReminder: 3 })).toEqual({
+      reminders: [{ days: 3, timing: 'before' }],
+    })
+  })
+
+  it('converts legacy followUpReminder to before', () => {
+    expect(validateReminderConfig({ followUpReminder: 1 })).toEqual({
+      reminders: [{ days: 1, timing: 'before' }],
+    })
+  })
+
+  it('converts legacy overdueReminder to after', () => {
+    expect(validateReminderConfig({ overdueReminder: 2 })).toEqual({
+      reminders: [{ days: 2, timing: 'after' }],
+    })
+  })
+
+  it('converts all three legacy fields', () => {
+    expect(validateReminderConfig({
+      initialReminder: 7,
+      followUpReminder: 1,
+      overdueReminder: 3,
+    })).toEqual({
+      reminders: [
+        { days: 7, timing: 'before' },
+        { days: 1, timing: 'before' },
+        { days: 3, timing: 'after' },
+      ],
+    })
+  })
+
+  it('deduplicates legacy fields with same value', () => {
+    expect(validateReminderConfig({
+      initialReminder: 3,
+      followUpReminder: 3,
+    })).toEqual({
+      reminders: [{ days: 3, timing: 'before' }],
+    })
+  })
+
+  it('returns null for legacy format with only invalid values', () => {
     expect(validateReminderConfig({
       daysBeforeDue: [7, 1],
       enabled: true,
     })).toBeNull()
   })
 
-  it('strips legacy fields but keeps valid new fields', () => {
+  it('strips unknown keys from input', () => {
     expect(validateReminderConfig({
-      daysBeforeDue: [7, 1],
-      enabled: true,
-      initialReminder: 3,
-    })).toEqual({ initialReminder: 3 })
-  })
-
-  // --- Accepts valid new format ---
-  it('accepts initialReminder only', () => {
-    expect(validateReminderConfig({ initialReminder: 3 })).toEqual({
-      initialReminder: 3,
-    })
-  })
-
-  it('accepts followUpReminder only', () => {
-    expect(validateReminderConfig({ followUpReminder: 1 })).toEqual({
-      followUpReminder: 1,
-    })
-  })
-
-  it('accepts overdueReminder only', () => {
-    expect(validateReminderConfig({ overdueReminder: 2 })).toEqual({
-      overdueReminder: 2,
-    })
-  })
-
-  it('accepts all three fields together', () => {
-    expect(validateReminderConfig({
-      initialReminder: 7,
-      followUpReminder: 1,
-      overdueReminder: 3,
-    })).toEqual({
-      initialReminder: 7,
-      followUpReminder: 1,
-      overdueReminder: 3,
-    })
-  })
-
-  it('accepts zero as a valid value', () => {
-    expect(validateReminderConfig({ initialReminder: 0 })).toEqual({
-      initialReminder: 0,
-    })
-  })
-
-  // --- Rejects invalid field values ---
-  it('rejects negative numbers', () => {
-    expect(validateReminderConfig({ initialReminder: -1 })).toBeNull()
-  })
-
-  it('rejects string values for numeric fields', () => {
-    expect(validateReminderConfig({ initialReminder: '3' })).toBeNull()
-  })
-
-  it('ignores unknown extra fields', () => {
-    expect(validateReminderConfig({
-      initialReminder: 5,
+      reminders: [{ days: 3, timing: 'before' }],
       bogusField: 'foo',
-      anotherJunk: 99,
-    })).toEqual({ initialReminder: 5 })
-  })
-
-  it('filters out invalid fields while keeping valid ones', () => {
-    expect(validateReminderConfig({
-      initialReminder: 3,
-      followUpReminder: -1,
-      overdueReminder: 'bad',
-    })).toEqual({ initialReminder: 3 })
+    })).toEqual({
+      reminders: [{ days: 3, timing: 'before' }],
+    })
   })
 })

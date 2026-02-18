@@ -195,9 +195,7 @@ describe('Notification Logic Tests', () => {
       occurrence_executed: 'mine',
       occurrence_skipped: 'mine',
       occurrence_commented: 'mine',
-      reminder_initial: 'mine',
-      reminder_followup: 'mine',
-      reminder_overdue: 'mine'
+      reminders: 'mine',
     }
 
     it('should have correct default values for task notifications', () => {

@@ -81,57 +81,66 @@ export class EmailProvider implements NotificationProvider {
           }),
         };
 
-      case "task_reminder_initial": {
-        const daysBefore = this.getDaysUntilDue(occurrence?.dueDate);
-        const dueSummary =
-          daysBefore > 0
-            ? `Your task is due in ${daysBefore} days:`
-            : "Your task is due today:";
+      case "task_reminder": {
+        const reminderEntry = context.reminderEntry;
+        const timing = reminderEntry?.timing || 'before';
+        const isOverdue = timing === 'after';
+
+        // Determine heading, colors, and summary based on timing
+        let heading: string;
+        let headingColor: string;
+        let bgColor: string;
+        let buttonColor: string;
+        let dueSummary: string;
+        let subjectLine: string;
+
+        if (isOverdue) {
+          const daysOverdue = reminderEntry?.days || Math.abs(this.getDaysUntilDue(occurrence?.dueDate));
+          heading = "Task Overdue";
+          headingColor = "#dc2626";
+          bgColor = "#fef2f2";
+          buttonColor = "#dc2626";
+          dueSummary = `Your task is ${daysOverdue} days overdue:`;
+          subjectLine = `Overdue: ${task?.name} (${daysOverdue} days overdue)`;
+        } else if (timing === 'on') {
+          heading = "Due Today";
+          headingColor = "#d97706";
+          bgColor = "#fffbeb";
+          buttonColor = "#d97706";
+          dueSummary = "Your task is due today:";
+          subjectLine = `Due Today: ${task?.name}`;
+        } else {
+          // before
+          const daysBefore = reminderEntry?.days || this.getDaysUntilDue(occurrence?.dueDate);
+          heading = "Task Reminder";
+          headingColor = "#d97706";
+          bgColor = "#fffbeb";
+          buttonColor = "#d97706";
+          if (daysBefore === 1) {
+            dueSummary = "Your task is due tomorrow:";
+            subjectLine = `Reminder: ${task?.name} due tomorrow`;
+          } else if (daysBefore === 0) {
+            dueSummary = "Your task is due today:";
+            subjectLine = `Reminder: ${task?.name} due today`;
+          } else {
+            dueSummary = `Your task is due in ${daysBefore} days:`;
+            subjectLine = `Reminder: ${task?.name} due in ${daysBefore} days`;
+          }
+        }
+
         return {
-          subject: `Reminder: ${task?.name} ${daysBefore > 0 ? `due in ${daysBefore} days` : "due today"}`,
-          body: this.renderEmailTemplate("task_reminder_initial", {
+          subject: subjectLine,
+          body: this.renderEmailTemplate("task_reminder", {
             userName: user.name,
             taskName: task?.name,
             dueDate: occurrence?.dueDate
               ? format(new Date(occurrence.dueDate), "PPP")
               : "",
+            heading,
+            headingColor,
+            bgColor,
+            buttonColor,
             dueSummary,
-            occurrenceUrl: `${baseUrl}/occurrences/${occurrence?.id}`,
-          }),
-        };
-      }
-
-      case "task_reminder_followup": {
-        const daysBeforeFollowup = this.getDaysUntilDue(occurrence?.dueDate);
-        const dueSummaryFollowup =
-          daysBeforeFollowup > 0
-            ? `Your task is due in ${daysBeforeFollowup} days:`
-            : "Your task is due today:";
-        return {
-          subject: `Follow-up: ${task?.name} ${daysBeforeFollowup > 0 ? `due in ${daysBeforeFollowup} days` : "due today"}`,
-          body: this.renderEmailTemplate("task_reminder_followup", {
-            userName: user.name,
-            taskName: task?.name,
-            dueDate: occurrence?.dueDate
-              ? format(new Date(occurrence.dueDate), "PPP")
-              : "",
-            dueSummary: dueSummaryFollowup,
-            occurrenceUrl: `${baseUrl}/occurrences/${occurrence?.id}`,
-          }),
-        };
-      }
-
-      case "task_reminder_overdue": {
-        const daysOverdue = Math.abs(this.getDaysUntilDue(occurrence?.dueDate));
-        return {
-          subject: `Overdue: ${task?.name} (${daysOverdue} days overdue)`,
-          body: this.renderEmailTemplate("task_reminder_overdue", {
-            userName: user.name,
-            taskName: task?.name,
-            dueDate: occurrence?.dueDate
-              ? format(new Date(occurrence.dueDate), "PPP")
-              : "",
-            daysOverdue,
             occurrenceUrl: `${baseUrl}/occurrences/${occurrence?.id}`,
           }),
         };
@@ -245,44 +254,16 @@ export class EmailProvider implements NotificationProvider {
         </div>
       `,
 
-      task_reminder_initial: `
+      task_reminder: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #d97706;">Task Reminder</h2>
+          <h2 style="color: {{headingColor}};">{{heading}}</h2>
           <p>Hi {{userName}},</p>
           <p>{{dueSummary}}</p>
-          <div style="background: #fffbeb; padding: 16px; border-radius: 8px; margin: 16px 0;">
+          <div style="background: {{bgColor}}; padding: 16px; border-radius: 8px; margin: 16px 0;">
             <h3 style="margin-top: 0;">{{taskName}}</h3>
             <p><strong>Due Date:</strong> {{dueDate}}</p>
           </div>
-          <p><a href="{{occurrenceUrl}}" style="background: #d97706; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">Complete Task</a></p>
-          <p>Best regards,<br>Adulting.DIY</p>
-        </div>
-      `,
-
-      task_reminder_followup: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #d97706;">Follow-up Reminder</h2>
-          <p>Hi {{userName}},</p>
-          <p>{{dueSummary}}</p>
-          <div style="background: #fffbeb; padding: 16px; border-radius: 8px; margin: 16px 0;">
-            <h3 style="margin-top: 0;">{{taskName}}</h3>
-            <p><strong>Due Date:</strong> {{dueDate}}</p>
-          </div>
-          <p><a href="{{occurrenceUrl}}" style="background: #d97706; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">Complete Task</a></p>
-          <p>Best regards,<br>Adulting.DIY</p>
-        </div>
-      `,
-
-      task_reminder_overdue: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #dc2626;">Task Overdue</h2>
-          <p>Hi {{userName}},</p>
-          <p>Your task is {{daysOverdue}} days overdue:</p>
-          <div style="background: #fef2f2; padding: 16px; border-radius: 8px; margin: 16px 0;">
-            <h3 style="margin-top: 0;">{{taskName}}</h3>
-            <p><strong>Due Date:</strong> {{dueDate}}</p>
-          </div>
-          <p><a href="{{occurrenceUrl}}" style="background: #dc2626; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">Complete Task</a></p>
+          <p><a href="{{occurrenceUrl}}" style="background: {{buttonColor}}; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">Complete Task</a></p>
           <p>Best regards,<br>Adulting.DIY</p>
         </div>
       `,

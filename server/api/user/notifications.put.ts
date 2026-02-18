@@ -13,9 +13,7 @@ const requiredFields = [
   "occurrence_executed",
   "occurrence_skipped",
   "occurrence_commented",
-  "reminder_initial",
-  "reminder_followup",
-  "reminder_overdue",
+  "reminders",
 ] as const;
 
 export default defineHouseholdProtectedEventHandler(

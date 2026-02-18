@@ -107,10 +107,15 @@ export type ScheduleConfig =
   | AnnualFixedScheduleConfig
   | AnnualVariableScheduleConfig;
 
+export type ReminderTiming = 'before' | 'on' | 'after';
+
+export interface ReminderEntry {
+  days: number;              // 0+ integer (always 0 when timing is 'on')
+  timing: ReminderTiming;
+}
+
 export interface ReminderConfig {
-  initialReminder?: number; // Days before due date
-  followUpReminder?: number; // Days before due date
-  overdueReminder?: number; // Days after due date
+  reminders: ReminderEntry[];  // max 5 entries
 }
 
 export interface TaskDefinition {

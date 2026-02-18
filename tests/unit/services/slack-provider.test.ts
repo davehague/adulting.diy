@@ -79,9 +79,13 @@ describe('SlackProvider', () => {
       .rejects.toThrow('Slack webhook failed');
   });
 
-  it('formats task_reminder_overdue with overdue info', async () => {
+  it('formats task_reminder with overdue info when timing is after', async () => {
     const provider = new SlackProvider();
-    await provider.send(recipient, 'task_reminder_overdue', baseContext);
+    const overdueContext = {
+      ...baseContext,
+      reminderEntry: { days: 3, timing: 'after' as const },
+    };
+    await provider.send(recipient, 'task_reminder', overdueContext);
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     const text = JSON.stringify(body.blocks);

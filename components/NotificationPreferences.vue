@@ -131,26 +131,11 @@
         <h4 class="text-sm font-medium text-stone-900 mb-3">Reminder Notifications</h4>
         <div class="space-y-3">
           <div class="flex items-center justify-between">
-            <label class="text-sm text-stone-700">Initial Reminder</label>
-            <select v-model="preferences.reminder_initial" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
-              <option value="any">All tasks</option>
-              <option value="mine">My tasks only</option>
-              <option value="none">Disabled</option>
-            </select>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <label class="text-sm text-stone-700">Follow-up Reminder</label>
-            <select v-model="preferences.reminder_followup" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
-              <option value="any">All tasks</option>
-              <option value="mine">My tasks only</option>
-              <option value="none">Disabled</option>
-            </select>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <label class="text-sm text-stone-700">Overdue Reminder</label>
-            <select v-model="preferences.reminder_overdue" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
+            <div>
+              <label class="text-sm text-stone-700">Task Reminders</label>
+              <p class="text-xs text-stone-500">Reminders configured on tasks</p>
+            </div>
+            <select v-model="preferences.reminders" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
               <option value="any">All tasks</option>
               <option value="mine">My tasks only</option>
               <option value="none">Disabled</option>
@@ -195,9 +180,7 @@ const preferences = ref<NotificationPreferences>({
   occurrence_executed: 'mine',
   occurrence_skipped: 'mine',
   occurrence_commented: 'mine',
-  reminder_initial: 'mine',
-  reminder_followup: 'mine',
-  reminder_overdue: 'mine',
+  reminders: 'mine',
   channels: {
     email: true,
     slack: false,
