@@ -815,6 +815,76 @@ describe('End conditions prevent next occurrence', () => {
     // Only the transaction update happened, no new occurrence create
     expect(createCalls.length).toBe(0)
   })
+
+  it('does not generate next when date end condition is reached on execute', async () => {
+    const config: ScheduleConfig = {
+      type: 'fixed_interval',
+      interval: 1,
+      intervalUnit: 'week',
+      endCondition: { type: 'date', date: localDate(2024, 1, 20) },
+    }
+    const task = makeTask({ scheduleConfig: config })
+    const occ = makeOccurrence({ dueDate: localDate(2024, 1, 15) })
+    const occWithTask = { ...occ, task, completedAt: new Date(), dueDate: occ.dueDate }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(occWithTask)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+    db.taskOccurrence.count.mockResolvedValue(1)
+
+    await occurrenceService.execute(OCCURRENCE_ID, USER_ID)
+
+    // Next due date would be Jan 22 which is after end date Jan 20 → no new occurrence
+    const createCalls = db.taskOccurrence.create.mock.calls
+    expect(createCalls.length).toBe(0)
+  })
+
+  it('does not generate next when date end condition is reached on skip', async () => {
+    const config: ScheduleConfig = {
+      type: 'fixed_interval',
+      interval: 1,
+      intervalUnit: 'week',
+      endCondition: { type: 'date', date: localDate(2024, 1, 20) },
+    }
+    const task = makeTask({ scheduleConfig: config })
+    const occ = makeOccurrence({ dueDate: localDate(2024, 1, 15) })
+    const skippedOcc = { ...occ, task, skippedAt: new Date(), dueDate: occ.dueDate }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(skippedOcc)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+    db.taskOccurrence.count.mockResolvedValue(1)
+
+    await occurrenceService.skip(OCCURRENCE_ID, USER_ID, 'End date reached')
+
+    // Next due date would be Jan 22 which is after end date Jan 20 → no new occurrence
+    const createCalls = db.taskOccurrence.create.mock.calls
+    expect(createCalls.length).toBe(0)
+  })
+
+  it('generates next when date end condition is NOT yet reached on execute', async () => {
+    const config: ScheduleConfig = {
+      type: 'fixed_interval',
+      interval: 1,
+      intervalUnit: 'week',
+      endCondition: { type: 'date', date: localDate(2027, 6, 1) },
+    }
+    const task = makeTask({ scheduleConfig: config })
+    const occ = makeOccurrence({ dueDate: localDate(2027, 1, 15) })
+    const occWithTask = { ...occ, task, completedAt: new Date(), dueDate: occ.dueDate }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(occWithTask)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+    db.taskOccurrence.count.mockResolvedValue(1)
+    db.taskOccurrence.findFirst.mockResolvedValue(null)
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-2' }))
+
+    await occurrenceService.execute(OCCURRENCE_ID, USER_ID)
+
+    // Next due date Jan 22 2027 is well before end date Jun 1 2027 → occurrence created
+    expect(db.taskOccurrence.create).toHaveBeenCalled()
+  })
 })
 
 // =============================================================================
