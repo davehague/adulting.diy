@@ -54,12 +54,12 @@
                          @keyup.enter="saveHouseholdName"
                          @keyup.escape="cancelEditingName">
                   <button @click="saveHouseholdName"
-                          class="bg-amber-600 text-white px-3 py-1 rounded text-sm hover:bg-amber-700 transition-colors duration-150">
-                    Save
+                          class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors">
+                    <Check :size="16" />Save
                   </button>
                   <button @click="cancelEditingName"
-                          class="bg-stone-300 text-stone-700 px-3 py-1 rounded text-sm hover:bg-stone-400 transition-colors duration-150">
-                    Cancel
+                          class="inline-flex items-center gap-1.5 text-stone-600 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-stone-100 transition-colors">
+                    <X :size="16" />Cancel
                   </button>
                 </div>
               </div>
@@ -114,8 +114,8 @@
                   <div class="flex items-center space-x-2">
                     <code class="bg-stone-100 px-3 py-2 rounded-md font-mono text-lg">{{ householdInfo.inviteCode }}</code>
                     <button @click="copyInviteCode"
-                            class="bg-amber-600 text-white px-3 py-2 rounded-md hover:bg-amber-700 text-sm transition-colors duration-150">
-                      {{ copiedInviteCode ? 'Copied!' : 'Copy' }}
+                            class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors">
+                      <Copy :size="16" />{{ copiedInviteCode ? 'Copied!' : 'Copy' }}
                     </button>
                   </div>
                   <p class="text-xs text-stone-500 mt-1">Share this code with others to invite them to your household</p>
@@ -123,8 +123,8 @@
                 
                 <div class="space-y-2">
                   <button @click="regenerateInviteCode"
-                          class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 text-sm transition-colors duration-150">
-                    Generate New Code
+                          class="inline-flex items-center gap-1.5 text-stone-600 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-stone-100 transition-colors">
+                    <RefreshCw :size="16" />Generate New Code
                   </button>
                   <p class="text-xs text-stone-500">This will invalidate the current invite code</p>
                 </div>
@@ -135,11 +135,9 @@
                 <div class="mb-4">
                   <label class="block text-sm font-medium text-stone-700 mb-2">Share Household</label>
                   <div class="space-y-3">
-                    <button @click="copyHouseholdInfo" 
-                            class="w-full flex items-center justify-center px-4 py-2 border border-stone-300 rounded-md hover:bg-stone-50">
-                      <svg class="w-4 h-4 mr-2 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                      </svg>
+                    <button @click="copyHouseholdInfo"
+                            class="w-full inline-flex items-center justify-center gap-1.5 text-stone-600 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-stone-100 transition-colors">
+                      <Copy :size="16" />
                       {{ copiedHouseholdInfo ? 'Copied!' : 'Copy Invitation' }}
                     </button>
                     <p class="text-xs text-stone-500">Share household invitation with others</p>
@@ -382,8 +380,8 @@
                 </span>
               </p>
               <button @click="leaveHousehold"
-                      class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm transition-colors duration-150">
-                Leave Household
+                      class="inline-flex items-center gap-1.5 text-red-500 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                <LogOut :size="16" />Leave Household
               </button>
             </div>
           </div>
@@ -404,6 +402,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useApi } from '@/utils/api';
 import { useAuthStore } from '@/stores/auth';
 import { ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
+import { Check, X, Copy, RefreshCw, LogOut } from 'lucide-vue-next';
 import type { User } from '@/types';
 
 const api = useApi();

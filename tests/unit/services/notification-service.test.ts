@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NotificationService } from '@/server/services/NotificationService'
+import { EmailProvider } from '@/server/services/notifications/EmailProvider'
 import type { NotificationPreferences } from '@/types/notification'
 import { defaultNotificationPreferences } from '@/types/notification'
 import type { NotificationEventType, NotificationContext } from '@/server/services/NotificationService'
@@ -296,10 +297,10 @@ describe('checkAndSendTaskReminders', () => {
 })
 
 describe('renderEmailTemplate', () => {
-  const service = new NotificationService()
+  const provider = new EmailProvider()
 
   it('task_created renders with description', () => {
-    const html = service.renderEmailTemplate('task_created', {
+    const html = provider.renderEmailTemplate('task_created', {
       userName: 'Alice',
       taskName: 'Clean Kitchen',
       descriptionBlock: '<p><strong>Description:</strong> Wipe counters</p>',
@@ -316,7 +317,7 @@ describe('renderEmailTemplate', () => {
   })
 
   it('task_created renders without description (empty descriptionBlock)', () => {
-    const html = service.renderEmailTemplate('task_created', {
+    const html = provider.renderEmailTemplate('task_created', {
       userName: 'Alice',
       taskName: 'Clean Kitchen',
       descriptionBlock: '',
@@ -330,7 +331,7 @@ describe('renderEmailTemplate', () => {
   })
 
   it('task_reminder_initial uses amber colors and Task Reminder heading', () => {
-    const html = service.renderEmailTemplate('task_reminder_initial', {
+    const html = provider.renderEmailTemplate('task_reminder_initial', {
       userName: 'Alice',
       taskName: 'Clean Kitchen',
       dueDate: 'January 20, 2025',
@@ -345,7 +346,7 @@ describe('renderEmailTemplate', () => {
   })
 
   it('task_reminder_followup uses amber colors and Follow-up heading', () => {
-    const html = service.renderEmailTemplate('task_reminder_followup', {
+    const html = provider.renderEmailTemplate('task_reminder_followup', {
       userName: 'Alice',
       taskName: 'Clean Kitchen',
       dueDate: 'January 20, 2025',
@@ -358,7 +359,7 @@ describe('renderEmailTemplate', () => {
   })
 
   it('task_reminder_overdue uses red colors and Task Overdue heading', () => {
-    const html = service.renderEmailTemplate('task_reminder_overdue', {
+    const html = provider.renderEmailTemplate('task_reminder_overdue', {
       userName: 'Alice',
       taskName: 'Clean Kitchen',
       dueDate: 'January 15, 2025',
@@ -373,7 +374,7 @@ describe('renderEmailTemplate', () => {
   })
 
   it('task_paused renders with warning styling', () => {
-    const html = service.renderEmailTemplate('task_paused', {
+    const html = provider.renderEmailTemplate('task_paused', {
       userName: 'Alice',
       taskName: 'Clean Kitchen',
       pausedByName: 'Bob',
@@ -387,7 +388,7 @@ describe('renderEmailTemplate', () => {
   })
 
   it('task_deleted renders with red styling', () => {
-    const html = service.renderEmailTemplate('task_deleted', {
+    const html = provider.renderEmailTemplate('task_deleted', {
       userName: 'Alice',
       taskName: 'Clean Kitchen',
       deletedByName: 'Bob',
@@ -400,7 +401,7 @@ describe('renderEmailTemplate', () => {
   })
 
   it('occurrence_executed renders with green styling', () => {
-    const html = service.renderEmailTemplate('occurrence_executed', {
+    const html = provider.renderEmailTemplate('occurrence_executed', {
       userName: 'Alice',
       taskName: 'Clean Kitchen',
       completedByName: 'Bob',
@@ -415,7 +416,7 @@ describe('renderEmailTemplate', () => {
   })
 
   it('occurrence_skipped renders with amber styling', () => {
-    const html = service.renderEmailTemplate('occurrence_skipped', {
+    const html = provider.renderEmailTemplate('occurrence_skipped', {
       userName: 'Alice',
       taskName: 'Clean Kitchen',
       skippedByName: 'Bob',
@@ -430,7 +431,7 @@ describe('renderEmailTemplate', () => {
   })
 
   it('occurrence_commented renders with comment content', () => {
-    const html = service.renderEmailTemplate('occurrence_commented', {
+    const html = provider.renderEmailTemplate('occurrence_commented', {
       userName: 'Alice',
       taskName: 'Clean Kitchen',
       commentedByName: 'Bob',
@@ -446,7 +447,7 @@ describe('renderEmailTemplate', () => {
   })
 
   it('unknown template falls back to generic', () => {
-    const html = service.renderEmailTemplate('unknown_template', {
+    const html = provider.renderEmailTemplate('unknown_template', {
       userName: 'Alice',
       taskName: 'Test',
       eventType: 'some_event',
@@ -457,7 +458,7 @@ describe('renderEmailTemplate', () => {
 })
 
 describe('generateEmailContent', () => {
-  const service = new NotificationService()
+  const provider = new EmailProvider()
   const baseContext = {
     user: { id: 'u1', name: 'Alice', email: 'alice@test.com' } as any,
     task: { id: 't1', name: 'Clean Kitchen', description: 'Wipe counters', category: { name: 'Cleaning' } } as any,
@@ -467,7 +468,7 @@ describe('generateEmailContent', () => {
   }
 
   it('task_reminder_followup returns proper subject and body (not generic)', () => {
-    const result = service.generateEmailContent('task_reminder_followup', baseContext, baseContext.user)
+    const result = provider.generateEmailContent('task_reminder_followup', baseContext, baseContext.user)
     expect(result.subject).toContain('Follow-up')
     expect(result.subject).toContain('Clean Kitchen')
     expect(result.body).toContain('Follow-up Reminder')
@@ -475,14 +476,14 @@ describe('generateEmailContent', () => {
   })
 
   it('task_reminder_overdue includes days overdue in subject', () => {
-    const result = service.generateEmailContent('task_reminder_overdue', baseContext, baseContext.user)
+    const result = provider.generateEmailContent('task_reminder_overdue', baseContext, baseContext.user)
     expect(result.subject).toContain('Overdue')
     expect(result.body).toContain('Task Overdue')
     expect(result.body).toContain('#dc2626')
   })
 
   it('task_created includes description when present', () => {
-    const result = service.generateEmailContent('task_created', baseContext, baseContext.user)
+    const result = provider.generateEmailContent('task_created', baseContext, baseContext.user)
     expect(result.body).toContain('Wipe counters')
   })
 
@@ -491,12 +492,12 @@ describe('generateEmailContent', () => {
       ...baseContext,
       task: { ...baseContext.task, description: undefined },
     }
-    const result = service.generateEmailContent('task_created', noDescContext, baseContext.user)
+    const result = provider.generateEmailContent('task_created', noDescContext, baseContext.user)
     expect(result.body).not.toContain('Description:')
   })
 
   it('task_paused returns proper subject and body', () => {
-    const result = service.generateEmailContent('task_paused', baseContext, baseContext.user)
+    const result = provider.generateEmailContent('task_paused', baseContext, baseContext.user)
     expect(result.subject).toContain('Task Paused')
     expect(result.subject).toContain('Clean Kitchen')
     expect(result.body).toContain('Task Paused')
@@ -504,21 +505,21 @@ describe('generateEmailContent', () => {
   })
 
   it('task_deleted returns proper subject and body', () => {
-    const result = service.generateEmailContent('task_deleted', baseContext, baseContext.user)
+    const result = provider.generateEmailContent('task_deleted', baseContext, baseContext.user)
     expect(result.subject).toContain('Task Deleted')
     expect(result.body).toContain('Task Deleted')
     expect(result.body).not.toContain('Adulting.DIY Notification')
   })
 
   it('occurrence_executed returns proper subject and body', () => {
-    const result = service.generateEmailContent('occurrence_executed', baseContext, baseContext.user)
+    const result = provider.generateEmailContent('occurrence_executed', baseContext, baseContext.user)
     expect(result.subject).toContain('Task Completed')
     expect(result.body).toContain('Task Completed')
     expect(result.body).not.toContain('Adulting.DIY Notification')
   })
 
   it('occurrence_skipped returns proper subject and body', () => {
-    const result = service.generateEmailContent('occurrence_skipped', baseContext, baseContext.user)
+    const result = provider.generateEmailContent('occurrence_skipped', baseContext, baseContext.user)
     expect(result.subject).toContain('Task Skipped')
     expect(result.body).toContain('Task Skipped')
     expect(result.body).not.toContain('Adulting.DIY Notification')
@@ -526,7 +527,7 @@ describe('generateEmailContent', () => {
 
   it('occurrence_commented returns proper subject with comment content', () => {
     const commentContext = { ...baseContext, comment: 'Test comment' }
-    const result = service.generateEmailContent('occurrence_commented', commentContext, baseContext.user)
+    const result = provider.generateEmailContent('occurrence_commented', commentContext, baseContext.user)
     expect(result.subject).toContain('New Comment')
     expect(result.body).toContain('New Comment')
     expect(result.body).toContain('Test comment')

@@ -22,24 +22,24 @@
         </div>
         <div class="flex flex-wrap gap-2">
           <button v-if="hasOverdueOccurrences" @click="openCatchUpModal"
-            class="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700">
-            Catch Up
+            class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50">
+            <FastForward :size="16" /> Catch Up
           </button>
           <NuxtLink :to="`/tasks/${task.id}/edit`"
-            class="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700">
-            Edit Task
+            class="inline-flex items-center gap-1.5 text-stone-600 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-stone-100 transition-colors disabled:opacity-50">
+            <Pencil :size="16" /> Edit Task
           </NuxtLink>
           <button v-if="task.metaStatus === 'active'" @click="pauseTask"
-            class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600">
-            Pause Task
+            class="inline-flex items-center gap-1.5 text-stone-600 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-stone-100 transition-colors disabled:opacity-50">
+            <Pause :size="16" /> Pause Task
           </button>
           <button v-if="task.metaStatus === 'paused'" @click="unpauseTask"
-            class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
-            Unpause Task
+            class="inline-flex items-center gap-1.5 text-stone-600 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-stone-100 transition-colors disabled:opacity-50">
+            <Play :size="16" /> Unpause Task
           </button>
           <button v-if="task.metaStatus !== 'soft-deleted'" @click="deleteTask"
-            class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">
-            Delete Task
+            class="inline-flex items-center gap-1.5 text-red-500 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50">
+            <Trash2 :size="16" /> Delete Task
           </button>
         </div>
       </div>
@@ -133,10 +133,7 @@
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2"
                     @click.stop>
                   <NuxtLink :to="`/occurrences/${occurrence.id}`" class="text-amber-700 hover:text-amber-900" title="View">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
+                    <Eye :size="16" />
                   </NuxtLink>
                 </td>
               </tr>
@@ -186,6 +183,7 @@ import type { TaskDefinition, TaskOccurrence, Category, User } from '@/types'; /
 import CatchUpModal from '@/components/tasks/CatchUpModal.vue';
 import TaskTimeline from '@/components/tasks/TaskTimeline.vue';
 import { useToast } from '@/composables/useToast';
+import { Pencil, Pause, Play, Trash2, FastForward, Eye } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
