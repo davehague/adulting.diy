@@ -23,9 +23,25 @@
               <div class="mt-2">
                 <p class="text-sm text-stone-500">
                   This task has <span class="font-semibold text-stone-700">{{ overdueCount }} overdue occurrence{{ overdueCount !== 1 ? 's' : '' }}</span>.
-                  They will be marked as skipped and the next due date will be calculated.
+                  They will be marked as skipped.
                 </p>
               </div>
+
+              <!-- Next due date -->
+              <div class="mt-4">
+                <label for="catch-up-date" class="block text-sm font-medium text-stone-700">
+                  Next due date
+                </label>
+                <p class="text-xs text-stone-400 mb-1">Calculated from the schedule. Change it if you'd like a different date.</p>
+                <input
+                  id="catch-up-date"
+                  type="date"
+                  v-model="selectedDate"
+                  :min="minDate"
+                  class="block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm"
+                />
+              </div>
+
               <div class="mt-4">
                 <label for="catch-up-comment" class="block text-sm font-medium text-stone-700">
                   Add a reason (optional)
@@ -44,7 +60,7 @@
         <div class="bg-stone-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
           <button
             type="button"
-            :disabled="submitting"
+            :disabled="submitting || !selectedDate"
             @click="confirmCatchUp"
             class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-amber-600 text-base font-medium text-white hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
           >
@@ -65,35 +81,63 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed, watch } from 'vue';
 
-defineProps<{
+const props = defineProps<{
   visible: boolean;
   taskName: string;
   overdueCount: number;
+  calculatedNextDueDate: string | null;
 }>();
 
 const emit = defineEmits<{
-  (e: 'confirm', comment: string): void;
+  (e: 'confirm', payload: { comment: string; overrideNextDueDate?: string }): void;
   (e: 'cancel'): void;
 }>();
 
 const comment = ref('');
+const selectedDate = ref('');
 const submitting = ref(false);
+const initialDate = ref('');
+
+// When the calculated date prop changes (modal opens), pre-fill the date input
+watch(() => props.calculatedNextDueDate, (val) => {
+  if (val) {
+    const dateStr = new Date(val).toISOString().split('T')[0];
+    selectedDate.value = dateStr;
+    initialDate.value = dateStr;
+  } else {
+    selectedDate.value = '';
+    initialDate.value = '';
+  }
+});
+
+const minDate = computed(() => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toISOString().split('T')[0];
+});
 
 const confirmCatchUp = () => {
   submitting.value = true;
-  emit('confirm', comment.value);
+  const dateChanged = selectedDate.value !== initialDate.value;
+  emit('confirm', {
+    comment: comment.value,
+    overrideNextDueDate: dateChanged ? selectedDate.value : undefined,
+  });
 };
 
 const cancel = () => {
   comment.value = '';
+  selectedDate.value = '';
   emit('cancel');
 };
 
 defineExpose({
   reset: () => {
     comment.value = '';
+    selectedDate.value = '';
+    initialDate.value = '';
     submitting.value = false;
   },
 });

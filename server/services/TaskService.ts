@@ -519,7 +519,8 @@ export class TaskService {
   async catchUp(
     id: string,
     userId: string,
-    comment?: string
+    comment?: string,
+    overrideNextDueDate?: Date
   ): Promise<{ occurrencesSkipped: number; newDueDate: Date | null }> {
     try {
       const task = await prisma.taskDefinition.findUnique({
@@ -550,10 +551,11 @@ export class TaskService {
 
       const lastOverdueDueDate =
         overdueOccurrences[overdueOccurrences.length - 1].dueDate;
-      const newDueDate = calculateCatchUpDueDate(
+      const calculatedDueDate = calculateCatchUpDueDate(
         scheduleConfig,
         lastOverdueDueDate
       );
+      const newDueDate = overrideNextDueDate ?? calculatedDueDate;
 
       await prisma.$transaction(async (tx) => {
         // Skip all overdue occurrences
@@ -589,13 +591,30 @@ export class TaskService {
         });
 
         let actualNewDueDate = newDueDate;
+        const initialAssignees = task.defaultAssigneeIds || [];
+        const initialStatus =
+          initialAssignees.length > 0 ? "assigned" : "created";
 
-        // Create new occurrence if needed
-        if (newDueDate && !existingFuture) {
-          const initialAssignees = task.defaultAssigneeIds || [];
-          const initialStatus =
-            initialAssignees.length > 0 ? "assigned" : "created";
-
+        if (overrideNextDueDate && existingFuture) {
+          // User chose a specific date — update the existing future occurrence
+          await tx.taskOccurrence.update({
+            where: { id: existingFuture.id },
+            data: { dueDate: overrideNextDueDate, updatedAt: now },
+          });
+          actualNewDueDate = overrideNextDueDate;
+        } else if (overrideNextDueDate && !existingFuture) {
+          // User chose a specific date — create occurrence with that date
+          await tx.taskOccurrence.create({
+            data: {
+              taskId: id,
+              dueDate: overrideNextDueDate,
+              status: initialStatus,
+              assigneeIds: initialAssignees,
+            },
+          });
+          actualNewDueDate = overrideNextDueDate;
+        } else if (newDueDate && !existingFuture) {
+          // Auto-calculated date, no existing future — create new occurrence
           await tx.taskOccurrence.create({
             data: {
               taskId: id,
@@ -605,6 +624,7 @@ export class TaskService {
             },
           });
         } else if (existingFuture) {
+          // Auto-calculated, existing future — keep it
           actualNewDueDate = existingFuture.dueDate;
         }
 
@@ -618,6 +638,7 @@ export class TaskService {
               occurrencesSkipped: overdueOccurrences.length,
               newDueDate: actualNewDueDate?.toISOString() ?? null,
               previousDueDate: lastOverdueDueDate.toISOString(),
+              overrideDateUsed: !!overrideNextDueDate,
             },
             comment: comment || null,
           },

@@ -175,6 +175,103 @@ describe('TaskService.catchUp', () => {
     expect(historyLogCalls[0][0].data.logType).toBe('catch_up')
   })
 
+  it('uses override date instead of calculated date when provided', async () => {
+    const config: FixedIntervalScheduleConfig = {
+      type: 'fixed_interval',
+      interval: 1,
+      intervalUnit: 'year',
+      endCondition: never,
+    }
+    vi.mocked(prisma.taskDefinition.findUnique).mockResolvedValue(mockTask(config) as any)
+    vi.mocked(prisma.taskOccurrence.findMany).mockResolvedValue([
+      mockOverdueOccurrence('occ-1', new Date(2025, 1, 17)),
+    ] as any)
+    vi.mocked(prisma.taskOccurrence.findFirst).mockResolvedValue(null)
+    vi.mocked(prisma.taskOccurrence.update).mockResolvedValue({} as any)
+    vi.mocked(prisma.occurrenceHistoryLog.create).mockResolvedValue({} as any)
+    vi.mocked((prisma as any).taskHistoryLog.create).mockResolvedValue({} as any)
+    vi.mocked(prisma.taskOccurrence.create).mockResolvedValue({} as any)
+    vi.mocked(prisma.taskOccurrence.count).mockResolvedValue(1)
+
+    const overrideDate = new Date(2026, 2, 1) // Mar 1 2026 (instead of Feb 17 2027)
+    const result = await taskService.catchUp('task-1', 'user-1', undefined, overrideDate)
+
+    expect(result.occurrencesSkipped).toBe(1)
+    // Should use override date, not calculated (which would be Feb 17 2027)
+    expect(result.newDueDate).toEqual(overrideDate)
+    // Verify occurrence was created with override date
+    expect(prisma.taskOccurrence.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ dueDate: overrideDate }),
+      })
+    )
+  })
+
+  it('updates existing future occurrence when override date is provided', async () => {
+    const config: FixedIntervalScheduleConfig = {
+      type: 'fixed_interval',
+      interval: 1,
+      intervalUnit: 'year',
+      endCondition: never,
+    }
+    vi.mocked(prisma.taskDefinition.findUnique).mockResolvedValue(mockTask(config) as any)
+    vi.mocked(prisma.taskOccurrence.findMany).mockResolvedValue([
+      mockOverdueOccurrence('occ-1', new Date(2025, 1, 17)),
+    ] as any)
+    vi.mocked(prisma.taskOccurrence.findFirst)
+      .mockResolvedValueOnce({
+        id: 'occ-future', dueDate: new Date(2027, 1, 17), status: 'assigned',
+      } as any)
+      .mockResolvedValueOnce({
+        id: 'occ-future', dueDate: new Date(2026, 2, 1), status: 'assigned',
+      } as any)
+    vi.mocked(prisma.taskOccurrence.update).mockResolvedValue({} as any)
+    vi.mocked(prisma.occurrenceHistoryLog.create).mockResolvedValue({} as any)
+    vi.mocked((prisma as any).taskHistoryLog.create).mockResolvedValue({} as any)
+
+    const overrideDate = new Date(2026, 2, 1)
+    const result = await taskService.catchUp('task-1', 'user-1', undefined, overrideDate)
+
+    expect(result.occurrencesSkipped).toBe(1)
+    // Should NOT create a new occurrence — should update the existing one
+    expect(prisma.taskOccurrence.create).not.toHaveBeenCalled()
+    // Verify the existing occurrence was updated with the override date
+    // update calls: 1 for skipping overdue + 1 for updating future occurrence date
+    const updateCalls = vi.mocked(prisma.taskOccurrence.update).mock.calls
+    const dateUpdateCall = updateCalls.find(
+      (call) => (call[0] as any).where.id === 'occ-future'
+    )
+    expect(dateUpdateCall).toBeTruthy()
+    expect((dateUpdateCall![0] as any).data.dueDate).toEqual(overrideDate)
+  })
+
+  it('records overrideDateUsed in history log when override is provided', async () => {
+    const config: FixedIntervalScheduleConfig = {
+      type: 'fixed_interval',
+      interval: 1,
+      intervalUnit: 'week',
+      endCondition: never,
+    }
+    vi.mocked(prisma.taskDefinition.findUnique).mockResolvedValue(mockTask(config) as any)
+    vi.mocked(prisma.taskOccurrence.findMany).mockResolvedValue([
+      mockOverdueOccurrence('occ-1', new Date(2026, 0, 1)),
+    ] as any)
+    vi.mocked(prisma.taskOccurrence.findFirst).mockResolvedValue(null)
+    vi.mocked(prisma.taskOccurrence.update).mockResolvedValue({} as any)
+    vi.mocked(prisma.occurrenceHistoryLog.create).mockResolvedValue({} as any)
+    vi.mocked((prisma as any).taskHistoryLog.create).mockResolvedValue({} as any)
+    vi.mocked(prisma.taskOccurrence.create).mockResolvedValue({} as any)
+    vi.mocked(prisma.taskOccurrence.count).mockResolvedValue(1)
+
+    const overrideDate = new Date(2026, 2, 15)
+    await taskService.catchUp('task-1', 'user-1', 'Yearly task, want it sooner', overrideDate)
+
+    const historyLogCalls = vi.mocked((prisma as any).taskHistoryLog.create).mock.calls
+    expect(historyLogCalls[0][0].data.details.overrideDateUsed).toBe(true)
+    expect(historyLogCalls[0][0].data.details.newDueDate).toBe(overrideDate.toISOString())
+    expect(historyLogCalls[0][0].data.comment).toBe('Yearly task, want it sooner')
+  })
+
   it('uses variable interval calculation for variable_interval tasks', async () => {
     const config: VariableIntervalScheduleConfig = {
       type: 'variable_interval',

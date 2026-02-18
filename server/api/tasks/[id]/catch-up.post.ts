@@ -33,12 +33,27 @@ export default defineHouseholdProtectedEventHandler(
         });
       }
 
-      // Read optional comment from body
+      // Read optional comment and override date from body
       const body = await readBody(event).catch(() => ({}));
       const comment = body?.comment as string | undefined;
+      const overrideNextDueDate = body?.overrideNextDueDate
+        ? new Date(body.overrideNextDueDate as string)
+        : undefined;
+
+      // Validate override date is in the future if provided
+      if (overrideNextDueDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (overrideNextDueDate <= today) {
+          throw createError({
+            statusCode: 400,
+            message: "Override date must be in the future",
+          });
+        }
+      }
 
       // Perform catch-up
-      const result = await taskService.catchUp(taskId, authUser.userId, comment);
+      const result = await taskService.catchUp(taskId, authUser.userId, comment, overrideNextDueDate);
 
       return result;
     } catch (error) {

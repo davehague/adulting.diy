@@ -21,7 +21,7 @@
           <h1 class="font-heading text-2xl font-bold text-stone-900">{{ task.name }}</h1>
         </div>
         <div class="flex space-x-2">
-          <button v-if="hasOverdueOccurrences" @click="showCatchUpModal = true"
+          <button v-if="hasOverdueOccurrences" @click="openCatchUpModal"
             class="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700">
             Catch Up
           </button>
@@ -144,6 +144,7 @@
         :visible="showCatchUpModal"
         :task-name="task.name"
         :overdue-count="overdueOccurrenceCount"
+        :calculated-next-due-date="calculatedNextDueDate"
         @confirm="handleCatchUp"
         @cancel="showCatchUpModal = false"
       />
@@ -166,11 +167,13 @@ import { useTaskStore } from '@/stores/tasks';
 import type { TaskDefinition, TaskOccurrence, Category, User } from '@/types'; // Add User type
 import CatchUpModal from '@/components/tasks/CatchUpModal.vue';
 import TaskTimeline from '@/components/tasks/TaskTimeline.vue';
+import { useToast } from '@/composables/useToast';
 
 const route = useRoute();
 const router = useRouter();
 const api = useApi();
 const taskStore = useTaskStore();
+const toast = useToast();
 
 // Task ID from route params
 const taskId = route.params.id as string;
@@ -378,6 +381,17 @@ const getAssigneeNames = (assigneeIds: string[] | undefined): string => {
 // Catch-up state
 const showCatchUpModal = ref(false);
 const catchUpModalRef = ref<any>(null);
+const calculatedNextDueDate = ref<string | null>(null);
+
+const openCatchUpModal = async () => {
+  try {
+    const preview = await api.get<{ calculatedNextDueDate: string | null }>(`/api/tasks/${taskId}/catch-up-preview`);
+    calculatedNextDueDate.value = preview.calculatedNextDueDate;
+  } catch {
+    calculatedNextDueDate.value = null;
+  }
+  showCatchUpModal.value = true;
+};
 
 const hasOverdueOccurrences = computed(() => {
   const now = new Date();
@@ -399,11 +413,14 @@ const overdueOccurrenceCount = computed(() => {
   }).length;
 });
 
-const handleCatchUp = async (comment: string) => {
+const handleCatchUp = async (payload: { comment: string; overrideNextDueDate?: string }) => {
   try {
     const result = await api.post<{ occurrencesSkipped: number; newDueDate: string | null }>(
       `/api/tasks/${taskId}/catch-up`,
-      { comment: comment || undefined }
+      {
+        comment: payload.comment || undefined,
+        overrideNextDueDate: payload.overrideNextDueDate || undefined,
+      }
     );
 
     showCatchUpModal.value = false;
@@ -416,10 +433,10 @@ const handleCatchUp = async (comment: string) => {
     ]);
     taskTimelineRef.value?.fetchHistory();
 
-    alert(`Caught up — ${result.occurrencesSkipped} occurrence${result.occurrencesSkipped !== 1 ? 's' : ''} skipped.${result.newDueDate ? ' Next due: ' + new Date(result.newDueDate).toLocaleDateString() : ''}`);
+    toast.success(`Caught up — ${result.occurrencesSkipped} occurrence${result.occurrencesSkipped !== 1 ? 's' : ''} skipped.${result.newDueDate ? ' Next due: ' + new Date(result.newDueDate).toLocaleDateString() : ''}`);
   } catch (err: any) {
     console.error('Error catching up task:', err);
-    alert(err.data?.message || 'Failed to catch up task');
+    toast.error(err.data?.message || 'Failed to catch up task');
     catchUpModalRef.value?.reset();
   }
 };

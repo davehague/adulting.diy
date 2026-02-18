@@ -40,7 +40,7 @@
     </div>
 
     <!-- Occurrences List Table -->
-    <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+    <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200">
       <table class="min-w-full divide-y divide-stone-200">
         <thead class="bg-stone-50">
           <tr>

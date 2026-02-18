@@ -17,6 +17,7 @@
             class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
             <option value="">All Statuses</option>
             <option value="active">Active</option>
+            <option value="overdue">Overdue</option>
             <option value="paused">Paused</option>
             <option value="soft-deleted">Deleted</option>
             <option value="completed">Completed</option>
@@ -64,7 +65,7 @@
     </div>
 
     <!-- Task List -->
-    <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+    <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200">
       <table class="min-w-full divide-y divide-stone-200">
         <thead class="bg-stone-50">
           <tr>
@@ -233,6 +234,7 @@
       :visible="showCatchUpModal"
       :task-name="catchUpTask?.name || ''"
       :overdue-count="catchUpOverdueCount"
+      :calculated-next-due-date="catchUpCalculatedDate"
       @confirm="handleCatchUp"
       @cancel="closeCatchUpModal"
     />
@@ -247,16 +249,23 @@ import { useTaskStore } from '@/stores/tasks';
 import { useAuthStore } from '@/stores/auth'; // Import auth store
 import type { TaskDefinition, Category, User } from '@/types';
 import CatchUpModal from '@/components/tasks/CatchUpModal.vue';
+import { useToast } from '@/composables/useToast';
 
 const api = useApi(); // Keep for categories for now
 const taskStore = useTaskStore();
 const authStore = useAuthStore(); // Get auth store instance
 const router = useRouter();
+const toast = useToast();
 
 // State
 // Use computed properties to get state from the store
 const loading = computed(() => taskStore.isLoading);
-const tasks = computed(() => taskStore.tasks);
+const tasks = computed(() => {
+  if (filters.status === 'overdue') {
+    return taskStore.tasks.filter(task => task.nextOccurrence && isOverdue(task.nextOccurrence.dueDate));
+  }
+  return taskStore.tasks;
+});
 const error = computed(() => taskStore.error);
 
 // Keep local state for categories filter and household users
@@ -271,6 +280,12 @@ const filters = reactive({
   status: '',
   categoryId: '',
   search: ''
+});
+
+// Map UI filters to API filters (overdue → active for the API, filtered client-side)
+const apiFilters = (f: typeof filters) => ({
+  ...f,
+  status: f.status === 'overdue' ? 'active' : f.status,
 });
 
 // Load initial data
@@ -303,24 +318,21 @@ onMounted(async () => {
   watch(() => authStore.isReady, (ready) => {
     if (ready) {
       console.log('[Tasks Page] Auth ready, fetching tasks.');
-      taskStore.fetchTasks(filters);
+      taskStore.fetchTasks(apiFilters(filters));
     }
   }, { immediate: true }); // immediate: true runs the watcher once on setup
 
   // Also handle the case where auth is already ready when component mounts
   if (authStore.isReady) {
     console.log('[Tasks Page] Auth already ready on mount, fetching tasks.');
-    await taskStore.fetchTasks(filters);
+    await taskStore.fetchTasks(apiFilters(filters));
   }
 });
 
-// Remove local fetchTasks function, store handles it
-
-// Watch filters changes to refresh tasks via store action
 // Watch filters changes, but only fetch if auth is ready
-watch(filters, async (newFilters) => {
+watch(filters, async () => {
   if (authStore.isReady) {
-    await taskStore.fetchTasks(newFilters);
+    await taskStore.fetchTasks(apiFilters(filters));
   }
 }, { deep: true });
 
@@ -426,7 +438,7 @@ const pauseTask = async (taskId: string) => {
   try {
     // Placeholder: Direct API call for now, ideally move to store action
     await api.post(`/api/tasks/${taskId}/pause`, {}); // Pass empty object for data
-    await taskStore.fetchTasks(filters); // Refetch tasks via store
+    await taskStore.fetchTasks(apiFilters(filters)); // Refetch tasks via store
   } catch (err) {
     console.error('Error pausing task:', err);
     // error.value = 'Failed to pause task. Please try again.'; // Store handles errors
@@ -439,7 +451,7 @@ const unpauseTask = async (taskId: string) => {
   try {
     // Placeholder: Direct API call for now, ideally move to store action
     await api.post(`/api/tasks/${taskId}/unpause`, {}); // Pass empty object for data
-    await taskStore.fetchTasks(filters); // Refetch tasks via store
+    await taskStore.fetchTasks(apiFilters(filters)); // Refetch tasks via store
   } catch (err) {
     console.error('Error unpausing task:', err);
     // error.value = 'Failed to unpause task. Please try again.'; // Store handles errors
@@ -456,7 +468,7 @@ const deleteTask = async (taskId: string) => {
     // TODO: Implement deleteTask action in store and call it here
     // Placeholder: Direct API call for now, ideally move to store action
     await api.delete(`/api/tasks/${taskId}`);
-    await taskStore.fetchTasks(filters); // Refetch tasks via store
+    await taskStore.fetchTasks(apiFilters(filters)); // Refetch tasks via store
   } catch (err) {
     console.error('Error deleting task:', err);
     // error.value = 'Failed to delete task. Please try again.'; // Store handles errors
@@ -468,6 +480,7 @@ const showCatchUpModal = ref(false);
 const catchUpTask = ref<TaskDefinition | null>(null);
 const catchUpModalRef = ref<any>(null);
 const catchUpOverdueCount = ref(0);
+const catchUpCalculatedDate = ref<string | null>(null);
 
 const isTaskOverdue = (task: TaskDefinition): boolean => {
   if (!task.nextOccurrence) return false;
@@ -482,7 +495,10 @@ const openCatchUp = async (task: TaskDefinition) => {
   closeDropdown();
   catchUpTask.value = task;
   try {
-    const occurrences = await api.get<any[]>(`/api/tasks/${task.id}/occurrences`);
+    const [occurrences, preview] = await Promise.all([
+      api.get<any[]>(`/api/tasks/${task.id}/occurrences`),
+      api.get<{ calculatedNextDueDate: string | null }>(`/api/tasks/${task.id}/catch-up-preview`),
+    ]);
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     catchUpOverdueCount.value = occurrences.filter((occ: any) => {
@@ -490,8 +506,10 @@ const openCatchUp = async (task: TaskDefinition) => {
       dueDate.setHours(0, 0, 0, 0);
       return (occ.status === 'created' || occ.status === 'assigned') && dueDate < now;
     }).length;
+    catchUpCalculatedDate.value = preview.calculatedNextDueDate;
   } catch {
     catchUpOverdueCount.value = 0;
+    catchUpCalculatedDate.value = null;
   }
   showCatchUpModal.value = true;
 };
@@ -499,24 +517,28 @@ const openCatchUp = async (task: TaskDefinition) => {
 const closeCatchUpModal = () => {
   showCatchUpModal.value = false;
   catchUpTask.value = null;
+  catchUpCalculatedDate.value = null;
   catchUpModalRef.value?.reset();
 };
 
-const handleCatchUp = async (comment: string) => {
+const handleCatchUp = async (payload: { comment: string; overrideNextDueDate?: string }) => {
   if (!catchUpTask.value) return;
   try {
     const result = await api.post<{ occurrencesSkipped: number; newDueDate: string | null }>(
       `/api/tasks/${catchUpTask.value.id}/catch-up`,
-      { comment: comment || undefined }
+      {
+        comment: payload.comment || undefined,
+        overrideNextDueDate: payload.overrideNextDueDate || undefined,
+      }
     );
 
     closeCatchUpModal();
-    await taskStore.fetchTasks(filters);
+    await taskStore.fetchTasks(apiFilters(filters));
 
-    alert(`Caught up — ${result.occurrencesSkipped} occurrence${result.occurrencesSkipped !== 1 ? 's' : ''} skipped.${result.newDueDate ? ' Next due: ' + new Date(result.newDueDate).toLocaleDateString() : ''}`);
+    toast.success(`Caught up — ${result.occurrencesSkipped} occurrence${result.occurrencesSkipped !== 1 ? 's' : ''} skipped.${result.newDueDate ? ' Next due: ' + new Date(result.newDueDate).toLocaleDateString() : ''}`);
   } catch (err: any) {
     console.error('Error catching up task:', err);
-    alert(err.data?.message || 'Failed to catch up task');
+    toast.error(err.data?.message || 'Failed to catch up task');
     catchUpModalRef.value?.reset();
   }
 };
