@@ -168,15 +168,17 @@ export class NotificationService {
    */
   public isUserRelatedToOccurrence(userId: string, context: NotificationContext): boolean {
     if (!context.occurrence) return false;
-    
+
     // Check if user is assigned to the occurrence
     if (context.occurrence.assigneeIds.includes(userId)) {
       return true;
     }
 
-    // TODO: Check if user has commented on the occurrence
-    // This would require checking the occurrence history logs
-    // For now, just return false for comments
+    // Check if user has commented on the occurrence
+    if ((context.occurrence as any).commentUserIds?.includes(userId)) {
+      return true;
+    }
+
     return false;
   }
 

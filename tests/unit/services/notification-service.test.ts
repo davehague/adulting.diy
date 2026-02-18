@@ -490,6 +490,49 @@ describe('generateEmailContent', () => {
   })
 })
 
+describe('isUserRelatedToOccurrence with comment history', () => {
+  const service = new NotificationService()
+
+  it('returns true when user is an assignee', () => {
+    const context: NotificationContext = {
+      user: { id: 'u1' } as any,
+      occurrence: { assigneeIds: ['u1'] } as any,
+    }
+    expect(service.isUserRelatedToOccurrence('u1', context)).toBe(true)
+  })
+
+  it('returns true when user has commented (via commentUserIds)', () => {
+    const context: NotificationContext = {
+      user: { id: 'u1' } as any,
+      occurrence: { assigneeIds: ['u2'], commentUserIds: ['u1'] } as any,
+    }
+    expect(service.isUserRelatedToOccurrence('u1', context)).toBe(true)
+  })
+
+  it('returns false when user is neither assignee nor commenter', () => {
+    const context: NotificationContext = {
+      user: { id: 'u3' } as any,
+      occurrence: { assigneeIds: ['u1'], commentUserIds: ['u2'] } as any,
+    }
+    expect(service.isUserRelatedToOccurrence('u3', context)).toBe(false)
+  })
+
+  it('returns false when no occurrence in context', () => {
+    const context: NotificationContext = {
+      user: { id: 'u1' } as any,
+    }
+    expect(service.isUserRelatedToOccurrence('u1', context)).toBe(false)
+  })
+
+  it('returns false when commentUserIds is not present', () => {
+    const context: NotificationContext = {
+      user: { id: 'u1' } as any,
+      occurrence: { assigneeIds: ['u2'] } as any,
+    }
+    expect(service.isUserRelatedToOccurrence('u1', context)).toBe(false)
+  })
+})
+
 describe('Notification preferences vs reminder config interaction', () => {
   const service = new NotificationService()
 

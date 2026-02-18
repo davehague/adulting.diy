@@ -687,6 +687,17 @@ export class OccurrenceService {
         });
 
         if (occurrence?.task) {
+          // Get distinct user IDs who have commented on this occurrence
+          const commentLogs = await prisma.occurrenceHistoryLog.findMany({
+            where: {
+              occurrenceId: id,
+              logType: "comment",
+            },
+            select: { userId: true },
+            distinct: ["userId"],
+          });
+          const commentUserIds = commentLogs.map(log => log.userId);
+
           // Get the user who commented and the household
           const [actionUser, household] = await Promise.all([
             prisma.user.findUnique({
@@ -706,7 +717,7 @@ export class OccurrenceService {
               {
                 user: actionUser as any,
                 task: occurrence.task as unknown as TaskDefinition,
-                occurrence: occurrence as unknown as TaskOccurrence,
+                occurrence: { ...occurrence, commentUserIds } as unknown as TaskOccurrence,
                 actionUser: actionUser as any,
                 household: { id: occurrence.task.householdId, name: household?.name || "" },
                 comment: comment,
