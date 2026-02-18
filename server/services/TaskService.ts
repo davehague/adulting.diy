@@ -224,11 +224,17 @@ export class TaskService {
       try {
         const notificationService = new NotificationService();
         
-        // Get the user who created the task for notification context
-        const createdByUser = await prisma.user.findUnique({
-          where: { id: taskDefinition.createdByUserId },
-          select: { id: true, name: true, email: true },
-        });
+        // Get the user who created the task and the household for notification context
+        const [createdByUser, household] = await Promise.all([
+          prisma.user.findUnique({
+            where: { id: taskDefinition.createdByUserId },
+            select: { id: true, name: true, email: true },
+          }),
+          prisma.household.findUnique({
+            where: { id: taskDefinition.householdId },
+            select: { id: true, name: true },
+          }),
+        ]);
 
         if (createdByUser) {
           await notificationService.sendNotification(
@@ -238,7 +244,7 @@ export class TaskService {
               user: createdByUser as any,
               task: taskDefinition,
               actionUser: createdByUser as any,
-              household: { id: taskDefinition.householdId, name: "" },
+              household: { id: taskDefinition.householdId, name: household?.name || "" },
             },
             taskDefinition.createdByUserId // Don't notify the creator
           );
@@ -378,11 +384,17 @@ export class TaskService {
         try {
           const notificationService = new NotificationService();
           
-          // Get the user who paused the task
-          const actionUser = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { id: true, name: true, email: true },
-          });
+          // Get the user who paused the task and the household
+          const [actionUser, household] = await Promise.all([
+            prisma.user.findUnique({
+              where: { id: userId },
+              select: { id: true, name: true, email: true },
+            }),
+            prisma.household.findUnique({
+              where: { id: pausedTask.householdId },
+              select: { id: true, name: true },
+            }),
+          ]);
 
           if (actionUser) {
             await notificationService.sendNotification(
@@ -392,8 +404,9 @@ export class TaskService {
                 user: actionUser as any,
                 task: pausedTask,
                 actionUser: actionUser as any,
-                household: { id: pausedTask.householdId, name: "" },
-              }
+                household: { id: pausedTask.householdId, name: household?.name || "" },
+              },
+              userId
             );
           }
         } catch (notificationError) {
@@ -480,11 +493,17 @@ export class TaskService {
         try {
           const notificationService = new NotificationService();
           
-          // Get the user who deleted the task
-          const actionUser = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { id: true, name: true, email: true },
-          });
+          // Get the user who deleted the task and the household
+          const [actionUser, household] = await Promise.all([
+            prisma.user.findUnique({
+              where: { id: userId },
+              select: { id: true, name: true, email: true },
+            }),
+            prisma.household.findUnique({
+              where: { id: deletedTask.householdId },
+              select: { id: true, name: true },
+            }),
+          ]);
 
           if (actionUser) {
             await notificationService.sendNotification(
@@ -494,8 +513,9 @@ export class TaskService {
                 user: actionUser as any,
                 task: deletedTask,
                 actionUser: actionUser as any,
-                household: { id: deletedTask.householdId, name: "" },
-              }
+                household: { id: deletedTask.householdId, name: household?.name || "" },
+              },
+              userId
             );
           }
         } catch (notificationError) {

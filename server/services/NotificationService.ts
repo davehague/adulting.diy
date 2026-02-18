@@ -437,7 +437,7 @@ export class NotificationService {
         user: {} as User, // Will be populated for each recipient
         task,
         occurrence: occurrence as unknown as TaskOccurrence,
-        household: { id: task.householdId, name: "" },
+        household: { id: task.householdId, name: (task as any).household?.name || "" },
       };
 
       // Check for initial reminder
