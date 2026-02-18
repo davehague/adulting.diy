@@ -6,18 +6,25 @@ export default defineHouseholdProtectedEventHandler(
   async (event, authUser, householdId) => {
     try {
       const householdService = new HouseholdService();
-      const users = await householdService.getUsers(householdId);
+      const [users, formerMembers] = await Promise.all([
+        householdService.getUsers(householdId),
+        householdService.getFormerMembers(householdId),
+      ]);
 
-      // Return necessary user info including admin status and created date
-      const simplifiedUsers = users.map((user) => ({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        isAdmin: user.isAdmin,
-        createdAt: user.createdAt,
-      }));
-
-      return simplifiedUsers;
+      return {
+        members: users.map((user) => ({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          isAdmin: user.isAdmin,
+          createdAt: user.createdAt,
+        })),
+        formerMembers: formerMembers.map((fm) => ({
+          userId: fm.userId,
+          name: fm.name,
+          leftAt: fm.leftAt,
+        })),
+      };
     } catch (error) {
       console.error("[API] Error fetching household users:", error);
 

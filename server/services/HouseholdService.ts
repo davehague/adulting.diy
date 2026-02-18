@@ -324,4 +324,21 @@ export class HouseholdService {
       throw error;
     }
   }
+
+  /**
+   * Get former members of a household
+   */
+  async getFormerMembers(householdId: string) {
+    try {
+      const formerMembers = await prisma.formerHouseholdMember.findMany({
+        where: { householdId },
+        orderBy: { leftAt: 'desc' }
+      });
+
+      return formerMembers;
+    } catch (error) {
+      console.error(`[HouseholdService] Unexpected error in getFormerMembers:`, error);
+      throw error;
+    }
+  }
 }
