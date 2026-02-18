@@ -15,7 +15,10 @@ export default defineProtectedEventHandler(async (event, authUser) => {
     
     // Create new household
     const householdService = new HouseholdService();
-    const household = await householdService.create(body.name.trim());
+    const timezone = (typeof body.timezone === 'string' && body.timezone.trim())
+      ? body.timezone.trim()
+      : 'UTC';
+    const household = await householdService.create(body.name.trim(), timezone);
     
     // Add current user to household as admin
     await householdService.addUser(household.id, authUser.userId, true);

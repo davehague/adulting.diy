@@ -4,7 +4,10 @@ import { createError, readBody } from 'h3';
 import { z } from 'zod';
 
 const updateHouseholdSchema = z.object({
-  name: z.string().min(1, 'Household name is required').max(100, 'Household name too long')
+  name: z.string().min(1, 'Household name is required').max(100, 'Household name too long').optional(),
+  timezone: z.string().min(1).max(50).optional()
+}).refine(data => data.name || data.timezone, {
+  message: 'At least one field must be provided'
 });
 
 export default defineHouseholdProtectedEventHandler(async (event, authUser, householdId) => {
@@ -26,14 +29,17 @@ export default defineHouseholdProtectedEventHandler(async (event, authUser, hous
     const validatedData = updateHouseholdSchema.parse(body);
 
     // Update household
-    const updatedHousehold = await householdService.update(householdId, {
-      name: validatedData.name
-    });
+    const updateFields: Record<string, string> = {};
+    if (validatedData.name) updateFields.name = validatedData.name;
+    if (validatedData.timezone) updateFields.timezone = validatedData.timezone;
+
+    const updatedHousehold = await householdService.update(householdId, updateFields);
 
     return {
       id: updatedHousehold.id,
       name: updatedHousehold.name,
       inviteCode: updatedHousehold.inviteCode,
+      timezone: updatedHousehold.timezone,
       updatedAt: updatedHousehold.updatedAt
     };
   } catch (error) {

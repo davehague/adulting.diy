@@ -35,6 +35,7 @@ model Household {
   id         String       @id @default(uuid())
   name       String
   inviteCode String       @unique
+  timezone   String       @default("UTC")
   users      User[]
   categories Category[]
   tasks      TaskDefinition[]

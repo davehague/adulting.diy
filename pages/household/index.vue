@@ -72,6 +72,31 @@
                 <label class="block text-sm font-medium text-stone-700 mb-2">Created</label>
                 <span class="text-stone-600">{{ formatDate(householdInfo.createdAt) }}</span>
               </div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-stone-700 mb-2">Timezone</label>
+                <div v-if="!editingTimezone" class="flex items-center space-x-2">
+                  <span class="text-stone-900">{{ householdInfo.timezone }}</span>
+                  <button v-if="householdInfo.isCurrentUserAdmin"
+                          @click="startEditingTimezone"
+                          class="text-amber-700 hover:text-amber-800 text-sm">
+                    Edit
+                  </button>
+                </div>
+                <div v-else class="flex items-center space-x-2">
+                  <select v-model="editedTimezone"
+                          class="flex-1 rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-sm">
+                    <option v-for="tz in commonTimezones" :key="tz" :value="tz">{{ tz }}</option>
+                  </select>
+                  <button @click="saveTimezone"
+                          class="bg-amber-600 text-white px-3 py-1 rounded text-sm hover:bg-amber-700 transition-colors duration-150">
+                    Save
+                  </button>
+                  <button @click="editingTimezone = false"
+                          class="bg-stone-300 text-stone-700 px-3 py-1 rounded text-sm hover:bg-stone-400 transition-colors duration-150">
+                    Cancel
+                  </button>
+                </div>
+              </div>
               <div v-if="!householdInfo.isCurrentUserAdmin" class="mb-4">
                 <label class="block text-sm font-medium text-stone-700 mb-2">Your Role</label>
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-stone-800">
@@ -392,6 +417,7 @@ const householdInfo = ref({
   id: '',
   name: '',
   inviteCode: '',
+  timezone: 'UTC',
   memberCount: 0,
   isCurrentUserAdmin: false,
   createdAt: '',
@@ -400,8 +426,21 @@ const householdInfo = ref({
 const members = ref<User[]>([]);
 const editingName = ref(false);
 const editedName = ref('');
+const editingTimezone = ref(false);
+const editedTimezone = ref('');
 const copiedInviteCode = ref(false);
 const copiedHouseholdInfo = ref(false);
+
+const commonTimezones = [
+  'UTC',
+  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+  'America/Anchorage', 'Pacific/Honolulu', 'America/Phoenix',
+  'America/Toronto', 'America/Vancouver',
+  'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow',
+  'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Kolkata', 'Asia/Dubai',
+  'Australia/Sydney', 'Australia/Perth',
+  'Pacific/Auckland',
+];
 
 const currentUserId = authStore.user?.id;
 
@@ -499,6 +538,29 @@ const saveHouseholdName = async () => {
   } catch (err: any) {
     console.error('Error updating household name:', err);
     error.value = err.data?.message || 'Failed to update household name';
+  }
+};
+
+// Timezone editing
+const startEditingTimezone = () => {
+  editedTimezone.value = householdInfo.value.timezone;
+  editingTimezone.value = true;
+};
+
+const saveTimezone = async () => {
+  if (!editedTimezone.value) return;
+
+  try {
+    const response = await api.put('/api/household', {
+      timezone: editedTimezone.value
+    });
+
+    householdInfo.value.timezone = response.timezone;
+    editingTimezone.value = false;
+    showSuccess('Household timezone updated successfully');
+  } catch (err: any) {
+    console.error('Error updating timezone:', err);
+    error.value = err.data?.message || 'Failed to update timezone';
   }
 };
 

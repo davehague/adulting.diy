@@ -137,7 +137,8 @@ const createHousehold = async () => {
         'Authorization': `Bearer ${authStore.accessToken}`
       },
       body: JSON.stringify({
-        name: createForm.value.name.trim()
+        name: createForm.value.name.trim(),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
       })
     });
 

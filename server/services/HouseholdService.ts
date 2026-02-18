@@ -49,14 +49,15 @@ export class HouseholdService {
   /**
    * Create a new household
    */
-  async create(name: string): Promise<Household> {
+  async create(name: string, timezone: string = 'UTC'): Promise<Household> {
     try {
       const inviteCode = this.generateInviteCode();
 
       const household = await prisma.household.create({
         data: {
           name,
-          inviteCode
+          inviteCode,
+          timezone
         }
       });
 
