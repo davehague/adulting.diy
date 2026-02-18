@@ -207,7 +207,7 @@ describe('Task Lifecycle E2E', async () => {
 
     it('should show task in household dashboard', async () => {
       // Navigate to dashboard
-      await page.goto('/home')
+      await page.goto('/dashboard')
       
       // Check that the created task appears in recent tasks or upcoming occurrences
       const dashboard = page.locator('[data-testid="dashboard-content"]')

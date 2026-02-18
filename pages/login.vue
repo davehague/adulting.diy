@@ -60,7 +60,7 @@ const handleLoginSuccess = async (response: CredentialResponse) => {
 
             // Check if user has a household and redirect accordingly
             if (userData.householdId) {
-                router.push('/home');
+                router.push('/dashboard');
             } else {
                 router.push('/setup-household');
             }

@@ -75,7 +75,7 @@
         </div>
 
         <div class="pt-4 border-t border-stone-200">
-          <NuxtLink to="/home" class="text-amber-700 hover:text-amber-800">
+          <NuxtLink to="/dashboard" class="text-amber-700 hover:text-amber-800">
             &larr; Back to Dashboard
           </NuxtLink>
         </div>

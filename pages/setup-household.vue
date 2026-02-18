@@ -165,7 +165,7 @@ const createHousehold = async () => {
     authStore.setUser(userData);
 
     // Redirect to home/dashboard using router
-    router.push('/home');
+    router.push('/dashboard');
 
   } catch (error: unknown) { // Explicitly type error as unknown
     console.error('Error creating household:', error);
@@ -225,7 +225,7 @@ const joinHousehold = async () => {
     authStore.setUser(userData);
 
     // Redirect to home/dashboard using router
-    router.push('/home');
+    router.push('/dashboard');
 
   } catch (error: unknown) { // Explicitly type error as unknown
     console.error('Error joining household:', error);

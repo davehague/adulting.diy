@@ -47,22 +47,6 @@
         </div>
       </div>
 
-      <!-- Bottom Row Skeleton -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div v-for="i in 2" :key="i" class="bg-white rounded-xl shadow-sm border border-stone-100">
-          <div class="px-6 py-4 border-b border-stone-100">
-            <div class="h-5 w-32 bg-stone-200 rounded animate-pulse"></div>
-          </div>
-          <div class="p-6 space-y-3">
-            <div v-for="j in 4" :key="j" class="flex items-center gap-3">
-              <div class="h-4 w-20 bg-stone-200 rounded animate-pulse"></div>
-              <div class="flex-1 bg-stone-100 rounded-full h-2">
-                <div class="bg-stone-200 h-2 rounded-full animate-pulse" :style="{ width: (70 - j * 15) + '%' }"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <template v-else>
@@ -148,67 +132,6 @@
         </div>
       </div>
 
-      <!-- Bottom Row: By Category + Household -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- By Category -->
-        <div class="bg-white rounded-xl shadow-sm border border-stone-100">
-          <div class="px-6 py-4 border-b border-stone-100">
-            <h2 class="font-heading font-semibold text-stone-900">By Category</h2>
-          </div>
-          <div v-if="categoryBreakdown.length === 0" class="px-6 py-8 text-center text-stone-400">
-            No active tasks yet.
-          </div>
-          <div v-else class="p-6 space-y-3">
-            <div v-for="cat in categoryBreakdown" :key="cat.name" class="flex items-center gap-3">
-              <span class="text-sm text-stone-700 w-20 sm:w-28 truncate flex-shrink-0">{{ cat.name }}</span>
-              <div class="flex-1 bg-stone-100 rounded-full h-2">
-                <div class="h-2 rounded-full transition-all" :class="categoryBarColor(cat.index)" :style="{ width: categoryBarWidth(cat.count) }"></div>
-              </div>
-              <span class="text-sm font-medium text-stone-600 w-6 text-right flex-shrink-0">{{ cat.count }}</span>
-            </div>
-          </div>
-          <div class="px-6 py-3 border-t border-stone-100">
-            <NuxtLink to="/tasks" class="text-sm text-amber-700 hover:text-amber-700 font-medium">
-              View all tasks &rarr;
-            </NuxtLink>
-          </div>
-        </div>
-
-        <!-- Household Members -->
-        <div class="bg-white rounded-xl shadow-sm border border-stone-100">
-          <div class="px-6 py-4 border-b border-stone-100">
-            <h2 class="font-heading font-semibold text-stone-900">Household Members</h2>
-          </div>
-          <div v-if="!authStore.user?.householdId" class="px-6 py-8 text-center">
-            <p class="text-stone-400 mb-4">You're not part of a household yet.</p>
-            <NuxtLink to="/setup-household" class="text-sm text-amber-700 hover:text-amber-700 font-medium">
-              Set up household &rarr;
-            </NuxtLink>
-          </div>
-          <div v-else-if="householdMembers.length === 0" class="px-6 py-8 text-center text-stone-400">
-            Loading members...
-          </div>
-          <div v-else class="divide-y divide-stone-50">
-            <div v-for="member in memberStats" :key="member.id" class="flex items-center gap-3 px-6 py-3.5">
-              <div class="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center text-sm font-medium text-stone-600 flex-shrink-0">
-                {{ member.name?.charAt(0)?.toUpperCase() }}
-              </div>
-              <div class="flex-1 min-w-0">
-                <span class="text-sm font-medium text-stone-900 truncate block">{{ member.name }}</span>
-              </div>
-              <div class="text-right flex-shrink-0">
-                <span class="text-sm text-stone-600">{{ member.dueCount }} due</span>
-                <span v-if="member.overdueCount > 0" class="text-sm text-red-500 ml-2">{{ member.overdueCount }} late</span>
-              </div>
-            </div>
-          </div>
-          <div v-if="authStore.user?.householdId" class="px-6 py-3 border-t border-stone-100">
-            <NuxtLink to="/household" class="text-sm text-amber-700 hover:text-amber-700 font-medium">
-              Manage household &rarr;
-            </NuxtLink>
-          </div>
-        </div>
-      </div>
     </template>
   </div>
 </template>
@@ -290,36 +213,6 @@ const overdueBarWidth = computed(() => barScale(overdueOccurrences.value.length)
 const dueTodayBarWidth = computed(() => barScale(dueTodayOccurrences.value.length));
 const completedBarWidth = computed(() => barScale(recentlyCompletedCount.value));
 
-// Category breakdown from server-aggregated data
-const categoryBreakdown = computed(() => {
-  if (!dashboardData.value) return [];
-  return dashboardData.value.categoryBreakdown.map((cat, index) => ({
-    ...cat,
-    index,
-  }));
-});
-
-const maxCategoryCount = computed(() =>
-  Math.max(1, ...categoryBreakdown.value.map(c => c.count))
-);
-
-const categoryBarWidth = (count: number) =>
-  Math.max(8, (count / maxCategoryCount.value) * 100) + '%';
-
-const categoryColors = ['bg-amber-600', 'bg-purple-500', 'bg-amber-500', 'bg-teal-500', 'bg-pink-500', 'bg-indigo-500', 'bg-orange-500', 'bg-cyan-500'];
-const categoryBarColor = (index: number) => categoryColors[index % categoryColors.length];
-
-// Member stats - count due/overdue per member
-const memberStats = computed(() => {
-  return householdMembers.value.map(member => {
-    const memberPending = pendingOccurrences.value.filter(
-      occ => occ.assigneeIds?.includes(member.id)
-    );
-    const dueCount = memberPending.length;
-    const overdueCount = memberPending.filter(isOverdue).length;
-    return { ...member, dueCount, overdueCount };
-  });
-});
 
 // Labels
 const formatDueLabel = (occ: PendingOccurrence): string => {

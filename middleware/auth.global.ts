@@ -49,9 +49,9 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     // Redirect away from login page if authenticated
     if (to.path === "/login") {
       console.log(
-        "[Global Auth Middleware] Authenticated user accessing /login. Redirecting to /home."
+        "[Global Auth Middleware] Authenticated user accessing /login. Redirecting to /dashboard."
       );
-      return navigateTo("/home");
+      return navigateTo("/dashboard");
     }
 
     // Sub-scenario 2a: User HAS a household
@@ -59,9 +59,9 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
       // If they have a household, they should NOT be on the setup page.
       if (to.path === "/setup-household") {
         console.log(
-          "[Global Auth Middleware] User with household accessing /setup-household. Redirecting to /home."
+          "[Global Auth Middleware] User with household accessing /setup-household. Redirecting to /dashboard."
         );
-        return navigateTo("/home");
+        return navigateTo("/dashboard");
       }
       // Otherwise, allow access to any other route
       console.log(

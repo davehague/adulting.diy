@@ -10,7 +10,7 @@
           <div class="flex">
             <!-- Logo/Brand -->
             <div class="flex-shrink-0 flex items-center">
-              <a href="/home" class="font-heading text-xl font-semibold">
+              <a href="/dashboard" class="font-heading text-xl font-semibold">
                 <span class="text-stone-900">Adulting</span><span class="text-amber-600">.DIY</span>
               </a>
             </div>
@@ -18,9 +18,9 @@
             <!-- Navigation Links -->
             <nav class="hidden sm:ml-6 sm:flex sm:space-x-4">
               <a
-                href="/home"
+                href="/dashboard"
                 class="inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors duration-150"
-                :class="route.path === '/home' ? 'border-amber-500 text-stone-900' : 'border-transparent text-stone-600 hover:text-stone-900 hover:border-stone-300'"
+                :class="route.path === '/dashboard' ? 'border-amber-500 text-stone-900' : 'border-transparent text-stone-600 hover:text-stone-900 hover:border-stone-300'"
               >
                 Dashboard
               </a>
@@ -117,9 +117,9 @@
     <div v-if="showMobileMenu && authStore.isAuthenticated" class="sm:hidden bg-white border-b border-stone-200 shadow-sm">
       <div class="px-4 py-3 space-y-1">
         <a
-          href="/home"
+          href="/dashboard"
           class="block px-3 py-2 rounded-md text-base font-medium transition-colors duration-150"
-          :class="route.path === '/home' ? 'bg-amber-50 text-amber-700' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'"
+          :class="route.path === '/dashboard' ? 'bg-amber-50 text-amber-700' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'"
           @click="showMobileMenu = false"
         >
           Dashboard
