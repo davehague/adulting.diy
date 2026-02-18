@@ -277,68 +277,13 @@
         </div>
       </div>
 
-      <!-- Quick Actions Panel -->
-      <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
-        <div class="px-6 py-4 bg-stone-50 border-b border-stone-200">
-          <h2 class="text-lg font-semibold text-stone-900 font-heading">Quick Actions</h2>
-        </div>
-        <div class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <NuxtLink to="/tasks" 
-                      class="flex items-center p-4 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors">
-              <div class="flex-shrink-0">
-                <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                  <svg class="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                  </svg>
-                </div>
-              </div>
-              <div class="ml-4">
-                <h3 class="text-sm font-medium text-stone-900">Manage Tasks</h3>
-                <p class="text-xs text-stone-500">Create and organize household tasks</p>
-              </div>
-            </NuxtLink>
-
-            <NuxtLink to="/occurrences" 
-                      class="flex items-center p-4 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors">
-              <div class="flex-shrink-0">
-                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                </div>
-              </div>
-              <div class="ml-4">
-                <h3 class="text-sm font-medium text-stone-900">View Occurrences</h3>
-                <p class="text-xs text-stone-500">See all pending and completed tasks</p>
-              </div>
-            </NuxtLink>
-
-            <button @click="copyHouseholdInfo" 
-                    class="flex items-center p-4 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors text-left">
-              <div class="flex-shrink-0">
-                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                  </svg>
-                </div>
-              </div>
-              <div class="ml-4">
-                <h3 class="text-sm font-medium text-stone-900">Share Household</h3>
-                <p class="text-xs text-stone-500">{{ copiedHouseholdInfo ? 'Copied!' : 'Copy invite info to share' }}</p>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
-
       <!-- Household Statistics -->
       <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
         <div class="px-6 py-4 bg-stone-50 border-b border-stone-200">
           <h2 class="text-lg font-semibold text-stone-900 font-heading">Household Overview</h2>
         </div>
         <div class="p-6">
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="text-center">
               <div class="text-2xl font-bold text-amber-700">{{ householdInfo.memberCount }}</div>
               <div class="text-sm text-stone-500">Total Members</div>
@@ -350,10 +295,6 @@
             <div class="text-center">
               <div class="text-2xl font-bold text-green-600">{{ daysSinceCreated }}</div>
               <div class="text-sm text-stone-500">Days Active</div>
-            </div>
-            <div class="text-center">
-              <div class="text-2xl font-bold text-stone-600">{{ householdInfo.inviteCode.length }}</div>
-              <div class="text-sm text-stone-500">Char Invite Code</div>
             </div>
           </div>
         </div>
