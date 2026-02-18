@@ -64,7 +64,7 @@
         </div>
 
         <!-- Empty State for Occurrences -->
-        <div v-else-if="!occurrences.length" class="bg-white rounded-xl shadow-sm border border-stone-200 p-6 text-center">
+        <div v-else-if="!filteredOccurrences.length" class="bg-white rounded-xl shadow-sm border border-stone-200 p-6 text-center">
           <h3 class="font-heading text-lg font-semibold text-stone-700 mb-2">No Occurrences</h3>
           <p class="text-stone-500 mb-4">
             {{
@@ -79,13 +79,17 @@
         <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200">
           <!-- Mobile occurrence cards -->
           <div class="md:hidden divide-y divide-stone-100">
-            <div v-for="occurrence in occurrences" :key="'m-' + occurrence.id"
+            <div v-for="occurrence in filteredOccurrences" :key="'m-' + occurrence.id"
                  @click="navigateToOccurrence(occurrence.id)"
                  class="p-4 cursor-pointer hover:bg-stone-50 transition-colors">
               <div class="flex items-center justify-between mb-1">
                 <span class="text-sm text-stone-900">{{ formatDate(occurrence.dueDate) }}</span>
-                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                  :class="getOccurrenceStatusClass(occurrence.status)">
+                <span class="inline-flex items-center gap-1 text-xs text-stone-600">
+                  <Circle v-if="occurrence.status === 'created'" :size="14" />
+                  <UserCheck v-else-if="occurrence.status === 'assigned'" :size="14" />
+                  <CircleCheck v-else-if="occurrence.status === 'completed'" :size="14" />
+                  <SkipForward v-else-if="occurrence.status === 'skipped'" :size="14" />
+                  <Trash2 v-else-if="occurrence.status === 'deleted'" :size="14" />
                   {{ formatOccurrenceStatus(occurrence.status) }}
                 </span>
               </div>
@@ -112,15 +116,19 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-stone-200">
-              <tr v-for="occurrence in occurrences" :key="occurrence.id"
+              <tr v-for="occurrence in filteredOccurrences" :key="occurrence.id"
                   @click="navigateToOccurrence(occurrence.id)"
                   class="cursor-pointer hover:bg-stone-50 transition-colors">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-900">
                   {{ formatDate(occurrence.dueDate) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                    :class="getOccurrenceStatusClass(occurrence.status)">
+                  <span class="inline-flex items-center gap-1.5 text-sm text-stone-600">
+                    <Circle v-if="occurrence.status === 'created'" :size="16" />
+                    <UserCheck v-else-if="occurrence.status === 'assigned'" :size="16" />
+                    <CircleCheck v-else-if="occurrence.status === 'completed'" :size="16" />
+                    <SkipForward v-else-if="occurrence.status === 'skipped'" :size="16" />
+                    <Trash2 v-else-if="occurrence.status === 'deleted'" :size="16" />
                     {{ formatOccurrenceStatus(occurrence.status) }}
                   </span>
                 </td>
@@ -267,7 +275,7 @@ import TaskTimeline from '@/components/tasks/TaskTimeline.vue';
 import { useToast } from '@/composables/useToast';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
-import { Pencil, Pause, Play, Trash2, FastForward } from 'lucide-vue-next';
+import { Pencil, Pause, Play, Trash2, FastForward, Circle, UserCheck, CircleCheck, SkipForward } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -287,6 +295,13 @@ const error = computed(() => taskStore.error);
 
 // Keep local state for occurrences and categories
 const occurrences = ref<TaskOccurrence[]>([]);
+const hideDeleted = ref(true);
+const filteredOccurrences = computed(() => {
+  if (hideDeleted.value) {
+    return occurrences.value.filter(o => o.status !== 'deleted');
+  }
+  return occurrences.value;
+});
 const categories = ref<Category[]>([]);
 const householdUsers = ref<User[]>([]); // State for household users
 const loadingOccurrences = ref(true);
@@ -533,46 +548,11 @@ const formatDate = (date: Date | string): string => {
   });
 };
 
-const formatStatus = (status: string | undefined | null): string => {
-  if (!status) return 'Unknown';
-  return status.charAt(0).toUpperCase() + status.slice(1).replace(/-/g, ' ');
-};
-
-const getStatusClass = (status: string): string => {
-  switch (status) {
-    case 'active':
-      return 'bg-green-100 text-green-800';
-    case 'paused':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'soft-deleted':
-      return 'bg-red-100 text-red-800';
-    case 'completed':
-      return 'bg-amber-100 text-amber-800';
-    default:
-      return 'bg-stone-100 text-stone-800';
-  }
-};
-
 const formatOccurrenceStatus = (status: string): string => {
   return status.charAt(0).toUpperCase() + status.slice(1);
 };
 
-const getOccurrenceStatusClass = (status: string): string => {
-  switch (status) {
-    case 'created':
-      return 'bg-stone-100 text-stone-800';
-    case 'assigned':
-      return 'bg-amber-100 text-amber-800';
-    case 'completed':
-      return 'bg-green-100 text-green-800';
-    case 'skipped':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'deleted':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-stone-100 text-stone-800';
-  }
-};
+
 
 
 // Helper to get assignee names

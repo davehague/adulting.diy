@@ -27,12 +27,10 @@
           v-model="filters.status"
           class="bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-700 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-colors min-w-[140px]"
         >
-          <option value="">All Statuses</option>
           <option value="pending">Pending</option>
-          <option value="created">Created</option>
-          <option value="assigned">Assigned</option>
           <option value="completed">Completed</option>
           <option value="skipped">Skipped</option>
+          <option value="deleted">Deleted</option>
         </select>
 
         <!-- Category select -->
@@ -68,6 +66,7 @@
           <SlidersHorizontal :size="16" />
           <span class="hidden sm:inline">Dates</span>
         </button>
+
       </div>
 
       <!-- Date range row (collapsible) -->
@@ -171,8 +170,12 @@
              class="p-4 cursor-pointer hover:bg-stone-50 transition-colors">
           <div class="flex items-start justify-between mb-2">
             <div class="text-sm font-medium text-stone-900 flex-1 min-w-0 mr-2">{{ occurrence.task?.name || 'Unknown Task' }}</div>
-            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full flex-shrink-0"
-              :class="getStatusClass(occurrence.status)">
+            <span class="inline-flex items-center gap-1 text-xs text-stone-600 flex-shrink-0">
+              <Circle v-if="occurrence.status === 'created'" :size="14" />
+              <UserCheck v-else-if="occurrence.status === 'assigned'" :size="14" />
+              <CircleCheck v-else-if="occurrence.status === 'completed'" :size="14" />
+              <SkipForward v-else-if="occurrence.status === 'skipped'" :size="14" />
+              <Trash2 v-else-if="occurrence.status === 'deleted'" :size="14" />
               {{ occurrence.status.charAt(0).toUpperCase() + occurrence.status.slice(1) }}
             </span>
           </div>
@@ -291,8 +294,12 @@
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                  :class="getStatusClass(occurrence.status)">
+                <span class="inline-flex items-center gap-1.5 text-sm text-stone-600">
+                  <Circle v-if="occurrence.status === 'created'" :size="16" />
+                  <UserCheck v-else-if="occurrence.status === 'assigned'" :size="16" />
+                  <CircleCheck v-else-if="occurrence.status === 'completed'" :size="16" />
+                  <SkipForward v-else-if="occurrence.status === 'skipped'" :size="16" />
+                  <Trash2 v-else-if="occurrence.status === 'deleted'" :size="16" />
                   {{ occurrence.status.charAt(0).toUpperCase() + occurrence.status.slice(1) }}
                 </span>
               </td>
@@ -411,7 +418,7 @@ import { useAuthStore } from '@/stores/auth';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
 import CompleteModal from '@/components/occurrences/CompleteModal.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
-import { Plus, Search, X, ChevronUp, ChevronDown, SlidersHorizontal } from 'lucide-vue-next';
+import { Plus, Search, X, ChevronUp, ChevronDown, SlidersHorizontal, Circle, UserCheck, CircleCheck, SkipForward, Trash2 } from 'lucide-vue-next';
 import type { TaskOccurrence, Category, User } from '@/types';
 
 const api = useApi();
@@ -423,17 +430,9 @@ const loading = ref(false);
 const rawOccurrences = ref<TaskOccurrence[]>([]);
 const categories = ref<Category[]>([]);
 const householdUsers = ref<User[]>([]);
-// Restore persisted state from localStorage
-const savedFilters = import.meta.client
-  ? JSON.parse(localStorage.getItem('adulting-occurrences-filters') || 'null')
-  : null;
-const savedSort = import.meta.client
-  ? JSON.parse(localStorage.getItem('adulting-occurrences-sort') || 'null')
-  : null;
-
-// Sort state (replaces sortBy dropdown)
-const sortColumn = ref<string>(savedSort?.column ?? 'dueDate');
-const sortDirection = ref<'asc' | 'desc'>(savedSort?.direction ?? 'asc');
+// Sort state
+const sortColumn = ref<string>('dueDate');
+const sortDirection = ref<'asc' | 'desc'>('asc');
 
 const toggleSort = (column: string) => {
   if (sortColumn.value === column) {
@@ -467,16 +466,16 @@ const editError = ref<string | null>(null);
 
 // Filters - Default to showing only pending occurrences (created/assigned)
 const filters = reactive({
-  status: savedFilters?.status ?? 'pending',
-  categoryId: savedFilters?.categoryId ?? '',
-  assigneeId: savedFilters?.assigneeId ?? '',
-  search: savedFilters?.search ?? '',
-  dueDateFrom: savedFilters?.dueDateFrom ?? '',
-  dueDateTo: savedFilters?.dueDateTo ?? ''
+  status: 'pending' as string,
+  categoryId: '',
+  assigneeId: '',
+  search: '',
+  dueDateFrom: '',
+  dueDateTo: ''
 });
 
-// Date filter panel toggle (auto-open if saved dates exist)
-const showDateFilters = ref(!!(filters.dueDateFrom || filters.dueDateTo));
+// Date filter panel toggle
+const showDateFilters = ref(false);
 
 const activeFilterCount = computed(() => {
   let count = 0;
@@ -513,7 +512,10 @@ const hasActiveFilters = computed(() => {
 });
 
 const occurrences = computed(() => {
-  const sorted = [...rawOccurrences.value];
+  const filtered = filters.status !== 'deleted'
+    ? rawOccurrences.value.filter(o => o.status !== 'deleted')
+    : rawOccurrences.value;
+  const sorted = [...filtered];
 
   sorted.sort((a, b) => {
     let cmp = 0;
@@ -541,6 +543,25 @@ const occurrences = computed(() => {
 
 // Load initial data
 onMounted(async () => {
+  // Restore persisted state from localStorage
+  const savedFilters = JSON.parse(localStorage.getItem('adulting-occurrences-filters') || 'null');
+  const savedSort = JSON.parse(localStorage.getItem('adulting-occurrences-sort') || 'null');
+  if (savedFilters) {
+    Object.assign(filters, {
+      status: savedFilters.status ?? 'pending',
+      categoryId: savedFilters.categoryId ?? '',
+      assigneeId: savedFilters.assigneeId ?? '',
+      search: savedFilters.search ?? '',
+      dueDateFrom: savedFilters.dueDateFrom ?? '',
+      dueDateTo: savedFilters.dueDateTo ?? '',
+    });
+    showDateFilters.value = !!(filters.dueDateFrom || filters.dueDateTo);
+  }
+  if (savedSort) {
+    sortColumn.value = savedSort.column ?? 'dueDate';
+    sortDirection.value = savedSort.direction ?? 'asc';
+  }
+
   // Fetch categories for the filter dropdown
   try {
     const categoriesData = await api.get<Category[]>('/api/categories');
@@ -665,23 +686,6 @@ const isOverdue = (dueDate: Date | string): boolean => {
   const due = new Date(dueDate);
   due.setHours(0, 0, 0, 0);
   return due < today;
-};
-
-const getStatusClass = (status: string): string => {
-  switch (status) {
-    case 'created':
-      return 'bg-stone-100 text-stone-800';
-    case 'assigned':
-      return 'bg-amber-100 text-amber-800';
-    case 'completed':
-      return 'bg-green-100 text-green-800';
-    case 'skipped':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'deleted':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-stone-100 text-stone-800';
-  }
 };
 
 // Navigation

@@ -27,12 +27,10 @@
           v-model="filters.status"
           class="bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-700 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-colors min-w-[140px]"
         >
-          <option value="">All Statuses</option>
           <option value="active">Active</option>
           <option value="overdue">Overdue</option>
           <option value="paused">Paused</option>
           <option value="soft-deleted">Deleted</option>
-          <option value="completed">Completed</option>
         </select>
 
         <!-- Category select -->
@@ -50,7 +48,7 @@
       <!-- Active filter chips -->
       <div v-if="activeFilterCount > 0" class="flex items-center gap-2 flex-wrap">
         <span
-          v-if="filters.status"
+          v-if="filters.status && filters.status !== 'active'"
           class="inline-flex items-center gap-1 bg-amber-100 text-amber-800 rounded-full px-2.5 py-0.5 text-xs font-semibold"
         >
           Status: {{ filters.status.charAt(0).toUpperCase() + filters.status.slice(1) }}
@@ -88,7 +86,7 @@
       <h2 class="font-heading text-xl font-semibold text-stone-700 mb-2">No tasks found</h2>
       <p class="text-stone-500 mb-4">
         {{
-          filters.status || filters.categoryId || filters.search
+          activeFilterCount > 0
             ? 'Try changing your filters or search term'
             : 'Create your first task to get started'
         }}
@@ -107,9 +105,11 @@
              class="p-4 cursor-pointer hover:bg-stone-50 transition-colors">
           <div class="flex items-start justify-between mb-2">
             <div class="text-sm font-medium text-stone-900 flex-1 min-w-0 mr-2">{{ task.name }}</div>
-            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full flex-shrink-0"
-              :class="getStatusClass(task.metaStatus)">
-              {{ task.metaStatus.charAt(0).toUpperCase() + task.metaStatus.slice(1) }}
+            <span class="inline-flex items-center gap-1 text-xs text-stone-600 flex-shrink-0">
+              <CirclePlay v-if="task.metaStatus === 'active'" :size="14" />
+              <Pause v-else-if="task.metaStatus === 'paused'" :size="14" />
+              <Trash2 v-else-if="task.metaStatus === 'soft-deleted'" :size="14" />
+              {{ formatMetaStatus(task.metaStatus) }}
             </span>
           </div>
           <div class="flex items-center gap-2 mb-2">
@@ -236,9 +236,11 @@
               <span v-else class="text-sm text-stone-400 italic">Unassigned</span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                :class="getStatusClass(task.metaStatus)">
-                {{ task.metaStatus.charAt(0).toUpperCase() + task.metaStatus.slice(1) }}
+              <span class="inline-flex items-center gap-1.5 text-sm text-stone-600">
+                <CirclePlay v-if="task.metaStatus === 'active'" :size="16" />
+                <Pause v-else-if="task.metaStatus === 'paused'" :size="16" />
+                <Trash2 v-else-if="task.metaStatus === 'soft-deleted'" :size="16" />
+                {{ formatMetaStatus(task.metaStatus) }}
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" 
@@ -375,7 +377,7 @@ import CatchUpModal from '@/components/tasks/CatchUpModal.vue';
 import PauseModal from '@/components/tasks/PauseModal.vue';
 import DeleteModal from '@/components/tasks/DeleteModal.vue';
 import { useToast } from '@/composables/useToast';
-import { Plus, Search, X, ChevronUp, ChevronDown } from 'lucide-vue-next';
+import { Plus, Search, X, ChevronUp, ChevronDown, CirclePlay, Pause, Trash2 } from 'lucide-vue-next';
 
 const api = useApi(); // Keep for categories for now
 const taskStore = useTaskStore();
@@ -442,9 +444,9 @@ const showDeleteModal = ref(false);
 const deleteTargetId = ref<string | null>(null);
 const isSubmittingDelete = ref(false);
 
-// Filters - initialized empty for SSR consistency; restored from localStorage in onMounted
+// Filters - initialized with defaults for SSR consistency; restored from localStorage in onMounted
 const filters = reactive({
-  status: '',
+  status: 'active',
   categoryId: '',
   search: ''
 });
@@ -464,20 +466,24 @@ const toggleSort = (column: string) => {
 
 const activeFilterCount = computed(() => {
   let count = 0;
-  if (filters.status) count++;
+  if (filters.status && filters.status !== 'active') count++;
   if (filters.categoryId) count++;
   if (filters.search) count++;
   return count;
 });
 
 const clearFilters = () => {
-  filters.status = '';
+  filters.status = 'active';
   filters.categoryId = '';
   filters.search = '';
 };
 
 const clearFilter = (key: 'status' | 'categoryId' | 'search') => {
-  filters[key] = '';
+  if (key === 'status') {
+    filters.status = 'active';
+  } else {
+    filters[key] = '';
+  }
 };
 
 // Map UI filters to API filters (overdue → active for the API, filtered client-side)
@@ -632,19 +638,9 @@ const getAssigneeNames = (assigneeIds: string[]): string[] => {
   });
 };
 
-const getStatusClass = (status: string): string => {
-  switch (status) {
-    case 'active':
-      return 'bg-green-100 text-green-800';
-    case 'paused':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'soft-deleted':
-      return 'bg-red-100 text-red-800';
-    case 'completed':
-      return 'bg-amber-100 text-amber-800';
-    default:
-      return 'bg-stone-100 text-stone-800';
-  }
+const formatMetaStatus = (status: string): string => {
+  if (status === 'soft-deleted') return 'Deleted';
+  return status.charAt(0).toUpperCase() + status.slice(1);
 };
 
 // Navigation
