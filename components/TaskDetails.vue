@@ -16,17 +16,47 @@
           <span class="px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
             {{ getCategoryName(task.categoryId) }}
           </span>
-          <button 
+          <div class="relative" ref="menuRef">
+            <button
+              @click="toggleMenu"
+              class="p-1 rounded-md hover:bg-stone-100 transition-colors"
+              title="Task actions"
+            >
+              <EllipsisVertical :size="20" class="text-stone-500" />
+            </button>
+            <div
+              v-if="showMenu"
+              class="absolute right-0 mt-1 w-44 rounded-lg bg-white shadow-lg ring-1 ring-stone-200 z-20"
+            >
+              <NuxtLink
+                :to="`/tasks/${task.id}`"
+                class="flex items-center gap-2 px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 rounded-t-lg"
+                @click="showMenu = false"
+              >
+                <Eye :size="16" class="text-stone-400" />
+                View Task
+              </NuxtLink>
+              <NuxtLink
+                :to="`/tasks/${task.id}/edit`"
+                class="flex items-center gap-2 px-4 py-2.5 text-sm text-stone-700 hover:bg-stone-50 rounded-b-lg"
+                @click="showMenu = false"
+              >
+                <Pencil :size="16" class="text-stone-400" />
+                Edit Task
+              </NuxtLink>
+            </div>
+          </div>
+          <button
             v-if="collapsible"
             @click="isExpanded = !isExpanded"
             class="p-1 rounded-md hover:bg-stone-100 transition-colors"
             :title="isExpanded ? 'Collapse' : 'Expand'"
           >
-            <svg 
-              class="w-5 h-5 transition-transform duration-200" 
+            <svg
+              class="w-5 h-5 transition-transform duration-200"
               :class="{ 'rotate-180': isExpanded }"
-              fill="none" 
-              stroke="currentColor" 
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -103,8 +133,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import type { TaskDefinition, Category, User } from '@/types';
+import { EllipsisVertical, Eye, Pencil } from 'lucide-vue-next';
 
 interface Props {
   task: TaskDefinition;
@@ -122,6 +153,27 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const isExpanded = ref(props.defaultExpanded);
+const showMenu = ref(false);
+const menuRef = ref<HTMLElement | null>(null);
+
+const toggleMenu = (event: MouseEvent) => {
+  event.stopPropagation();
+  showMenu.value = !showMenu.value;
+};
+
+const closeMenu = (event: MouseEvent) => {
+  if (menuRef.value && !menuRef.value.contains(event.target as Node)) {
+    showMenu.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', closeMenu);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeMenu);
+});
 
 const getCategoryName = (categoryId: string): string => {
   const category = props.categories.find(c => c.id === categoryId);
