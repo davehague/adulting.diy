@@ -211,12 +211,11 @@
           <div class="flex items-start justify-between mb-2">
             <div class="text-sm font-medium text-stone-900 flex-1 min-w-0 mr-2">{{ occurrence.task?.name || 'Unknown Task' }}</div>
             <span class="inline-flex items-center gap-1 text-xs text-stone-600 flex-shrink-0">
-              <Circle v-if="occurrence.status === 'created'" :size="14" />
-              <UserCheck v-else-if="occurrence.status === 'assigned'" :size="14" />
+              <Circle v-if="occurrence.status === 'created' || occurrence.status === 'assigned'" :size="14" />
               <CircleCheck v-else-if="occurrence.status === 'completed'" :size="14" />
               <SkipForward v-else-if="occurrence.status === 'skipped'" :size="14" />
               <Trash2 v-else-if="occurrence.status === 'deleted'" :size="14" />
-              {{ occurrence.status.charAt(0).toUpperCase() + occurrence.status.slice(1) }}
+              {{ displayStatus(occurrence.status) }}
             </span>
           </div>
           <div class="flex items-center gap-2 mb-2">
@@ -230,6 +229,7 @@
                 {{ formatDate(occurrence.dueDate) }}
               </span>
               <span v-if="isOverdue(occurrence.dueDate) && ['created', 'assigned'].includes(occurrence.status)" class="text-xs text-red-500 ml-1">Overdue</span>
+              <span v-else-if="isToday(occurrence.dueDate) && ['created', 'assigned'].includes(occurrence.status)" class="text-xs text-amber-600 ml-1">Today</span>
             </div>
             <div class="relative" @click.stop>
               <button @click="toggleDropdown(occurrence.id)" class="text-stone-400 hover:text-stone-600 p-1" title="Actions">
@@ -322,9 +322,13 @@
                 <div class="text-sm text-stone-900" :class="{ 'text-red-600 font-semibold': isOverdue(occurrence.dueDate) }">
                   {{ formatDate(occurrence.dueDate) }}
                 </div>
-                <div v-if="isOverdue(occurrence.dueDate) && ['created', 'assigned'].includes(occurrence.status)" 
+                <div v-if="isOverdue(occurrence.dueDate) && ['created', 'assigned'].includes(occurrence.status)"
                      class="text-xs text-red-500 font-medium">
                   Overdue
+                </div>
+                <div v-else-if="isToday(occurrence.dueDate) && ['created', 'assigned'].includes(occurrence.status)"
+                     class="text-xs text-amber-600 font-medium">
+                  Today
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
@@ -339,12 +343,11 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span class="inline-flex items-center gap-1.5 text-sm text-stone-600">
-                  <Circle v-if="occurrence.status === 'created'" :size="16" />
-                  <UserCheck v-else-if="occurrence.status === 'assigned'" :size="16" />
+                  <Circle v-if="occurrence.status === 'created' || occurrence.status === 'assigned'" :size="16" />
                   <CircleCheck v-else-if="occurrence.status === 'completed'" :size="16" />
                   <SkipForward v-else-if="occurrence.status === 'skipped'" :size="16" />
                   <Trash2 v-else-if="occurrence.status === 'deleted'" :size="16" />
-                  {{ occurrence.status.charAt(0).toUpperCase() + occurrence.status.slice(1) }}
+                  {{ displayStatus(occurrence.status) }}
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
@@ -462,7 +465,7 @@ import { useAuthStore } from '@/stores/auth';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
 import CompleteModal from '@/components/occurrences/CompleteModal.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
-import { Plus, Search, X, ChevronUp, ChevronDown, SlidersHorizontal, Circle, UserCheck, CircleCheck, SkipForward, Trash2 } from 'lucide-vue-next';
+import { Plus, Search, X, ChevronUp, ChevronDown, SlidersHorizontal, Circle, CircleCheck, SkipForward, Trash2 } from 'lucide-vue-next';
 import type { TaskOccurrence, Category, User } from '@/types';
 import type { FormerHouseholdMember } from '@/types/user';
 
@@ -732,12 +735,25 @@ const formatDate = (date: Date | string): string => {
   });
 };
 
+const displayStatus = (status: string): string => {
+  if (status === 'created' || status === 'assigned') return 'Pending';
+  return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
 const isOverdue = (dueDate: Date | string): boolean => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const due = new Date(dueDate);
   due.setHours(0, 0, 0, 0);
   return due < today;
+};
+
+const isToday = (dueDate: Date | string): boolean => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  return due.getTime() === today.getTime();
 };
 
 // Navigation
