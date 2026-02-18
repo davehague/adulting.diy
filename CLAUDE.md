@@ -84,6 +84,7 @@ adulting.diy/
 ├── composables/          # Vue composables
 │   └── onClickOutside.ts
 ├── docs/                 # Project documentation
+│   ├── adrs/             # Architectural Decision Records
 │   ├── api-endpoints.md
 │   ├── development-login-bypass-guide.md
 │   ├── next-up.md
@@ -360,6 +361,12 @@ The test suite includes 41+ tests ensuring reliability of critical functionality
 
 ### Other
 - `POST /api/sendEmail` - Send email
+
+## Architectural Decision Records (ADRs)
+
+Architectural decisions are documented in `docs/adrs/`. Consult these before proposing changes to areas they cover.
+
+- **ADR-0001**: Defer Prisma 7 upgrade (decided 2026-02-18, revisit Q3 2026)
 
 ## Future Enhancements
 
