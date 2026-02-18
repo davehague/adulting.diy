@@ -79,7 +79,7 @@
         </div>
 
         <!-- Occurrences List -->
-        <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+        <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200">
           <!-- Mobile occurrence cards -->
           <div class="md:hidden divide-y divide-stone-100">
             <div v-for="occurrence in occurrences.slice(0, 5)" :key="'m-' + occurrence.id"
