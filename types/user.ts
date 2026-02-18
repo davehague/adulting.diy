@@ -17,6 +17,12 @@ export interface User {
   lastLogin: Date;
 }
 
+export interface FormerHouseholdMember {
+  userId: string;
+  name: string;
+  leftAt: Date;
+}
+
 export interface UserRegistrationData {
   // Renamed from GoogleUser
   email: string;
