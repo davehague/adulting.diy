@@ -7,6 +7,7 @@ import type {
   TaskMetaStatus,
 } from "@/types";
 import { TaskDefinition as PrismaTaskDefinition, Prisma } from "@prisma/client"; // Import Prisma namespace
+import { calculateCatchUpDueDate } from "@/server/utils/schedule";
 import { OccurrenceService } from "./OccurrenceService"; // Import OccurrenceService
 import { NotificationService } from "./NotificationService"; // Import NotificationService
 // Helper function to map Prisma Task object (with included category) to our TaskDefinition type
@@ -508,6 +509,136 @@ export class TaskService {
       return deletedTask;
     } catch (error) {
       console.error(`[TaskService] Unexpected error in softDelete:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Catch up a task by skipping all overdue occurrences and creating the next future occurrence.
+   */
+  async catchUp(
+    id: string,
+    userId: string,
+    comment?: string
+  ): Promise<{ occurrencesSkipped: number; newDueDate: Date | null }> {
+    try {
+      const task = await prisma.taskDefinition.findUnique({
+        where: { id },
+        include: { category: true },
+      });
+
+      if (!task) {
+        throw new Error("Task not found");
+      }
+
+      const scheduleConfig = task.scheduleConfig as unknown as ScheduleConfig;
+      const now = new Date();
+
+      // Find all overdue occurrences
+      const overdueOccurrences = await prisma.taskOccurrence.findMany({
+        where: {
+          taskId: id,
+          status: { in: ["created", "assigned"] },
+          dueDate: { lt: now },
+        },
+        orderBy: { dueDate: "asc" },
+      });
+
+      if (overdueOccurrences.length === 0) {
+        throw new Error("No overdue occurrences to catch up");
+      }
+
+      const lastOverdueDueDate =
+        overdueOccurrences[overdueOccurrences.length - 1].dueDate;
+      const newDueDate = calculateCatchUpDueDate(
+        scheduleConfig,
+        lastOverdueDueDate
+      );
+
+      await prisma.$transaction(async (tx) => {
+        // Skip all overdue occurrences
+        for (const occ of overdueOccurrences) {
+          await tx.taskOccurrence.update({
+            where: { id: occ.id },
+            data: {
+              status: "skipped",
+              skippedAt: now,
+              updatedAt: now,
+            },
+          });
+
+          await tx.occurrenceHistoryLog.create({
+            data: {
+              occurrenceId: occ.id,
+              userId,
+              logType: "status_change",
+              oldValue: occ.status,
+              newValue: "skipped",
+              comment: "Skipped during catch-up",
+            },
+          });
+        }
+
+        // Check for existing future occurrence
+        const existingFuture = await tx.taskOccurrence.findFirst({
+          where: {
+            taskId: id,
+            status: { in: ["created", "assigned"] },
+            dueDate: { gte: now },
+          },
+        });
+
+        let actualNewDueDate = newDueDate;
+
+        // Create new occurrence if needed
+        if (newDueDate && !existingFuture) {
+          const initialAssignees = task.defaultAssigneeIds || [];
+          const initialStatus =
+            initialAssignees.length > 0 ? "assigned" : "created";
+
+          await tx.taskOccurrence.create({
+            data: {
+              taskId: id,
+              dueDate: newDueDate,
+              status: initialStatus,
+              assigneeIds: initialAssignees,
+            },
+          });
+        } else if (existingFuture) {
+          actualNewDueDate = existingFuture.dueDate;
+        }
+
+        // Log the catch-up event
+        await tx.taskHistoryLog.create({
+          data: {
+            taskId: id,
+            userId,
+            logType: "catch_up",
+            details: {
+              occurrencesSkipped: overdueOccurrences.length,
+              newDueDate: actualNewDueDate?.toISOString() ?? null,
+              previousDueDate: lastOverdueDueDate.toISOString(),
+            },
+            comment: comment || null,
+          },
+        });
+      });
+
+      // Check for future occurrence for return value
+      const existingFuture = await prisma.taskOccurrence.findFirst({
+        where: {
+          taskId: id,
+          status: { in: ["created", "assigned"] },
+          dueDate: { gte: now },
+        },
+      });
+
+      return {
+        occurrencesSkipped: overdueOccurrences.length,
+        newDueDate: existingFuture ? existingFuture.dueDate : newDueDate,
+      };
+    } catch (error) {
+      console.error(`[TaskService] Unexpected error in catchUp:`, error);
       throw error;
     }
   }

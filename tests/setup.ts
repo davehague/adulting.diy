@@ -55,6 +55,10 @@ const prismaMock = {
     create: vi.fn(),
     findMany: vi.fn(),
   },
+  taskHistoryLog: {
+    create: vi.fn(),
+    findMany: vi.fn(),
+  },
   $transaction: vi.fn((cb: (tx: any) => any) => cb(prismaMock)),
 }
 
