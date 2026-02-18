@@ -47,7 +47,7 @@ import { useApi } from '@/utils/api';
 import { Plus, Check, X } from 'lucide-vue-next';
 import type { Category } from '@/types';
 
-const props = defineProps<{
+defineProps<{
   modelValue: string;
   categories: Category[];
 }>();
@@ -92,7 +92,7 @@ const createCategory = async () => {
     isCreating.value = false;
     newCategoryName.value = '';
   } catch (err: any) {
-    error.value = err?.data?.message || err?.message || 'Failed to create category';
+    error.value = err?.message || 'Failed to create category';
   } finally {
     isSaving.value = false;
   }
