@@ -161,7 +161,8 @@ export type HistoryLogType =
   | "status_change"
   | "comment"
   | "assignment_change"
-  | "date_change";
+  | "date_change"
+  | "reminder_sent";
 
 export interface OccurrenceHistoryLog {
   id: string;

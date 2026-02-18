@@ -92,7 +92,8 @@
           <div class="flex items-center justify-between">
             <label class="text-sm text-stone-700">Initial Reminder</label>
             <select v-model="preferences.reminder_initial" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
-              <option value="any">Enabled</option>
+              <option value="any">All tasks</option>
+              <option value="mine">My tasks only</option>
               <option value="none">Disabled</option>
             </select>
           </div>
@@ -100,7 +101,8 @@
           <div class="flex items-center justify-between">
             <label class="text-sm text-stone-700">Follow-up Reminder</label>
             <select v-model="preferences.reminder_followup" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
-              <option value="any">Enabled</option>
+              <option value="any">All tasks</option>
+              <option value="mine">My tasks only</option>
               <option value="none">Disabled</option>
             </select>
           </div>
@@ -108,7 +110,8 @@
           <div class="flex items-center justify-between">
             <label class="text-sm text-stone-700">Overdue Reminder</label>
             <select v-model="preferences.reminder_overdue" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
-              <option value="any">Enabled</option>
+              <option value="any">All tasks</option>
+              <option value="mine">My tasks only</option>
               <option value="none">Disabled</option>
             </select>
           </div>
@@ -151,9 +154,9 @@ const preferences = ref<NotificationPreferences>({
   occurrence_executed: 'mine',
   occurrence_skipped: 'mine',
   occurrence_commented: 'mine',
-  reminder_initial: 'any',
-  reminder_followup: 'any',
-  reminder_overdue: 'any'
+  reminder_initial: 'mine',
+  reminder_followup: 'mine',
+  reminder_overdue: 'mine'
 });
 
 // Load current preferences

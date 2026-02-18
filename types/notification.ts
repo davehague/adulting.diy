@@ -13,9 +13,9 @@ export interface NotificationPreferences {
   occurrence_commented: 'any' | 'mine' | 'none';
 
   // Reminder notifications
-  reminder_initial: 'any' | 'none';
-  reminder_followup: 'any' | 'none';
-  reminder_overdue: 'any' | 'none';
+  reminder_initial: 'any' | 'mine' | 'none';
+  reminder_followup: 'any' | 'mine' | 'none';
+  reminder_overdue: 'any' | 'mine' | 'none';
 }
 
 export const defaultNotificationPreferences: NotificationPreferences = {
@@ -31,8 +31,8 @@ export const defaultNotificationPreferences: NotificationPreferences = {
   occurrence_skipped: 'mine',
   occurrence_commented: 'mine',
 
-  // Reminder notifications - defaults to 'any'
-  reminder_initial: 'any',
-  reminder_followup: 'any',
-  reminder_overdue: 'any'
+  // Reminder notifications - defaults to 'mine'
+  reminder_initial: 'mine',
+  reminder_followup: 'mine',
+  reminder_overdue: 'mine'
 };

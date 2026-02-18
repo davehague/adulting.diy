@@ -12,6 +12,7 @@ export interface NotificationContext {
     id: string;
     name: string;
   };
+  comment?: string;
 }
 
 export type NotificationEventType = 
@@ -150,12 +151,18 @@ export class NotificationService {
         return preferences.occurrence_commented === "any" ||
                (preferences.occurrence_commented === "mine" && isMine);
       
-      case "task_reminder_initial":
-        return (preferences.reminder_initial || 'any') === 'any';
-      case "task_reminder_followup":
-        return (preferences.reminder_followup || 'any') === 'any';
-      case "task_reminder_overdue":
-        return (preferences.reminder_overdue || 'any') === 'any';
+      case "task_reminder_initial": {
+        const pref = preferences.reminder_initial || 'any';
+        return pref === 'any' || (pref === 'mine' && isMine);
+      }
+      case "task_reminder_followup": {
+        const pref = preferences.reminder_followup || 'any';
+        return pref === 'any' || (pref === 'mine' && isMine);
+      }
+      case "task_reminder_overdue": {
+        const pref = preferences.reminder_overdue || 'any';
+        return pref === 'any' || (pref === 'mine' && isMine);
+      }
       
       default:
         return false;
@@ -167,15 +174,17 @@ export class NotificationService {
    */
   public isUserRelatedToOccurrence(userId: string, context: NotificationContext): boolean {
     if (!context.occurrence) return false;
-    
+
     // Check if user is assigned to the occurrence
     if (context.occurrence.assigneeIds.includes(userId)) {
       return true;
     }
 
-    // TODO: Check if user has commented on the occurrence
-    // This would require checking the occurrence history logs
-    // For now, just return false for comments
+    // Check if user has commented on the occurrence
+    if ((context.occurrence as any).commentUserIds?.includes(userId)) {
+      return true;
+    }
+
     return false;
   }
 
@@ -296,6 +305,63 @@ export class NotificationService {
           }),
         };
       }
+      case "task_paused":
+        return {
+          subject: `Task Paused: ${task?.name}`,
+          body: this.renderEmailTemplate("task_paused", {
+            userName: user.name,
+            taskName: task?.name,
+            pausedByName: actionUser?.name,
+            taskUrl: `${baseUrl}/tasks/${task?.id}`,
+          }),
+        };
+
+      case "task_deleted":
+        return {
+          subject: `Task Deleted: ${task?.name}`,
+          body: this.renderEmailTemplate("task_deleted", {
+            userName: user.name,
+            taskName: task?.name,
+            deletedByName: actionUser?.name,
+          }),
+        };
+
+      case "occurrence_executed":
+        return {
+          subject: `Task Completed: ${task?.name}`,
+          body: this.renderEmailTemplate("occurrence_executed", {
+            userName: user.name,
+            taskName: task?.name,
+            dueDate: occurrence?.dueDate ? format(new Date(occurrence.dueDate), "PPP") : "",
+            completedByName: actionUser?.name,
+            occurrenceUrl: `${baseUrl}/occurrences/${occurrence?.id}`,
+          }),
+        };
+
+      case "occurrence_skipped":
+        return {
+          subject: `Task Skipped: ${task?.name}`,
+          body: this.renderEmailTemplate("occurrence_skipped", {
+            userName: user.name,
+            taskName: task?.name,
+            dueDate: occurrence?.dueDate ? format(new Date(occurrence.dueDate), "PPP") : "",
+            skippedByName: actionUser?.name,
+            occurrenceUrl: `${baseUrl}/occurrences/${occurrence?.id}`,
+          }),
+        };
+
+      case "occurrence_commented":
+        return {
+          subject: `New Comment: ${task?.name}`,
+          body: this.renderEmailTemplate("occurrence_commented", {
+            userName: user.name,
+            taskName: task?.name,
+            commentedByName: actionUser?.name,
+            comment: context.comment || "",
+            occurrenceUrl: `${baseUrl}/occurrences/${occurrence?.id}`,
+          }),
+        };
+
       default:
         return {
           subject: `Adulting.DIY Notification`,
@@ -386,6 +452,80 @@ export class NotificationService {
         </div>
       `,
       
+      task_paused: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #d97706;">Task Paused</h2>
+          <p>Hi {{userName}},</p>
+          <p>A task in your household has been paused:</p>
+          <div style="background: #fffbeb; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <h3 style="margin-top: 0;">{{taskName}}</h3>
+            <p><strong>Paused by:</strong> {{pausedByName}}</p>
+          </div>
+          <p>No new occurrences will be generated until the task is unpaused.</p>
+          <p><a href="{{taskUrl}}" style="background: #d97706; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">View Task</a></p>
+          <p>Best regards,<br>Adulting.DIY</p>
+        </div>
+      `,
+
+      task_deleted: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc2626;">Task Deleted</h2>
+          <p>Hi {{userName}},</p>
+          <p>A task in your household has been deleted:</p>
+          <div style="background: #fef2f2; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <h3 style="margin-top: 0;">{{taskName}}</h3>
+            <p><strong>Deleted by:</strong> {{deletedByName}}</p>
+          </div>
+          <p>All future occurrences have been cancelled.</p>
+          <p>Best regards,<br>Adulting.DIY</p>
+        </div>
+      `,
+
+      occurrence_executed: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #059669;">Task Completed</h2>
+          <p>Hi {{userName}},</p>
+          <p>A task has been completed in your household:</p>
+          <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <h3 style="margin-top: 0;">{{taskName}}</h3>
+            <p><strong>Due Date:</strong> {{dueDate}}</p>
+            <p><strong>Completed by:</strong> {{completedByName}}</p>
+          </div>
+          <p><a href="{{occurrenceUrl}}" style="background: #059669; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">View Details</a></p>
+          <p>Best regards,<br>Adulting.DIY</p>
+        </div>
+      `,
+
+      occurrence_skipped: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #d97706;">Task Skipped</h2>
+          <p>Hi {{userName}},</p>
+          <p>A task has been skipped in your household:</p>
+          <div style="background: #fffbeb; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <h3 style="margin-top: 0;">{{taskName}}</h3>
+            <p><strong>Due Date:</strong> {{dueDate}}</p>
+            <p><strong>Skipped by:</strong> {{skippedByName}}</p>
+          </div>
+          <p><a href="{{occurrenceUrl}}" style="background: #d97706; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">View Details</a></p>
+          <p>Best regards,<br>Adulting.DIY</p>
+        </div>
+      `,
+
+      occurrence_commented: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">New Comment</h2>
+          <p>Hi {{userName}},</p>
+          <p>A new comment was added to a task in your household:</p>
+          <div style="background: #eff6ff; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <h3 style="margin-top: 0;">{{taskName}}</h3>
+            <p><strong>Comment by:</strong> {{commentedByName}}</p>
+            <blockquote style="border-left: 3px solid #2563eb; margin: 8px 0; padding: 8px 12px; color: #4b5563;">{{comment}}</blockquote>
+          </div>
+          <p><a href="{{occurrenceUrl}}" style="background: #2563eb; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">View Task</a></p>
+          <p>Best regards,<br>Adulting.DIY</p>
+        </div>
+      `,
+
       generic: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #2563eb;">Adulting.DIY Notification</h2>
@@ -437,14 +577,15 @@ export class NotificationService {
         user: {} as User, // Will be populated for each recipient
         task,
         occurrence: occurrence as unknown as TaskOccurrence,
-        household: { id: task.householdId, name: "" },
+        household: { id: task.householdId, name: (task as any).household?.name || "" },
       };
 
       // Check for initial reminder
       if (task.reminderConfig.initialReminder) {
         const reminderDate = addDays(new Date(occurrence.dueDate), -task.reminderConfig.initialReminder);
-        if (this.isDateToday(reminderDate)) {
+        if (this.isDateToday(reminderDate) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_initial"))) {
           await this.sendNotification(task.householdId, "task_reminder_initial", context);
+          await this.logReminderSent(occurrence.id, "task_reminder_initial", task.createdByUserId);
           remindersSent++;
         }
       }
@@ -452,8 +593,9 @@ export class NotificationService {
       // Check for follow-up reminder
       if (task.reminderConfig.followUpReminder) {
         const reminderDate = addDays(new Date(occurrence.dueDate), -task.reminderConfig.followUpReminder);
-        if (this.isDateToday(reminderDate)) {
+        if (this.isDateToday(reminderDate) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_followup"))) {
           await this.sendNotification(task.householdId, "task_reminder_followup", context);
+          await this.logReminderSent(occurrence.id, "task_reminder_followup", task.createdByUserId);
           remindersSent++;
         }
       }
@@ -461,14 +603,54 @@ export class NotificationService {
       // Check for overdue reminder
       if (task.reminderConfig.overdueReminder) {
         const overdueDate = addDays(new Date(occurrence.dueDate), task.reminderConfig.overdueReminder);
-        if (this.isDateToday(overdueDate)) {
+        if (this.isDateToday(overdueDate) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_overdue"))) {
           await this.sendNotification(task.householdId, "task_reminder_overdue", context);
+          await this.logReminderSent(occurrence.id, "task_reminder_overdue", task.createdByUserId);
           remindersSent++;
         }
       }
     }
 
     return remindersSent;
+  }
+
+  /**
+   * Check if a reminder of a given type was already sent today for an occurrence
+   */
+  private async wasReminderSentToday(occurrenceId: string, reminderType: NotificationEventType): Promise<boolean> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const existingLog = await prisma.occurrenceHistoryLog.findFirst({
+      where: {
+        occurrenceId,
+        logType: "reminder_sent",
+        newValue: reminderType,
+        createdAt: {
+          gte: today,
+          lt: tomorrow,
+        },
+      },
+    });
+
+    return !!existingLog;
+  }
+
+  /**
+   * Log that a reminder was sent for deduplication
+   */
+  private async logReminderSent(occurrenceId: string, reminderType: NotificationEventType, userId: string): Promise<void> {
+    await prisma.occurrenceHistoryLog.create({
+      data: {
+        occurrenceId,
+        userId,
+        logType: "reminder_sent",
+        newValue: reminderType,
+        comment: `${reminderType} reminder sent`,
+      },
+    });
   }
 
   /**
