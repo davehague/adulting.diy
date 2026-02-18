@@ -8,8 +8,8 @@
       </div>
       <div class="flex gap-3">
         <NuxtLink to="/tasks/create"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors">
-          <span class="text-lg leading-none">+</span> New Task
+          class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50">
+          <Plus :size="16" /> New Task
         </NuxtLink>
       </div>
     </div>
@@ -171,6 +171,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useApi } from '@/utils/api';
 import type { TaskOccurrence, TaskDefinition } from '@/types/task';
+import { Plus } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
 const api = useApi();

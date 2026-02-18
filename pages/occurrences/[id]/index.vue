@@ -34,15 +34,18 @@
                     <h3 class="text-lg leading-6 font-medium text-stone-900 font-heading">Occurrence Details</h3>
                     <div class="flex flex-wrap gap-2">
                         <button type="button" @click="showEditModal = true"
-                            class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-stone-900 shadow-sm ring-1 ring-inset ring-stone-300 hover:bg-stone-50 transition-colors duration-150">
+                            class="inline-flex items-center gap-1.5 text-stone-600 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-stone-100 transition-colors">
+                            <Pencil :size="16" />
                             Edit
                         </button>
                         <button type="button" @click="showSkipModal = true" :disabled="isActionDisabled"
-                            class="inline-flex items-center rounded-md bg-yellow-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600 disabled:opacity-50 transition-colors duration-150">
+                            class="inline-flex items-center gap-1.5 text-stone-600 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-stone-100 transition-colors disabled:opacity-50">
+                            <SkipForward :size="16" />
                             Skip
                         </button>
                         <button type="button" @click="executeOccurrence" :disabled="isActionDisabled"
-                            class="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700 disabled:opacity-50 transition-colors duration-150">
+                            class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50">
+                            <CheckCircle :size="16" />
                             Complete
                         </button>
                     </div>
@@ -102,7 +105,8 @@
                     </div>
                     <div class="mt-3 flex justify-end">
                         <button type="submit" :disabled="isSubmittingComment"
-                            class="inline-flex items-center rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 disabled:opacity-50 transition-colors duration-150">
+                            class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50">
+                            <MessageSquare :size="16" />
                             {{ isSubmittingComment ? 'Adding...' : 'Add Comment' }}
                         </button>
                     </div>
@@ -160,6 +164,7 @@ import type { TaskOccurrence, User, Category, TaskDefinition } from '@/types';
 import OccurrenceTimeline from '@/components/occurrences/OccurrenceTimeline.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
+import { Pencil, SkipForward, CheckCircle, MessageSquare } from 'lucide-vue-next';
 import { format } from 'date-fns';
 
 // Setup
