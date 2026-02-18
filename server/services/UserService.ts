@@ -1,4 +1,5 @@
 import type { User, GoogleUser } from '~/types';
+import { defaultNotificationPreferences } from '~/types/notification';
 import prisma from '@/server/utils/prisma/client';
 
 export class UserService {
@@ -42,7 +43,7 @@ export class UserService {
           name: googleUser.name,
           picture: googleUser.picture,
           lastLogin: new Date(),
-          // Default notification preferences will be set by the schema
+          notificationPreferences: defaultNotificationPreferences,
         }
       });
 
