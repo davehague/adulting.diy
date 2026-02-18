@@ -130,11 +130,70 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
                   {{ getAssigneeNames(occurrence.assigneeIds) }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2"
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
                     @click.stop>
-                  <NuxtLink :to="`/occurrences/${occurrence.id}`" class="text-amber-700 hover:text-amber-900" title="View">
-                    <Eye :size="16" />
-                  </NuxtLink>
+                  <div class="relative inline-block text-left">
+                    <button
+                      @click="toggleDropdown(occurrence.id)"
+                      class="text-stone-400 hover:text-stone-600 focus:outline-none"
+                      title="Actions"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
+                    </button>
+
+                    <div
+                      v-if="openDropdownId === occurrence.id"
+                      class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10"
+                    >
+                      <div class="py-1">
+                        <NuxtLink
+                          :to="`/occurrences/${occurrence.id}`"
+                          class="group flex items-center px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
+                        >
+                          <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          View
+                        </NuxtLink>
+
+                        <button
+                          v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
+                          @click="handleEdit(occurrence)"
+                          class="group flex items-center w-full px-4 py-2 text-sm text-amber-700 hover:bg-stone-100"
+                        >
+                          <svg class="mr-3 h-4 w-4 text-amber-500 group-hover:text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Edit
+                        </button>
+
+                        <button
+                          v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
+                          @click="handleExecute(occurrence.id)"
+                          class="group flex items-center w-full px-4 py-2 text-sm text-green-600 hover:bg-stone-100"
+                        >
+                          <svg class="mr-3 h-4 w-4 text-green-400 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Complete
+                        </button>
+
+                        <button
+                          v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
+                          @click="handleSkip(occurrence.id)"
+                          class="group flex items-center w-full px-4 py-2 text-sm text-yellow-600 hover:bg-stone-100"
+                        >
+                          <svg class="mr-3 h-4 w-4 text-yellow-400 group-hover:text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Skip
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -164,6 +223,38 @@
         @cancel="showCatchUpModal = false"
       />
 
+      <!-- Skip Modal -->
+      <SkipModal
+        :show="showSkipModal"
+        :is-variable-interval="isVariableInterval"
+        :disabled="isSubmittingSkip"
+        @confirm="handleSkipConfirm"
+        @cancel="handleSkipCancel"
+      />
+
+      <!-- Edit Modal -->
+      <div v-if="showEditModal"
+        class="fixed inset-0 z-10 overflow-y-auto bg-stone-500 bg-opacity-75 transition-opacity"
+        aria-labelledby="edit-modal-title" role="dialog" aria-modal="true">
+        <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+          <div class="relative transform overflow-hidden rounded-lg bg-white px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+            <div>
+              <h3 class="text-lg font-medium leading-6 text-stone-900 font-heading" id="edit-modal-title">Edit Occurrence</h3>
+              <div class="mt-4">
+                <OccurrenceEditForm
+                  v-if="editTargetOccurrence"
+                  :occurrence="editTargetOccurrence"
+                  @submit="handleEditSubmit"
+                  @cancel="handleEditCancel"
+                  :disabled="isSubmittingEdit"
+                />
+                <p v-if="editError" class="mt-3 text-sm text-red-600">{{ editError }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Back to Tasks List -->
       <div class="mt-8">
         <NuxtLink to="/tasks" class="text-amber-700 hover:text-amber-800">
@@ -175,7 +266,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/utils/api'; // Keep for categories/occurrences for now
 import { useTaskStore } from '@/stores/tasks';
@@ -183,7 +274,9 @@ import type { TaskDefinition, TaskOccurrence, Category, User } from '@/types'; /
 import CatchUpModal from '@/components/tasks/CatchUpModal.vue';
 import TaskTimeline from '@/components/tasks/TaskTimeline.vue';
 import { useToast } from '@/composables/useToast';
-import { Pencil, Pause, Play, Trash2, FastForward, Eye } from 'lucide-vue-next';
+import SkipModal from '@/components/occurrences/SkipModal.vue';
+import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
+import { Pencil, Pause, Play, Trash2, FastForward } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -209,6 +302,25 @@ const loadingOccurrences = ref(true);
 const loadingUsers = ref(false); // Add loading state for users
 const taskTimelineRef = ref<InstanceType<typeof TaskTimeline> | null>(null);
 
+// Dropdown state
+const openDropdownId = ref<string | null>(null);
+
+// Skip modal state
+const showSkipModal = ref(false);
+const skipTargetId = ref<string | null>(null);
+const isSubmittingSkip = ref(false);
+
+// Edit modal state
+const showEditModal = ref(false);
+const editTargetOccurrence = ref<TaskOccurrence | null>(null);
+const isSubmittingEdit = ref(false);
+const editError = ref<string | null>(null);
+
+// Determine if the task uses variable interval scheduling
+const isVariableInterval = computed(() => {
+  return (task.value?.scheduleConfig as any)?.type === 'variable_interval';
+});
+
 // Load data
 onMounted(async () => {
   try {
@@ -231,6 +343,20 @@ onMounted(async () => {
     // Log error, but primary error display relies on store.error
     console.error("Error during initial data load:", err);
   }
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', handleClickOutside);
+});
+
+const handleClickOutside = (e: MouseEvent) => {
+  const target = e.target as HTMLElement;
+  if (!target.closest('.relative')) {
+    openDropdownId.value = null;
+  }
+};
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside);
 });
 
 // Removed local fetchTask function
@@ -263,6 +389,89 @@ const fetchHouseholdUsers = async () => {
   } finally {
     loadingUsers.value = false;
   }
+};
+
+// Dropdown management
+const toggleDropdown = (occurrenceId: string) => {
+  openDropdownId.value = openDropdownId.value === occurrenceId ? null : occurrenceId;
+};
+
+const closeDropdown = () => {
+  openDropdownId.value = null;
+};
+
+// Occurrence action handlers
+const handleExecute = async (occurrenceId: string) => {
+  closeDropdown();
+  try {
+    await taskStore.executeOccurrence(occurrenceId);
+    await fetchOccurrences();
+    taskTimelineRef.value?.fetchHistory();
+  } catch (err) {
+    console.error("Execute failed:", err);
+    toast.error(`Error completing occurrence: ${taskStore.error || 'Unknown error'}`);
+  }
+};
+
+const handleSkip = (occurrenceId: string) => {
+  closeDropdown();
+  skipTargetId.value = occurrenceId;
+  showSkipModal.value = true;
+};
+
+const handleSkipConfirm = async (reason: string) => {
+  if (!skipTargetId.value) return;
+  isSubmittingSkip.value = true;
+  try {
+    await taskStore.skipOccurrence(skipTargetId.value, reason);
+    showSkipModal.value = false;
+    skipTargetId.value = null;
+    await fetchOccurrences();
+    taskTimelineRef.value?.fetchHistory();
+  } catch (err) {
+    console.error("Skip failed:", err);
+    toast.error(`Error skipping occurrence: ${taskStore.error || 'Unknown error'}`);
+  } finally {
+    isSubmittingSkip.value = false;
+  }
+};
+
+const handleSkipCancel = () => {
+  showSkipModal.value = false;
+  skipTargetId.value = null;
+};
+
+const handleEdit = (occurrence: TaskOccurrence) => {
+  closeDropdown();
+  editTargetOccurrence.value = occurrence;
+  showEditModal.value = true;
+};
+
+const handleEditSubmit = async (formData: { dueDate: string; assigneeIds: string[] }) => {
+  if (!editTargetOccurrence.value) return;
+  isSubmittingEdit.value = true;
+  editError.value = null;
+  try {
+    await taskStore.updateOccurrence(editTargetOccurrence.value.id, {
+      dueDate: formData.dueDate,
+      assigneeIds: formData.assigneeIds,
+    });
+    showEditModal.value = false;
+    editTargetOccurrence.value = null;
+    await fetchOccurrences();
+    taskTimelineRef.value?.fetchHistory();
+  } catch (err: any) {
+    console.error("Edit failed:", err);
+    editError.value = err.data?.message || taskStore.error || 'Failed to save changes';
+  } finally {
+    isSubmittingEdit.value = false;
+  }
+};
+
+const handleEditCancel = () => {
+  showEditModal.value = false;
+  editTargetOccurrence.value = null;
+  editError.value = null;
 };
 
 // Task action functions
