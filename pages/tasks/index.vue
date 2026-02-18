@@ -104,7 +104,7 @@
                 class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
                 <div class="py-1">
                   <NuxtLink :to="`/tasks/${task.id}/edit`" class="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">Edit</NuxtLink>
-                  <NuxtLink :to="`/tasks/${task.id}/occurrences`" class="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">View Occurrences</NuxtLink>
+                  <NuxtLink :to="`/tasks/${task.id}`" class="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">View Occurrences</NuxtLink>
                   <button v-if="task.metaStatus === 'active' && isTaskOverdue(task)" @click="openCatchUp(task)" class="block w-full text-left px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">Catch Up</button>
                   <button v-if="task.metaStatus === 'active'" @click="pauseTask(task.id)" class="block w-full text-left px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">Pause Task</button>
                   <button v-if="task.metaStatus === 'paused'" @click="unpauseTask(task.id)" class="block w-full text-left px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">Unpause Task</button>
@@ -216,7 +216,7 @@
                     </NuxtLink>
                     
                     <NuxtLink
-                      :to="`/tasks/${task.id}/occurrences`"
+                      :to="`/tasks/${task.id}`"
                       class="group flex items-center px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
                     >
                       <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

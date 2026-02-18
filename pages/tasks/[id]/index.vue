@@ -56,9 +56,6 @@
       <div class="mb-6">
         <div class="flex justify-between items-center mb-4">
           <h2 class="font-heading text-xl font-semibold text-stone-900">Occurrences</h2>
-          <NuxtLink :to="`/tasks/${task.id}/occurrences`" class="text-amber-700 hover:text-amber-800">
-            View All Occurrences
-          </NuxtLink>
         </div>
 
         <!-- Occurrences Loading -->
@@ -82,7 +79,7 @@
         <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200">
           <!-- Mobile occurrence cards -->
           <div class="md:hidden divide-y divide-stone-100">
-            <div v-for="occurrence in occurrences.slice(0, 5)" :key="'m-' + occurrence.id"
+            <div v-for="occurrence in occurrences" :key="'m-' + occurrence.id"
                  @click="navigateToOccurrence(occurrence.id)"
                  class="p-4 cursor-pointer hover:bg-stone-50 transition-colors">
               <div class="flex items-center justify-between mb-1">
@@ -115,7 +112,7 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-stone-200">
-              <tr v-for="occurrence in occurrences.slice(0, 5)" :key="occurrence.id"
+              <tr v-for="occurrence in occurrences" :key="occurrence.id"
                   @click="navigateToOccurrence(occurrence.id)"
                   class="cursor-pointer hover:bg-stone-50 transition-colors">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-900">
@@ -200,12 +197,6 @@
           </table>
           </div>
 
-          <!-- Show More Link if more than 5 occurrences -->
-          <div v-if="occurrences.length > 5" class="px-6 py-3 bg-stone-50 text-right">
-            <NuxtLink :to="`/tasks/${task.id}/occurrences`" class="text-amber-700 hover:text-amber-800">
-              View all {{ occurrences.length }} occurrences
-            </NuxtLink>
-          </div>
         </div>
       </div>
 
