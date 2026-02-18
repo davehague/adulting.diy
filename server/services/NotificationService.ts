@@ -3,6 +3,7 @@ import { defaultNotificationPreferences } from "@/types/notification";
 import prisma from "@/server/utils/prisma/client";
 import { addDays } from "date-fns";
 import { EmailProvider } from "./notifications/EmailProvider";
+import { SlackProvider } from "./notifications/SlackProvider";
 import type { NotificationProvider, NotificationRecipient } from "./notifications/NotificationProvider";
 
 export interface NotificationContext {
@@ -63,7 +64,7 @@ export class NotificationService {
             userId: user.id,
             name: user.name,
             email: user.email,
-            channelConfig: (userPreferences as any).channelConfig ?? {},
+            channelConfig: userPreferences.channelConfig ?? {},
           };
 
           for (const provider of providers) {
@@ -196,8 +197,11 @@ export class NotificationService {
    */
   private getEnabledProviders(preferences: NotificationPreferences): NotificationProvider[] {
     const providers: NotificationProvider[] = [];
-    const channels = (preferences as any).channels ?? { email: true, slack: false };
+    const channels = preferences.channels ?? { email: true, slack: false };
     if (channels.email) providers.push(new EmailProvider());
+    if (channels.slack && preferences.channelConfig?.slackWebhookUrl) {
+      providers.push(new SlackProvider());
+    }
     return providers;
   }
 
