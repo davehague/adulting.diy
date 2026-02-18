@@ -41,6 +41,28 @@
 
     <!-- Occurrences List Table -->
     <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200">
+      <!-- Mobile occurrence cards -->
+      <div class="md:hidden divide-y divide-stone-100">
+        <div v-for="occurrence in occurrences" :key="'m-' + occurrence.id"
+             @click="navigateToOccurrence(occurrence.id)"
+             class="p-4 cursor-pointer hover:bg-stone-50 transition-colors">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-sm text-stone-900">{{ formatDate(occurrence.dueDate) }}</span>
+            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+              :class="getOccurrenceStatusClass(occurrence.status)">
+              {{ formatOccurrenceStatus(occurrence.status) }}
+            </span>
+          </div>
+          <div class="text-xs text-stone-500 mb-2">{{ getAssigneeNames(occurrence.assigneeIds) }}</div>
+          <div v-if="occurrence.status === 'assigned' || occurrence.status === 'created'" class="flex gap-3" @click.stop>
+            <button @click="handleEdit(occurrence)" class="text-xs text-amber-700 hover:text-amber-900">Edit</button>
+            <button @click="handleExecute(occurrence.id)" class="text-xs text-green-600 hover:text-green-800">Complete</button>
+            <button @click="handleSkip(occurrence.id)" class="text-xs text-yellow-600 hover:text-yellow-800">Skip</button>
+          </div>
+        </div>
+      </div>
+      <!-- Desktop table -->
+      <div class="hidden md:block">
       <table class="min-w-full divide-y divide-stone-200">
         <thead class="bg-stone-50">
           <tr>
@@ -135,6 +157,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- Skip Modal -->

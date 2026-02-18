@@ -16,11 +16,11 @@
 
     <!-- Task Details -->
     <div v-else class="mb-8">
-      <div class="flex justify-between items-start mb-6">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
         <div>
           <h1 class="font-heading text-2xl font-bold text-stone-900">{{ task.name }}</h1>
         </div>
-        <div class="flex space-x-2">
+        <div class="flex flex-wrap gap-2">
           <button v-if="hasOverdueOccurrences" @click="openCatchUpModal"
             class="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700">
             Catch Up
@@ -80,6 +80,23 @@
 
         <!-- Occurrences List -->
         <div v-else class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+          <!-- Mobile occurrence cards -->
+          <div class="md:hidden divide-y divide-stone-100">
+            <div v-for="occurrence in occurrences.slice(0, 5)" :key="'m-' + occurrence.id"
+                 @click="navigateToOccurrence(occurrence.id)"
+                 class="p-4 cursor-pointer hover:bg-stone-50 transition-colors">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-sm text-stone-900">{{ formatDate(occurrence.dueDate) }}</span>
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                  :class="getOccurrenceStatusClass(occurrence.status)">
+                  {{ formatOccurrenceStatus(occurrence.status) }}
+                </span>
+              </div>
+              <div class="text-xs text-stone-500">{{ getAssigneeNames(occurrence.assigneeIds) }}</div>
+            </div>
+          </div>
+          <!-- Desktop table -->
+          <div class="hidden md:block">
           <table class="min-w-full divide-y divide-stone-200">
             <thead class="bg-stone-50">
               <tr>
@@ -125,6 +142,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
 
           <!-- Show More Link if more than 5 occurrences -->
           <div v-if="occurrences.length > 5" class="px-6 py-3 bg-stone-50 text-right">

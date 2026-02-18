@@ -62,7 +62,7 @@
             </div>
 
             <!-- Fixed Interval Options -->
-            <div v-if="formData.scheduleConfig.type === 'fixed_interval'" class="mb-4 grid grid-cols-2 gap-4">
+            <div v-if="formData.scheduleConfig.type === 'fixed_interval'" class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label for="interval" class="block text-sm font-medium text-stone-700">Interval*</label>
                     <input id="interval" v-model.number="formData.scheduleConfig.interval" type="number" min="1"
@@ -84,7 +84,7 @@
             <!-- Specific Days of Week Options -->
             <div v-if="formData.scheduleConfig.type === 'specific_days_of_week'" class="mb-4">
                 <label class="block text-sm font-medium text-stone-700 mb-2">Days of Week*</label>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div v-for="day in daysOfWeek" :key="day.value">
                         <label class="inline-flex items-center">
                             <input type="checkbox" :checked="isDayChecked(day.value)"
@@ -130,7 +130,7 @@
             </div>
 
             <!-- Variable Interval Options -->
-            <div v-if="formData.scheduleConfig.type === 'variable_interval'" class="mb-4 grid grid-cols-2 gap-4">
+            <div v-if="formData.scheduleConfig.type === 'variable_interval'" class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label for="variableInterval" class="block text-sm font-medium text-stone-700">Interval*</label>
                     <input id="variableInterval" v-model.number="formData.scheduleConfig.variableInterval!.interval"

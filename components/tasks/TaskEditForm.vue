@@ -55,7 +55,7 @@
       </div>
 
       <!-- Fixed Interval Options -->
-      <div v-if="formData.scheduleConfig.type === 'fixed_interval'" class="mb-4 grid grid-cols-2 gap-4">
+      <div v-if="formData.scheduleConfig.type === 'fixed_interval'" class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label for="interval" class="block text-sm font-medium text-stone-700">Interval*</label>
           <input id="interval" v-model.number="formData.scheduleConfig.interval" type="number" min="1" required
@@ -122,7 +122,7 @@
       </div>
 
       <!-- Variable Interval Options -->
-      <div v-if="formData.scheduleConfig.type === 'variable_interval'" class="mb-4 grid grid-cols-2 gap-4">
+      <div v-if="formData.scheduleConfig.type === 'variable_interval'" class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label for="variableInterval" class="block text-sm font-medium text-stone-700">Interval*</label>
           <input id="variableInterval" v-model.number="formData.scheduleConfig.variableInterval.interval" type="number"

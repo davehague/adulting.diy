@@ -1,7 +1,7 @@
 <template>
   <div class="bg-white rounded-xl shadow-sm border border-stone-200">
     <div class="p-6 pb-4">
-      <div class="flex justify-between items-start mb-4">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-4">
         <h2
           class="text-xl font-semibold font-heading"
           :class="{ 'cursor-pointer hover:text-stone-700 transition-colors': collapsible }"

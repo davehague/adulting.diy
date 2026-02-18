@@ -30,9 +30,9 @@
 
             <!-- Occurrence Details -->
             <div class="bg-white shadow-sm border border-stone-200 overflow-hidden sm:rounded-xl">
-                <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+                <div class="px-4 py-5 sm:px-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                     <h3 class="text-lg leading-6 font-medium text-stone-900 font-heading">Occurrence Details</h3>
-                    <div class="flex space-x-3">
+                    <div class="flex flex-wrap gap-2">
                         <button type="button" @click="showEditModal = true"
                             class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-stone-900 shadow-sm ring-1 ring-inset ring-stone-300 hover:bg-stone-50 transition-colors duration-150">
                             Edit

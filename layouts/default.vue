@@ -51,8 +51,19 @@
             </nav>
           </div>
 
-          <!-- User Dropdown -->
+          <!-- Mobile menu button + User Dropdown -->
           <div class="flex items-center">
+            <button
+              @click="showMobileMenu = !showMobileMenu"
+              class="sm:hidden inline-flex items-center justify-center p-2 rounded-md text-stone-500 hover:text-stone-700 hover:bg-stone-100 mr-2"
+            >
+              <svg v-if="!showMobileMenu" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              <svg v-else class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
             <div class="relative">
               <button
                 @click="toggleUserMenu"
@@ -101,6 +112,44 @@
       </div>
     </header>
 
+    <!-- Mobile Navigation Menu -->
+    <div v-if="showMobileMenu && authStore.isAuthenticated" class="sm:hidden bg-white border-b border-stone-200 shadow-sm">
+      <div class="px-4 py-3 space-y-1">
+        <a
+          href="/home"
+          class="block px-3 py-2 rounded-md text-base font-medium transition-colors duration-150"
+          :class="route.path === '/home' ? 'bg-amber-50 text-amber-700' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'"
+          @click="showMobileMenu = false"
+        >
+          Dashboard
+        </a>
+        <a
+          href="/tasks"
+          class="block px-3 py-2 rounded-md text-base font-medium transition-colors duration-150"
+          :class="route.path.startsWith('/tasks') ? 'bg-amber-50 text-amber-700' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'"
+          @click="showMobileMenu = false"
+        >
+          Tasks
+        </a>
+        <a
+          href="/occurrences"
+          class="block px-3 py-2 rounded-md text-base font-medium transition-colors duration-150"
+          :class="route.path.startsWith('/occurrences') ? 'bg-amber-50 text-amber-700' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'"
+          @click="showMobileMenu = false"
+        >
+          Occurrences
+        </a>
+        <a
+          href="/household"
+          class="block px-3 py-2 rounded-md text-base font-medium transition-colors duration-150"
+          :class="route.path === '/household' ? 'bg-amber-50 text-amber-700' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'"
+          @click="showMobileMenu = false"
+        >
+          Household
+        </a>
+      </div>
+    </div>
+
     <!-- Main Content -->
     <main class="flex-grow">
       <slot />
@@ -118,7 +167,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 
@@ -126,12 +175,20 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 
+// Mobile menu
+const showMobileMenu = ref(false);
+
 // User dropdown menu
 const showUserMenu = ref(false);
 
 const toggleUserMenu = () => {
   showUserMenu.value = !showUserMenu.value;
 };
+
+// Close mobile menu on route change
+watch(() => route.path, () => {
+  showMobileMenu.value = false;
+});
 
 // Click outside handler (replacing the onClickOutside composable)
 const handleClickOutside = (event: MouseEvent) => {

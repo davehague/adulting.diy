@@ -147,7 +147,40 @@
             </span>
           </div>
         </div>
-        <div class="overflow-x-auto">
+        <!-- Mobile member cards -->
+        <div class="md:hidden divide-y divide-stone-100">
+          <div v-for="member in members" :key="'m-' + member.id"
+               class="p-4"
+               :class="member.id === currentUserId ? 'bg-amber-50' : ''">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="h-10 w-10 rounded-full bg-amber-600 flex items-center justify-center flex-shrink-0">
+                <span class="text-white font-medium text-sm">{{ getInitials(member.name) }}</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium text-stone-900">
+                  {{ member.name }}
+                  <span v-if="member.id === currentUserId" class="text-xs text-amber-700 ml-1 font-semibold">(You)</span>
+                </div>
+                <div class="text-sm text-stone-500 truncate">{{ member.email }}</div>
+              </div>
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full flex-shrink-0"
+                    :class="member.isAdmin ? 'bg-purple-100 text-purple-800' : 'bg-stone-100 text-stone-800'">
+                {{ member.isAdmin ? 'Admin' : 'Member' }}
+              </span>
+            </div>
+            <div class="flex items-center justify-between pl-13">
+              <span class="text-xs text-stone-500">Joined {{ formatDate(member.createdAt) }}</span>
+              <div v-if="householdInfo.isCurrentUserAdmin && member.id !== currentUserId" class="flex gap-2">
+                <button v-if="!member.isAdmin" @click="makeAdmin(member.id, member.name)" class="text-xs text-amber-700 hover:text-amber-900">Make Admin</button>
+                <button v-else-if="!isOnlyAdmin(member.id)" @click="removeAdmin(member.id, member.name)" class="text-xs text-yellow-600 hover:text-yellow-900">Remove Admin</button>
+                <button @click="removeMember(member.id, member.name)" class="text-xs text-red-600 hover:text-red-900">Remove</button>
+              </div>
+              <span v-else-if="householdInfo.isCurrentUserAdmin && member.id === currentUserId" class="text-xs text-stone-400">Current User</span>
+            </div>
+          </div>
+        </div>
+        <!-- Desktop table -->
+        <div class="hidden md:block overflow-x-auto">
           <table class="min-w-full divide-y divide-stone-200">
             <thead class="bg-stone-50">
               <tr>
