@@ -442,24 +442,16 @@ const showDeleteModal = ref(false);
 const deleteTargetId = ref<string | null>(null);
 const isSubmittingDelete = ref(false);
 
-// Restore persisted state from localStorage
-const savedFilters = import.meta.client
-  ? JSON.parse(localStorage.getItem('adulting-tasks-filters') || 'null')
-  : null;
-const savedSort = import.meta.client
-  ? JSON.parse(localStorage.getItem('adulting-tasks-sort') || 'null')
-  : null;
-
-// Filters
+// Filters - initialized empty for SSR consistency; restored from localStorage in onMounted
 const filters = reactive({
-  status: savedFilters?.status ?? '',
-  categoryId: savedFilters?.categoryId ?? '',
-  search: savedFilters?.search ?? ''
+  status: '',
+  categoryId: '',
+  search: ''
 });
 
-// Sort state
-const sortColumn = ref<string>(savedSort?.column ?? 'name');
-const sortDirection = ref<'asc' | 'desc'>(savedSort?.direction ?? 'asc');
+// Sort state - initialized with defaults for SSR consistency; restored in onMounted
+const sortColumn = ref<string>('name');
+const sortDirection = ref<'asc' | 'desc'>('asc');
 
 const toggleSort = (column: string) => {
   if (sortColumn.value === column) {
@@ -496,6 +488,19 @@ const apiFilters = (f: typeof filters) => ({
 
 // Load initial data
 onMounted(async () => {
+  // Restore persisted filters and sort from localStorage before fetching
+  const savedFilters = JSON.parse(localStorage.getItem('adulting-tasks-filters') || 'null');
+  const savedSort = JSON.parse(localStorage.getItem('adulting-tasks-sort') || 'null');
+  if (savedFilters) {
+    if (savedFilters.status) filters.status = savedFilters.status;
+    if (savedFilters.categoryId) filters.categoryId = savedFilters.categoryId;
+    if (savedFilters.search) filters.search = savedFilters.search;
+  }
+  if (savedSort) {
+    if (savedSort.column) sortColumn.value = savedSort.column;
+    if (savedSort.direction) sortDirection.value = savedSort.direction;
+  }
+
   // Close dropdown when clicking outside
   document.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
