@@ -86,18 +86,51 @@
               <div class="flex items-center justify-between mb-1">
                 <span class="text-sm text-stone-900">{{ formatDate(occurrence.dueDate) }}</span>
                 <span class="inline-flex items-center gap-1 text-xs text-stone-600">
-                  <Circle v-if="occurrence.status === 'created' || occurrence.status === 'assigned'" :size="14" />
+                  <CirclePlay v-if="occurrence.status === 'created' || occurrence.status === 'assigned'" :size="14" />
                   <CircleCheck v-else-if="occurrence.status === 'completed'" :size="14" />
                   <SkipForward v-else-if="occurrence.status === 'skipped'" :size="14" />
                   <Trash2 v-else-if="occurrence.status === 'deleted'" :size="14" />
                   {{ displayStatus(occurrence.status) }}
                 </span>
               </div>
-              <div class="text-xs text-stone-500">
-                <template v-if="getAssigneeNames(occurrence.assigneeIds).length === 0">Unassigned</template>
-                <template v-for="(assignee, idx) in getAssigneeNames(occurrence.assigneeIds)" :key="idx">
-                  <span :class="assignee.departed ? 'text-stone-400 italic' : ''">{{ assignee.name }}</span><span v-if="idx < getAssigneeNames(occurrence.assigneeIds).length - 1">, </span>
-                </template>
+              <div class="flex items-center justify-between mb-1">
+                <div class="text-xs text-stone-500">
+                  <template v-if="getAssigneeNames(occurrence.assigneeIds).length === 0">Unassigned</template>
+                  <template v-for="(assignee, idx) in getAssigneeNames(occurrence.assigneeIds)" :key="idx">
+                    <span :class="assignee.departed ? 'text-stone-400 italic' : ''">{{ assignee.name }}</span><span v-if="idx < getAssigneeNames(occurrence.assigneeIds).length - 1">, </span>
+                  </template>
+                </div>
+                <div class="relative" @click.stop>
+                  <button @click="toggleDropdown(occurrence.id)" class="text-stone-400 hover:text-stone-600 p-1" title="Actions">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                  </button>
+                  <div v-if="openDropdownId === occurrence.id"
+                    class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                    <div class="py-1">
+                      <button v-if="occurrence.status === 'assigned' || occurrence.status === 'created'" @click="handleEdit(occurrence)" class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">
+                        <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Edit
+                      </button>
+                      <button v-if="occurrence.status === 'assigned' || occurrence.status === 'created'" @click="handleExecute(occurrence.id)" class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">
+                        <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Complete
+                      </button>
+                      <button v-if="occurrence.status === 'assigned' || occurrence.status === 'created'" @click="handleSkip(occurrence.id)" class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">
+                        <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Skip
+                      </button>
+                      <div v-if="!['created', 'assigned'].includes(occurrence.status)" class="px-4 py-2 text-sm text-stone-500">No actions available</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -129,7 +162,7 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span class="inline-flex items-center gap-1.5 text-sm text-stone-600">
-                    <Circle v-if="occurrence.status === 'created' || occurrence.status === 'assigned'" :size="16" />
+                    <CirclePlay v-if="occurrence.status === 'created' || occurrence.status === 'assigned'" :size="16" />
                     <CircleCheck v-else-if="occurrence.status === 'completed'" :size="16" />
                     <SkipForward v-else-if="occurrence.status === 'skipped'" :size="16" />
                     <Trash2 v-else-if="occurrence.status === 'deleted'" :size="16" />
@@ -160,23 +193,12 @@
                       class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10"
                     >
                       <div class="py-1">
-                        <NuxtLink
-                          :to="`/occurrences/${occurrence.id}`"
-                          class="group flex items-center px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
-                        >
-                          <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          View
-                        </NuxtLink>
-
                         <button
                           v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
                           @click="handleEdit(occurrence)"
-                          class="group flex items-center w-full px-4 py-2 text-sm text-amber-700 hover:bg-stone-100"
+                          class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
                         >
-                          <svg class="mr-3 h-4 w-4 text-amber-500 group-hover:text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                           Edit
@@ -185,9 +207,9 @@
                         <button
                           v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
                           @click="handleExecute(occurrence.id)"
-                          class="group flex items-center w-full px-4 py-2 text-sm text-green-600 hover:bg-stone-100"
+                          class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
                         >
-                          <svg class="mr-3 h-4 w-4 text-green-400 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           Complete
@@ -196,13 +218,14 @@
                         <button
                           v-if="occurrence.status === 'assigned' || occurrence.status === 'created'"
                           @click="handleSkip(occurrence.id)"
-                          class="group flex items-center w-full px-4 py-2 text-sm text-yellow-600 hover:bg-stone-100"
+                          class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
                         >
-                          <svg class="mr-3 h-4 w-4 text-yellow-400 group-hover:text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           Skip
                         </button>
+                        <div v-if="!['created', 'assigned'].includes(occurrence.status)" class="px-4 py-2 text-sm text-stone-500">No actions available</div>
                       </div>
                     </div>
                   </div>
@@ -261,6 +284,22 @@
         </div>
       </div>
 
+      <!-- Pause Modal -->
+      <PauseModal
+        :show="showPauseModal"
+        :disabled="isSubmittingPause"
+        @confirm="handlePauseConfirm"
+        @cancel="handlePauseCancel"
+      />
+
+      <!-- Delete Modal -->
+      <DeleteModal
+        :show="showDeleteModal"
+        :disabled="isSubmittingDelete"
+        @confirm="handleDeleteConfirm"
+        @cancel="handleDeleteCancel"
+      />
+
       <!-- Back to Tasks List -->
       <div class="mt-8">
         <NuxtLink to="/tasks" class="text-amber-700 hover:text-amber-800">
@@ -283,7 +322,9 @@ import TaskTimeline from '@/components/tasks/TaskTimeline.vue';
 import { useToast } from '@/composables/useToast';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
-import { Pencil, Pause, Play, Trash2, FastForward, Circle, CircleCheck, SkipForward } from 'lucide-vue-next';
+import DeleteModal from '@/components/tasks/DeleteModal.vue';
+import PauseModal from '@/components/tasks/PauseModal.vue';
+import { Pencil, Pause, Play, Trash2, FastForward, CirclePlay, CircleCheck, SkipForward } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -319,6 +360,14 @@ const taskTimelineRef = ref<InstanceType<typeof TaskTimeline> | null>(null);
 
 // Dropdown state
 const openDropdownId = ref<string | null>(null);
+
+// Pause modal state
+const showPauseModal = ref(false);
+const isSubmittingPause = ref(false);
+
+// Delete modal state
+const showDeleteModal = ref(false);
+const isSubmittingDelete = ref(false);
 
 // Skip modal state
 const showSkipModal = ref(false);
@@ -490,18 +539,26 @@ const handleEditCancel = () => {
 };
 
 // Task action functions
-const pauseTask = async () => {
-  // TODO: Implement pauseTask action in store and call it here
+const pauseTask = () => {
+  showPauseModal.value = true;
+};
+
+const handlePauseConfirm = async () => {
+  isSubmittingPause.value = true;
   try {
-    // TODO: Implement pauseTask action in store and call it here
-    // Placeholder: Direct API call for now, ideally move to store action
     await api.post(`/api/tasks/${taskId}/pause`, {});
-    await taskStore.fetchTaskById(taskId); // Refetch task via store
-    await fetchOccurrences(); // Refetch occurrences locally for now
+    showPauseModal.value = false;
+    await taskStore.fetchTaskById(taskId);
+    await fetchOccurrences();
   } catch (err) {
     console.error("Error pausing task:", err);
-    // Rely on store error or add specific message
+  } finally {
+    isSubmittingPause.value = false;
   }
+};
+
+const handlePauseCancel = () => {
+  showPauseModal.value = false;
 };
 
 const unpauseTask = async () => {
@@ -517,21 +574,25 @@ const unpauseTask = async () => {
   }
 };
 
-const deleteTask = async () => {
-  try {
-    if (!confirm('Are you sure you want to delete this task? This will remove all future occurrences.')) {
-      return;
-    }
+const deleteTask = () => {
+  showDeleteModal.value = true;
+};
 
-    // TODO: Implement deleteTask action in store and call it here
-    // Placeholder: Direct API call for now, ideally move to store action
+const handleDeleteConfirm = async () => {
+  isSubmittingDelete.value = true;
+  try {
     await api.delete(`/api/tasks/${taskId}`);
-    // On successful deletion, navigate away
+    showDeleteModal.value = false;
     router.push('/tasks');
   } catch (err) {
     console.error("Error deleting task:", err);
-    // Rely on store error or add specific message
+  } finally {
+    isSubmittingDelete.value = false;
   }
+};
+
+const handleDeleteCancel = () => {
+  showDeleteModal.value = false;
 };
 
 // Removed local handleError function

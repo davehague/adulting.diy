@@ -211,7 +211,7 @@
           <div class="flex items-start justify-between mb-2">
             <div class="text-sm font-medium text-stone-900 flex-1 min-w-0 mr-2">{{ occurrence.task?.name || 'Unknown Task' }}</div>
             <span class="inline-flex items-center gap-1 text-xs text-stone-600 flex-shrink-0">
-              <Circle v-if="occurrence.status === 'created' || occurrence.status === 'assigned'" :size="14" />
+              <CirclePlay v-if="occurrence.status === 'created' || occurrence.status === 'assigned'" :size="14" />
               <CircleCheck v-else-if="occurrence.status === 'completed'" :size="14" />
               <SkipForward v-else-if="occurrence.status === 'skipped'" :size="14" />
               <Trash2 v-else-if="occurrence.status === 'deleted'" :size="14" />
@@ -240,9 +240,24 @@
               <div v-if="openDropdownId === occurrence.id"
                 class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
                 <div class="py-1">
-                  <button v-if="['created', 'assigned'].includes(occurrence.status)" @click="editOccurrence(occurrence)" class="block w-full text-left px-4 py-2 text-sm text-amber-700 hover:bg-stone-100">Edit</button>
-                  <button v-if="['created', 'assigned'].includes(occurrence.status)" @click="executeOccurrence(occurrence.id)" class="block w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-stone-100">Complete</button>
-                  <button v-if="['created', 'assigned'].includes(occurrence.status)" @click="skipOccurrence(occurrence.id, occurrence)" class="block w-full text-left px-4 py-2 text-sm text-yellow-600 hover:bg-stone-100">Skip</button>
+                  <button v-if="['created', 'assigned'].includes(occurrence.status)" @click="editOccurrence(occurrence)" class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">
+                    <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit
+                  </button>
+                  <button v-if="['created', 'assigned'].includes(occurrence.status)" @click="executeOccurrence(occurrence.id)" class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">
+                    <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Complete
+                  </button>
+                  <button v-if="['created', 'assigned'].includes(occurrence.status)" @click="skipOccurrence(occurrence.id, occurrence)" class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">
+                    <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Skip
+                  </button>
                   <div v-if="!['created', 'assigned'].includes(occurrence.status)" class="px-4 py-2 text-sm text-stone-500">No actions available</div>
                 </div>
               </div>
@@ -343,7 +358,7 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span class="inline-flex items-center gap-1.5 text-sm text-stone-600">
-                  <Circle v-if="occurrence.status === 'created' || occurrence.status === 'assigned'" :size="16" />
+                  <CirclePlay v-if="occurrence.status === 'created' || occurrence.status === 'assigned'" :size="16" />
                   <CircleCheck v-else-if="occurrence.status === 'completed'" :size="16" />
                   <SkipForward v-else-if="occurrence.status === 'skipped'" :size="16" />
                   <Trash2 v-else-if="occurrence.status === 'deleted'" :size="16" />
@@ -371,9 +386,9 @@
                       <button
                         v-if="['created', 'assigned'].includes(occurrence.status)"
                         @click="editOccurrence(occurrence)"
-                        class="group flex items-center w-full px-4 py-2 text-sm text-amber-700 hover:bg-stone-100"
+                        class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
                       >
-                        <svg class="mr-3 h-4 w-4 text-amber-500 group-hover:text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                         Edit
@@ -382,9 +397,9 @@
                       <button
                         v-if="['created', 'assigned'].includes(occurrence.status)"
                         @click="executeOccurrence(occurrence.id)"
-                        class="group flex items-center w-full px-4 py-2 text-sm text-green-600 hover:bg-stone-100"
+                        class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
                       >
-                        <svg class="mr-3 h-4 w-4 text-green-400 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         Complete
@@ -393,9 +408,9 @@
                       <button
                         v-if="['created', 'assigned'].includes(occurrence.status)"
                         @click="skipOccurrence(occurrence.id, occurrence)"
-                        class="group flex items-center w-full px-4 py-2 text-sm text-yellow-600 hover:bg-stone-100"
+                        class="group flex items-center w-full px-4 py-2 text-sm text-stone-700 hover:bg-stone-100"
                       >
-                        <svg class="mr-3 h-4 w-4 text-yellow-400 group-hover:text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="mr-3 h-4 w-4 text-stone-400 group-hover:text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         Skip
@@ -465,7 +480,7 @@ import { useAuthStore } from '@/stores/auth';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
 import CompleteModal from '@/components/occurrences/CompleteModal.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
-import { Plus, Search, X, ChevronUp, ChevronDown, SlidersHorizontal, Circle, CircleCheck, SkipForward, Trash2 } from 'lucide-vue-next';
+import { Plus, Search, X, ChevronUp, ChevronDown, SlidersHorizontal, CirclePlay, CircleCheck, SkipForward, Trash2 } from 'lucide-vue-next';
 import type { TaskOccurrence, Category, User } from '@/types';
 import type { FormerHouseholdMember } from '@/types/user';
 
