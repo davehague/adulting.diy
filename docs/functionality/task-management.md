@@ -71,9 +71,9 @@ active ──→ paused ──→ active (unpause)
   └──→ soft-deleted
 ```
 
-| Status | Scheduler generates occurrences? | Future pending occurrences |
-|--------|--------------------------------|---------------------------|
-| **Active** | Yes | Maintained |
+| Status | Generates next occurrence? | Future pending occurrences |
+|--------|--------------------------|---------------------------|
+| **Active** | Yes (on complete/skip, scheduler as backup) | One pending at a time |
 | **Paused** | No | Marked as deleted |
 | **Soft-deleted** | No | Marked as deleted |
 

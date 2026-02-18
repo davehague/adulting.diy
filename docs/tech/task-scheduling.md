@@ -2,7 +2,7 @@
 
 ## Overview
 
-The scheduling system generates task occurrences automatically using a rolling 3-month window. A daily cron job processes all active tasks and creates future occurrences up to the horizon date.
+The scheduling system ensures every active recurring task always has exactly one pending occurrence. Occurrences are generated on-demand (after complete/skip) and backstopped by a daily cron job that fills in gaps.
 
 ### Key Files
 
@@ -72,12 +72,39 @@ TaskDefinition (1) ──→ (many) TaskOccurrence
   └─ endCondition                └─ OccurrenceHistoryLog entries
 ```
 
-- **Generation**: Scheduler creates occurrences up to 3 months ahead
+- **Generation**: One pending occurrence per task; created on-demand after complete/skip, with daily scheduler as gap-filler
 - **Inheritance**: New occurrences inherit `defaultAssigneeIds` from the parent task
 - **Variable recurrence**: Next occurrence uses actual completion/skip date, not due date
 - **End conditions**: Checked before each occurrence creation
 
 ## Occurrence Generation Flow
+
+### Design Principle: One Pending Occurrence Per Task
+
+A task should have exactly **one** pending occurrence (`created` or `assigned` status) at any time. The two generation paths work together to maintain this invariant:
+
+1. **On-demand (primary)**: When an occurrence is completed or skipped, the next one is generated immediately
+2. **Scheduler (gap-filler)**: Daily cron catches any task that somehow ended up with zero pending occurrences
+
+### On-Demand Generation (Primary Path)
+
+When an occurrence is completed or skipped, the system generates the next occurrence immediately:
+
+```
+OccurrenceService.execute() / skip()
+  ├→ Update occurrence status
+  ├→ Determine base date:
+  │   Fixed patterns → use dueDate (preserves cadence anchor)
+  │   Variable interval → use completedAt/skippedAt (schedule floats)
+  ├→ Check end conditions
+  ├→ calculateNextDueDate(config, baseDate)
+  ├→ Check no occurrence already exists for that date
+  └→ Create next TaskOccurrence
+```
+
+### Scheduler (Gap-Filler)
+
+The daily cron job ensures no task is left without a pending occurrence:
 
 ```
 Vercel Cron (daily at 06:00 UTC)
@@ -85,31 +112,20 @@ Vercel Cron (daily at 06:00 UTC)
       ├→ horizonDate = now + 3 months
       ├→ Fetch all tasks where metaStatus = 'active'
       └→ For each task:
-          └→ OccurrenceService.generateAndCreateOccurrences()
+          ├→ Count pending occurrences (status: created/assigned)
+          ├→ If pendingCount > 0 → SKIP (task already has next occurrence)
+          └→ If pendingCount = 0 → Generate via OccurrenceService.generateAndCreateOccurrences()
               ├→ Count existing occurrences
               ├→ Find last completed/skipped occurrence
               ├→ generateFutureOccurrences(config, horizon, count, lastCompletedDate)
               │   └→ Loop: calculateNextDueDate() until > horizon or end condition met
               └→ For each new date:
-                  ├→ Check no duplicate exists
+                  ├→ Check no duplicate exists for that date
                   ├→ Create TaskOccurrence
                   └→ Log in OccurrenceHistoryLog
 ```
 
-### On-Demand Generation
-
-When an occurrence is completed or skipped, the system also generates the next occurrence immediately (not waiting for the daily cron):
-
-```
-OccurrenceService.execute() / skip()
-  ├→ Update occurrence status
-  ├→ Determine base date:
-  │   Fixed patterns → use dueDate
-  │   Variable interval → use completedAt/skippedAt
-  ├→ Check end conditions
-  ├→ calculateNextDueDate(config, baseDate)
-  └→ Create next TaskOccurrence
-```
+The scheduler only processes tasks with **zero** pending occurrences. This prevents the scheduler from pre-generating multiple future occurrences and ensures it serves purely as a safety net.
 
 ## Task Lifecycle and Occurrence Cascading
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-02-19
+
+### UI Consistency Improvements
+- Unified context menu styling across occurrences and task detail pages to match the tasks list page (icons, stone-700 text color)
+- Added mobile context menus to task detail occurrence list (Edit, Complete, Skip)
+- Replaced browser confirm dialogs with proper Pause and Delete modals on task detail page (reusing shared modal components)
+- Changed pending status icon from empty circle to play circle to match active task icon
+
+### Scheduler Duplicate Occurrence Fix
+- Fixed the scheduler creating extra pending occurrences for tasks that already had one
+- The scheduler now only generates an occurrence when a task has zero pending occurrences (acts as a gap-filler)
+- Cleaned up 4 tasks that had duplicate pending occurrences in production
+
 ## 2026-02-18
 
 ### Former Household Members

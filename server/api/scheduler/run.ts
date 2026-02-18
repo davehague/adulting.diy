@@ -69,24 +69,38 @@ export default defineSchedulerProtectedEventHandler(async (event) => {
     console.log(`[Scheduler API] Found ${activeTasks.length} active tasks.`);
 
     // 2. Process each task
+    let tasksSkipped = 0;
     for (const prismaTask of activeTasks) {
       tasksProcessed++;
       const task = mapPrismaTaskToDefinitionTemp(
         prismaTask as PrismaTaskDefinition & { category: Category }
       ); // Use temp mapper
 
-      // 3. Find the last generated occurrence date for this task
+      // 3. Skip tasks that already have a pending occurrence — the execute/skip
+      //    flow is responsible for creating the next occurrence. The scheduler
+      //    only fills in gaps when that flow missed or failed.
+      const pendingCount = await prisma.taskOccurrence.count({
+        where: {
+          taskId: task.id,
+          status: { in: ["created", "assigned"] },
+        },
+      });
+
+      if (pendingCount > 0) {
+        console.log(
+          `[Scheduler API] Skipping task ${task.id} — already has ${pendingCount} pending occurrence(s)`
+        );
+        tasksSkipped++;
+        continue;
+      }
+
+      // 4. Find the last generated occurrence date for this task
       const lastOccurrence = await prisma.taskOccurrence.findFirst({
         where: { taskId: task.id },
         orderBy: { dueDate: "desc" },
       });
       const lastDueDate = lastOccurrence?.dueDate || null;
 
-      // 4. Determine how many occurrences are needed to reach the horizon
-      //    (This is simplified - a more robust approach would calculate dates iteratively)
-      //    For now, let's just call the existing generator which defaults to 5,
-      //    assuming it will eventually be smarter about the horizon.
-      //    A better approach would be needed here for production.
       console.log(
         `[Scheduler API] Generating occurrences for task ${task.id} (Last Due: ${lastDueDate})`
       );
@@ -101,11 +115,12 @@ export default defineSchedulerProtectedEventHandler(async (event) => {
     }
 
     console.log(
-      `[Scheduler API] Finished. Processed ${tasksProcessed} tasks, generated ${occurrencesGenerated} occurrences.`
+      `[Scheduler API] Finished. Processed ${tasksProcessed} tasks (${tasksSkipped} skipped with pending), generated ${occurrencesGenerated} occurrences.`
     );
     return {
       success: true,
       tasksProcessed,
+      tasksSkipped,
       occurrencesGenerated,
     };
   } catch (error: any) {

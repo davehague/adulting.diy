@@ -8,13 +8,16 @@ describe('Scheduler Logic Tests', () => {
       const mockSchedulerResponse = {
         success: true,
         tasksProcessed: 5,
+        tasksSkipped: 3,
         occurrencesGenerated: 12
       }
 
       expect(mockSchedulerResponse.success).toBe(true)
       expect(typeof mockSchedulerResponse.tasksProcessed).toBe('number')
+      expect(typeof mockSchedulerResponse.tasksSkipped).toBe('number')
       expect(typeof mockSchedulerResponse.occurrencesGenerated).toBe('number')
       expect(mockSchedulerResponse.tasksProcessed).toBeGreaterThanOrEqual(0)
+      expect(mockSchedulerResponse.tasksSkipped).toBeGreaterThanOrEqual(0)
       expect(mockSchedulerResponse.occurrencesGenerated).toBeGreaterThanOrEqual(0)
     })
 
@@ -84,7 +87,7 @@ describe('Scheduler Logic Tests', () => {
       const activeTask = { metaStatus: 'active' }
       const pausedTask = { metaStatus: 'paused' }
       const deletedTask = { metaStatus: 'soft-deleted' }
-      
+
       // Only active tasks should generate occurrences
       expect(activeTask.metaStatus).toBe('active')
       expect(pausedTask.metaStatus).not.toBe('active')
@@ -99,11 +102,70 @@ describe('Scheduler Logic Tests', () => {
         new Date('2024-01-22'),
         new Date('2024-01-29')
       ]
-      
+
       // New dates should not conflict with existing
       newGeneratedDates.forEach(newDate => {
         expect(newDate.getTime()).not.toBe(existingOccurrenceDate.getTime())
       })
+    })
+  })
+
+  describe('Pending Occurrence Skip Logic', () => {
+    // The scheduler should skip tasks that already have a pending occurrence.
+    // The execute/skip flow is responsible for creating the next occurrence;
+    // the scheduler only fills in gaps when that flow missed or failed.
+
+    function shouldSchedulerProcess(pendingCount: number): boolean {
+      return pendingCount === 0
+    }
+
+    it('should skip a task that already has one pending occurrence', () => {
+      expect(shouldSchedulerProcess(1)).toBe(false)
+    })
+
+    it('should skip a task that has multiple pending occurrences', () => {
+      expect(shouldSchedulerProcess(2)).toBe(false)
+    })
+
+    it('should process a task with zero pending occurrences', () => {
+      expect(shouldSchedulerProcess(0)).toBe(true)
+    })
+
+    it('should correctly categorize tasks by pending status', () => {
+      const tasks = [
+        { id: 'task-1', name: 'Weekly task', pendingCount: 1 },
+        { id: 'task-2', name: 'Missed task', pendingCount: 0 },
+        { id: 'task-3', name: 'Double-booked', pendingCount: 2 },
+        { id: 'task-4', name: 'New task', pendingCount: 0 },
+      ]
+
+      const toProcess = tasks.filter(t => shouldSchedulerProcess(t.pendingCount))
+      const toSkip = tasks.filter(t => !shouldSchedulerProcess(t.pendingCount))
+
+      expect(toProcess.map(t => t.id)).toEqual(['task-2', 'task-4'])
+      expect(toSkip.map(t => t.id)).toEqual(['task-1', 'task-3'])
+    })
+
+    it('should include tasksSkipped in response alongside tasksProcessed', () => {
+      const tasks = [
+        { pendingCount: 1 },
+        { pendingCount: 0 },
+        { pendingCount: 0 },
+        { pendingCount: 2 },
+      ]
+
+      let tasksProcessed = 0
+      let tasksSkipped = 0
+      for (const task of tasks) {
+        tasksProcessed++
+        if (!shouldSchedulerProcess(task.pendingCount)) {
+          tasksSkipped++
+          continue
+        }
+      }
+
+      expect(tasksProcessed).toBe(4)
+      expect(tasksSkipped).toBe(2)
     })
   })
 })
