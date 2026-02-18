@@ -16,6 +16,17 @@ export interface NotificationPreferences {
   reminder_initial: 'any' | 'none';
   reminder_followup: 'any' | 'none';
   reminder_overdue: 'any' | 'none';
+
+  // Channel toggles
+  channels?: {
+    email: boolean;
+    slack: boolean;
+  };
+
+  // Channel-specific configuration
+  channelConfig?: {
+    slackWebhookUrl?: string;
+  };
 }
 
 export const defaultNotificationPreferences: NotificationPreferences = {
@@ -34,5 +45,12 @@ export const defaultNotificationPreferences: NotificationPreferences = {
   // Reminder notifications - defaults to 'any'
   reminder_initial: 'any',
   reminder_followup: 'any',
-  reminder_overdue: 'any'
+  reminder_overdue: 'any',
+
+  // Channel defaults - email on, slack off
+  channels: {
+    email: true,
+    slack: false,
+  },
+  channelConfig: {},
 };

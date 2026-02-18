@@ -156,6 +156,8 @@ export const testNotificationPreferences = {
     reminder_initial: 'any' as const,
     reminder_followup: 'any' as const,
     reminder_overdue: 'any' as const,
+    channels: { email: true, slack: false },
+    channelConfig: {},
   },
 
   member: {
@@ -171,5 +173,7 @@ export const testNotificationPreferences = {
     reminder_initial: 'any' as const,
     reminder_followup: 'any' as const,
     reminder_overdue: 'any' as const,
+    channels: { email: true, slack: false },
+    channelConfig: {},
   }
 }
