@@ -277,8 +277,8 @@ describe('checkAndSendTaskReminders', () => {
     // Mock the log creation for dedup tracking
     vi.mocked(prisma.occurrenceHistoryLog.create).mockResolvedValueOnce({} as any)
 
-    // Mock sendNotification to track calls
-    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue()
+    // Mock sendNotification to track calls (returns true = sent successfully)
+    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue(true)
 
     const count = await service.checkAndSendTaskReminders(task as any)
 
@@ -616,7 +616,7 @@ describe('duplicate reminder prevention', () => {
       createdAt: new Date(),
     } as any)
 
-    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue()
+    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue(true)
     const count = await service.checkAndSendTaskReminders(task as any)
 
     expect(count).toBe(0)
@@ -658,7 +658,7 @@ describe('duplicate reminder prevention', () => {
     // No prior reminder sent
     vi.mocked(prisma.occurrenceHistoryLog.findFirst).mockResolvedValueOnce(null)
 
-    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue()
+    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue(true)
     // Mock the log creation
     vi.mocked(prisma.occurrenceHistoryLog.create).mockResolvedValueOnce({} as any)
 
@@ -670,6 +670,55 @@ describe('duplicate reminder prevention', () => {
       'task_reminder_initial',
       expect.any(Object)
     )
+
+    sendSpy.mockRestore()
+  })
+
+  it('does not log dedup record when send fails', async () => {
+    const service = new NotificationService()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const dueDate = new Date()
+    dueDate.setDate(dueDate.getDate() + 3)
+    dueDate.setHours(0, 0, 0, 0)
+
+    const task = {
+      id: 'task-1',
+      householdId: 'household-1',
+      createdByUserId: 'user-1',
+      reminderConfig: { initialReminder: 3 },
+    }
+
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+
+    // Clear any residual calls from prior tests
+    vi.mocked(prisma.occurrenceHistoryLog.create).mockClear()
+
+    vi.mocked(prisma.taskOccurrence.findMany).mockResolvedValueOnce([
+      {
+        id: 'occ-1',
+        taskId: 'task-1',
+        dueDate: dueDate,
+        status: 'assigned',
+        assigneeIds: ['user-1'],
+        createdAt: today,
+        updatedAt: today,
+      },
+    ] as any)
+
+    // No prior reminder sent
+    vi.mocked(prisma.occurrenceHistoryLog.findFirst).mockResolvedValueOnce(null)
+
+    // sendNotification returns false (all providers failed)
+    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue(false)
+
+    const count = await service.checkAndSendTaskReminders(task as any)
+
+    expect(count).toBe(0)
+    expect(sendSpy).toHaveBeenCalled()
+    // Dedup log should NOT have been created
+    expect(prisma.occurrenceHistoryLog.create).not.toHaveBeenCalled()
 
     sendSpy.mockRestore()
   })

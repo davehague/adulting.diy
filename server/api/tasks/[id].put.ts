@@ -1,5 +1,6 @@
 import { defineHouseholdProtectedEventHandler } from "@/server/utils/auth";
 import { TaskService } from "@/server/services/TaskService";
+import { validateReminderConfig } from "@/server/utils/validation";
 import { createError, readBody } from "h3";
 
 export default defineHouseholdProtectedEventHandler(
@@ -47,7 +48,7 @@ export default defineHouseholdProtectedEventHandler(
         instructions: body.instructions,
         categoryId: body.categoryId, // Use camelCase
         scheduleConfig: body.scheduleConfig, // Use camelCase
-        reminderConfig: body.reminderConfig, // Use camelCase
+        reminderConfig: validateReminderConfig(body.reminderConfig), // Sanitized
         defaultAssigneeIds: body.defaultAssigneeIds, // Use camelCase
       });
 

@@ -40,7 +40,8 @@ export class NotificationService {
     eventType: NotificationEventType,
     context: NotificationContext,
     excludeUserId?: string // Don't notify the user who triggered the action
-  ): Promise<void> {
+  ): Promise<boolean> {
+    let anySucceeded = false;
     try {
       // Get all users in the household with their notification preferences
       const householdUsers = await prisma.user.findMany({
@@ -71,6 +72,7 @@ export class NotificationService {
           for (const provider of providers) {
             try {
               await provider.send(recipient, eventType, context);
+              anySucceeded = true;
             } catch (error) {
               console.error(`[NotificationService] ${provider.channel} failed for ${user.email}:`, error);
             }
@@ -81,6 +83,7 @@ export class NotificationService {
       console.error(`[NotificationService] Error sending ${eventType} notification:`, error);
       // Don't throw - notifications shouldn't break main functionality
     }
+    return anySucceeded;
   }
 
   /**
@@ -246,9 +249,11 @@ export class NotificationService {
       if (task.reminderConfig.initialReminder) {
         const reminderDate = addDays(new Date(occurrence.dueDate), -task.reminderConfig.initialReminder);
         if (this.isDateToday(reminderDate, householdTimezone) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_initial", householdTimezone))) {
-          await this.sendNotification(task.householdId, "task_reminder_initial", context);
-          await this.logReminderSent(occurrence.id, "task_reminder_initial", task.createdByUserId);
-          remindersSent++;
+          const sent = await this.sendNotification(task.householdId, "task_reminder_initial", context);
+          if (sent) {
+            await this.logReminderSent(occurrence.id, "task_reminder_initial", task.createdByUserId);
+            remindersSent++;
+          }
         }
       }
 
@@ -256,9 +261,11 @@ export class NotificationService {
       if (task.reminderConfig.followUpReminder) {
         const reminderDate = addDays(new Date(occurrence.dueDate), -task.reminderConfig.followUpReminder);
         if (this.isDateToday(reminderDate, householdTimezone) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_followup", householdTimezone))) {
-          await this.sendNotification(task.householdId, "task_reminder_followup", context);
-          await this.logReminderSent(occurrence.id, "task_reminder_followup", task.createdByUserId);
-          remindersSent++;
+          const sent = await this.sendNotification(task.householdId, "task_reminder_followup", context);
+          if (sent) {
+            await this.logReminderSent(occurrence.id, "task_reminder_followup", task.createdByUserId);
+            remindersSent++;
+          }
         }
       }
 
@@ -266,9 +273,11 @@ export class NotificationService {
       if (task.reminderConfig.overdueReminder) {
         const overdueDate = addDays(new Date(occurrence.dueDate), task.reminderConfig.overdueReminder);
         if (this.isDateToday(overdueDate, householdTimezone) && !(await this.wasReminderSentToday(occurrence.id, "task_reminder_overdue", householdTimezone))) {
-          await this.sendNotification(task.householdId, "task_reminder_overdue", context);
-          await this.logReminderSent(occurrence.id, "task_reminder_overdue", task.createdByUserId);
-          remindersSent++;
+          const sent = await this.sendNotification(task.householdId, "task_reminder_overdue", context);
+          if (sent) {
+            await this.logReminderSent(occurrence.id, "task_reminder_overdue", task.createdByUserId);
+            remindersSent++;
+          }
         }
       }
     }

@@ -1,5 +1,6 @@
 import { defineHouseholdProtectedEventHandler } from "@/server/utils/auth";
 import { TaskService } from "@/server/services/TaskService";
+import { validateReminderConfig } from "@/server/utils/validation";
 import { createError, readBody } from "h3";
 
 export default defineHouseholdProtectedEventHandler(
@@ -27,7 +28,7 @@ export default defineHouseholdProtectedEventHandler(
         categoryId: body.categoryId,
         metaStatus: "active", // Default status
         scheduleConfig: body.scheduleConfig,
-        reminderConfig: body.reminderConfig,
+        reminderConfig: validateReminderConfig(body.reminderConfig),
         createdByUserId: authUser.userId,
         defaultAssigneeIds: body.defaultAssigneeIds || [],
       });
