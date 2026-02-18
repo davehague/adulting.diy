@@ -154,6 +154,44 @@ describe('NotificationService.shouldSendNotification', () => {
     })
   })
 
+  // --- "mine" reminder preference sends only to assignees ---
+  describe('reminder notifications with mine preference', () => {
+    it('sends reminder when preference is mine and user is assignee', () => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_initial: 'mine' }
+      expect(service.shouldSendNotification(
+        'task_reminder_initial', prefs, contextWithOccurrenceAssignedToUser, userId
+      )).toBe(true)
+    })
+
+    it('does NOT send reminder when preference is mine and user is not assignee', () => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_initial: 'mine' }
+      expect(service.shouldSendNotification(
+        'task_reminder_initial', prefs, contextWithOccurrenceAssignedToOther, userId
+      )).toBe(false)
+    })
+
+    it('sends followup reminder when preference is mine and user is assignee', () => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_followup: 'mine' }
+      expect(service.shouldSendNotification(
+        'task_reminder_followup', prefs, contextWithOccurrenceAssignedToUser, userId
+      )).toBe(true)
+    })
+
+    it('sends overdue reminder when preference is mine and user is assignee', () => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_overdue: 'mine' }
+      expect(service.shouldSendNotification(
+        'task_reminder_overdue', prefs, contextWithOccurrenceAssignedToUser, userId
+      )).toBe(true)
+    })
+
+    it('still sends when preference is any regardless of assignment', () => {
+      const prefs: NotificationPreferences = { ...allNonePrefs, reminder_initial: 'any' }
+      expect(service.shouldSendNotification(
+        'task_reminder_initial', prefs, contextWithOccurrenceAssignedToOther, userId
+      )).toBe(true)
+    })
+  })
+
   // --- Default preferences are snake_case and correct ---
   describe('getDefaultPreferences', () => {
     it('returns snake_case keys matching the NotificationPreferences type', () => {

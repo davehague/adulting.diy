@@ -151,12 +151,18 @@ export class NotificationService {
         return preferences.occurrence_commented === "any" ||
                (preferences.occurrence_commented === "mine" && isMine);
       
-      case "task_reminder_initial":
-        return (preferences.reminder_initial || 'any') === 'any';
-      case "task_reminder_followup":
-        return (preferences.reminder_followup || 'any') === 'any';
-      case "task_reminder_overdue":
-        return (preferences.reminder_overdue || 'any') === 'any';
+      case "task_reminder_initial": {
+        const pref = preferences.reminder_initial || 'any';
+        return pref === 'any' || (pref === 'mine' && isMine);
+      }
+      case "task_reminder_followup": {
+        const pref = preferences.reminder_followup || 'any';
+        return pref === 'any' || (pref === 'mine' && isMine);
+      }
+      case "task_reminder_overdue": {
+        const pref = preferences.reminder_overdue || 'any';
+        return pref === 'any' || (pref === 'mine' && isMine);
+      }
       
       default:
         return false;
