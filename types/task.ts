@@ -157,6 +157,32 @@ export interface TaskOccurrence {
   task?: TaskDefinition;
 }
 
+export interface DashboardData {
+  pendingOccurrences: {
+    id: string;
+    dueDate: Date;
+    assigneeIds: string[];
+    status: string;
+    task: {
+      name: string;
+      category: {
+        name: string;
+      } | null;
+    };
+  }[];
+  recentlyCompletedCount: number;
+  categoryBreakdown: {
+    name: string;
+    count: number;
+  }[];
+  householdMembers: {
+    id: string;
+    name: string;
+    email: string;
+    isAdmin: boolean;
+  }[];
+}
+
 export type HistoryLogType =
   | "status_change"
   | "comment"

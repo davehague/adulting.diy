@@ -81,6 +81,7 @@ model TaskDefinition {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
+  @@index([householdId, metaStatus])
   @@map("task_definitions")
 }
 
@@ -98,6 +99,8 @@ model TaskOccurrence {
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
 
+  @@index([taskId, status, dueDate])
+  @@index([status, dueDate])
   @@map("task_occurrences")
 }
 
