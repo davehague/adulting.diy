@@ -344,22 +344,6 @@ const apiFilters = (f: typeof filters) => ({
 
 // Load initial data
 onMounted(async () => {
-  // Fetch categories locally for the filter dropdown
-  try {
-    const categoriesData = await api.get<Category[]>('/api/categories');
-    categories.value = categoriesData;
-  } catch (err) {
-    console.error('Error loading categories:', err);
-  }
-
-  // Fetch household users for assignee display
-  try {
-    const usersData = await api.get<User[]>('/api/household/users');
-    householdUsers.value = usersData;
-  } catch (err) {
-    console.error('Error loading household users:', err);
-  }
-
   // Close dropdown when clicking outside
   document.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
@@ -368,18 +352,30 @@ onMounted(async () => {
     }
   });
 
-  // Fetch initial tasks only after auth is ready
-  watch(() => authStore.isReady, (ready) => {
-    if (ready) {
-      console.log('[Tasks Page] Auth ready, fetching tasks.');
-      taskStore.fetchTasks(apiFilters(filters));
-    }
-  }, { immediate: true }); // immediate: true runs the watcher once on setup
+  // Fetch categories, household users, and tasks in parallel
+  const fetchCategories = api.get<Category[]>('/api/categories')
+    .then(data => { categories.value = data; })
+    .catch(err => { console.error('Error loading categories:', err); });
 
-  // Also handle the case where auth is already ready when component mounts
+  const fetchUsers = api.get<User[]>('/api/household/users')
+    .then(data => { householdUsers.value = data; })
+    .catch(err => { console.error('Error loading household users:', err); });
+
+  // Fetch tasks once auth is ready
   if (authStore.isReady) {
-    console.log('[Tasks Page] Auth already ready on mount, fetching tasks.');
-    await taskStore.fetchTasks(apiFilters(filters));
+    await Promise.all([
+      fetchCategories,
+      fetchUsers,
+      taskStore.fetchTasks(apiFilters(filters)),
+    ]);
+  } else {
+    // Auth not ready yet — fetch categories/users now, tasks when auth resolves
+    await Promise.all([fetchCategories, fetchUsers]);
+    watch(() => authStore.isReady, (ready) => {
+      if (ready) {
+        taskStore.fetchTasks(apiFilters(filters));
+      }
+    });
   }
 });
 
