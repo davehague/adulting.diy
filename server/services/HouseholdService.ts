@@ -101,6 +101,11 @@ export class HouseholdService {
           updatedAt: new Date()
         }
       });
+
+      // Remove former member record if rejoining
+      await prisma.formerHouseholdMember.deleteMany({
+        where: { userId, householdId }
+      });
     } catch (error) {
       console.error(`[HouseholdService] Unexpected error in addUser:`, error);
       throw error;
