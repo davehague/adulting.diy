@@ -276,7 +276,7 @@ export class OccurrenceService {
   ): Promise<TaskOccurrence> {
     try {
       // Start a transaction to log the changes
-      return await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         // Get current occurrence state
         const currentOccurrence = await tx.taskOccurrence.findUnique({
           where: { id },
@@ -334,8 +334,54 @@ export class OccurrenceService {
           }
         }
 
-        return updatedOccurrence as unknown as TaskOccurrence; // Ensure cast is here
+        return {
+          updatedOccurrence: updatedOccurrence as unknown as TaskOccurrence,
+          assigneesChanged: data.assigneeIds
+            ? JSON.stringify(currentOccurrence.assigneeIds || []) !== JSON.stringify(data.assigneeIds || [])
+            : false,
+        };
       });
+
+      // Send occurrence_assigned notification if assignees changed
+      if (result.assigneesChanged && result.updatedOccurrence.task) {
+        try {
+          const notificationService = new NotificationService();
+          const task = result.updatedOccurrence.task as unknown as TaskDefinition;
+
+          const [actionUser, household] = await Promise.all([
+            prisma.user.findUnique({
+              where: { id: userId },
+              select: { id: true, name: true, email: true },
+            }),
+            prisma.household.findUnique({
+              where: { id: task.householdId },
+              select: { id: true, name: true },
+            }),
+          ]);
+
+          if (actionUser) {
+            await notificationService.sendNotification(
+              task.householdId,
+              "occurrence_assigned",
+              {
+                user: actionUser as any,
+                task,
+                occurrence: result.updatedOccurrence,
+                actionUser: actionUser as any,
+                household: { id: task.householdId, name: household?.name || "" },
+              },
+              userId // Exclude the person who made the assignment
+            );
+          }
+        } catch (notificationError) {
+          console.warn(
+            `[OccurrenceService] Failed to send occurrence assigned notification:`,
+            notificationError
+          );
+        }
+      }
+
+      return result.updatedOccurrence;
     } catch (error) {
       console.error(`[OccurrenceService] Unexpected error in update:`, error);
       throw error;
