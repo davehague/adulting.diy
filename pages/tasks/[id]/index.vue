@@ -164,6 +164,8 @@ import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/utils/api'; // Keep for categories/occurrences for now
 import { useTaskStore } from '@/stores/tasks';
 import type { TaskDefinition, TaskOccurrence, Category, User } from '@/types'; // Add User type
+import CatchUpModal from '@/components/tasks/CatchUpModal.vue';
+import TaskTimeline from '@/components/tasks/TaskTimeline.vue';
 
 const route = useRoute();
 const router = useRouter();

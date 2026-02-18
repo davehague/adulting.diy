@@ -246,6 +246,7 @@ import { useApi } from '@/utils/api';
 import { useTaskStore } from '@/stores/tasks';
 import { useAuthStore } from '@/stores/auth'; // Import auth store
 import type { TaskDefinition, Category, User } from '@/types';
+import CatchUpModal from '@/components/tasks/CatchUpModal.vue';
 
 const api = useApi(); // Keep for categories for now
 const taskStore = useTaskStore();
