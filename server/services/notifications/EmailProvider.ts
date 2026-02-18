@@ -19,6 +19,7 @@ export class EmailProvider implements NotificationProvider {
     } as User;
 
     const { subject, body } = this.generateEmailContent(eventType, context, user);
+    const prefixedSubject = `Adulting.diy - ${subject}`;
 
     try {
       await $fetch("/api/sendEmail", {
@@ -26,7 +27,7 @@ export class EmailProvider implements NotificationProvider {
         headers: { authorization: `Bearer ${process.env.CRON_SECRET || ''}` },
         body: {
           to: recipient.email,
-          subject: subject,
+          subject: prefixedSubject,
           html: body,
         },
       });
