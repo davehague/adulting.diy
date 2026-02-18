@@ -304,7 +304,7 @@ export class OccurrenceService {
         });
 
         // Log changes
-        if (data.dueDate && data.dueDate !== currentOccurrence.dueDate) {
+        if (data.dueDate && data.dueDate.getTime() !== currentOccurrence.dueDate.getTime()) {
           await tx.occurrenceHistoryLog.create({
             data: {
               occurrenceId: id,
@@ -318,8 +318,8 @@ export class OccurrenceService {
 
         // Log assignee changes if provided
         if (data.assigneeIds) {
-          const oldAssignees = currentOccurrence.assigneeIds || [];
-          const newAssignees = data.assigneeIds || [];
+          const oldAssignees = [...(currentOccurrence.assigneeIds || [])].sort();
+          const newAssignees = [...(data.assigneeIds || [])].sort();
 
           if (JSON.stringify(oldAssignees) !== JSON.stringify(newAssignees)) {
             await tx.occurrenceHistoryLog.create({

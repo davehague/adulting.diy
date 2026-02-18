@@ -21,8 +21,8 @@
                         <div class="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm text-stone-500">
-                                    {{ formatLogMessage(log) }}
                                     <span class="font-medium" :class="log.user && isFormerMember(log.userId) ? 'text-stone-400 italic' : 'text-stone-900'">{{ log.user?.name || 'System' }}</span>
+                                    {{ formatLogMessage(log) }}
                                 </p>
                                 <!-- Comment display / edit -->
                                 <div v-if="log.logType === 'comment' && log.comment">
@@ -46,14 +46,16 @@
                                         <p v-if="editError" class="mt-1 text-xs text-red-600">{{ editError }}</p>
                                     </div>
                                     <!-- Read mode -->
-                                    <div v-else class="mt-1 group flex items-start gap-1.5">
-                                        <p class="text-sm text-stone-700 italic">
-                                            "{{ log.comment }}"
-                                            <span v-if="log.updatedAt" class="text-xs text-stone-400 not-italic">(edited)</span>
-                                        </p>
+                                    <div v-else class="mt-2 group">
+                                        <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                                            <p class="text-sm text-stone-800">
+                                                {{ log.comment }}
+                                                <span v-if="log.updatedAt" class="text-xs text-stone-400 ml-1">(edited)</span>
+                                            </p>
+                                        </div>
                                         <button v-if="isOwnComment(log)"
                                             @click="startEdit(log)"
-                                            class="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5 text-stone-400 hover:text-stone-600"
+                                            class="opacity-0 group-hover:opacity-100 transition-opacity ml-1.5 align-middle text-stone-400 hover:text-stone-600"
                                             title="Edit comment">
                                             <PencilIcon class="h-3.5 w-3.5" />
                                         </button>
@@ -95,6 +97,7 @@ import {
 const props = defineProps<{
     occurrenceId: string;
     formerMembers?: FormerHouseholdMember[];
+    householdUsers?: { id: string; name: string }[];
 }>();
 
 const isFormerMember = (userId: string): boolean => {
@@ -228,8 +231,25 @@ const formatLogMessage = (log: OccurrenceHistoryLog): string => {
                 return `changed status to ${log.newValue}`;
             }
             return 'changed status';
-        case 'assignment_change':
-            return 'changed assignees';
+        case 'assignment_change': {
+            const resolveNames = (json: string | undefined): string => {
+                if (!json) return '?';
+                try {
+                    const ids: string[] = JSON.parse(json);
+                    if (ids.length === 0) return 'none';
+                    return ids.map(id => {
+                        const user = (props.householdUsers || []).find(u => u.id === id);
+                        if (user) return user.name;
+                        const former = (props.formerMembers || []).find(u => u.userId === id);
+                        if (former) return former.name;
+                        return 'Unknown';
+                    }).join(', ');
+                } catch {
+                    return '?';
+                }
+            };
+            return `changed assignees from ${resolveNames(log.oldValue)} to ${resolveNames(log.newValue)}`;
+        }
         case 'date_change':
             return `changed due date from ${log.oldValue ? new Date(log.oldValue).toLocaleDateString() : '?'} to ${log.newValue ? new Date(log.newValue).toLocaleDateString() : '?'}`;
         default:

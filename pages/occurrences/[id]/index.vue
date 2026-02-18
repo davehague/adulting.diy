@@ -120,7 +120,7 @@
 
 
             <!-- History Timeline -->
-            <OccurrenceTimeline :occurrence-id="occurrenceId" :former-members="formerMembers" ref="timelineComponent" />
+            <OccurrenceTimeline :occurrence-id="occurrenceId" :former-members="formerMembers" :household-users="householdUsers" ref="timelineComponent" />
 
         </div>
         <div v-else class="text-center py-10 text-stone-500">

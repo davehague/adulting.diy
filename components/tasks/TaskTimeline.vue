@@ -19,14 +19,16 @@
               </span>
             </div>
             <div class="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
-              <div>
+              <div class="flex-1 min-w-0">
                 <p class="text-sm text-stone-500">
-                  {{ formatLogMessage(log) }}
                   <span class="font-medium text-stone-900">{{ log.user?.name || 'System' }}</span>
+                  {{ formatLogMessage(log) }}
                 </p>
-                <p v-if="log.comment" class="mt-1 text-sm text-stone-700 italic">
-                  "{{ log.comment }}"
-                </p>
+                <div v-if="log.comment" class="mt-2">
+                  <div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                    <p class="text-sm text-stone-800">{{ log.comment }}</p>
+                  </div>
+                </div>
               </div>
               <div class="whitespace-nowrap text-right text-sm text-stone-500">
                 <time :datetime="log.createdAt.toISOString()">{{ formatRelativeTime(log.createdAt) }}</time>
@@ -138,14 +140,14 @@ const formatLogMessage = (log: TaskHistoryLog): string => {
       const newDate = details?.newDueDate
         ? new Date(details.newDueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
         : 'none';
-      return `Caught up \u2014 ${skipped} occurrence${skipped !== 1 ? 's' : ''} skipped. Next due: ${newDate}. By `;
+      return `caught up \u2014 ${skipped} occurrence${skipped !== 1 ? 's' : ''} skipped. Next due: ${newDate}`;
     }
-    case 'paused': return 'Paused task. By ';
-    case 'unpaused': return 'Unpaused task. By ';
-    case 'created': return 'Created task. By ';
-    case 'edited': return 'Edited task. By ';
-    case 'soft_deleted': return 'Deleted task. By ';
-    default: return 'Updated task. By ';
+    case 'paused': return 'paused task';
+    case 'unpaused': return 'unpaused task';
+    case 'created': return 'created task';
+    case 'edited': return 'edited task';
+    case 'soft_deleted': return 'deleted task';
+    default: return 'updated task';
   }
 };
 </script>

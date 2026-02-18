@@ -86,12 +86,11 @@
               <div class="flex items-center justify-between mb-1">
                 <span class="text-sm text-stone-900">{{ formatDate(occurrence.dueDate) }}</span>
                 <span class="inline-flex items-center gap-1 text-xs text-stone-600">
-                  <Circle v-if="occurrence.status === 'created'" :size="14" />
-                  <UserCheck v-else-if="occurrence.status === 'assigned'" :size="14" />
+                  <Circle v-if="occurrence.status === 'created' || occurrence.status === 'assigned'" :size="14" />
                   <CircleCheck v-else-if="occurrence.status === 'completed'" :size="14" />
                   <SkipForward v-else-if="occurrence.status === 'skipped'" :size="14" />
                   <Trash2 v-else-if="occurrence.status === 'deleted'" :size="14" />
-                  {{ formatOccurrenceStatus(occurrence.status) }}
+                  {{ displayStatus(occurrence.status) }}
                 </span>
               </div>
               <div class="text-xs text-stone-500">
@@ -130,12 +129,11 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span class="inline-flex items-center gap-1.5 text-sm text-stone-600">
-                    <Circle v-if="occurrence.status === 'created'" :size="16" />
-                    <UserCheck v-else-if="occurrence.status === 'assigned'" :size="16" />
+                    <Circle v-if="occurrence.status === 'created' || occurrence.status === 'assigned'" :size="16" />
                     <CircleCheck v-else-if="occurrence.status === 'completed'" :size="16" />
                     <SkipForward v-else-if="occurrence.status === 'skipped'" :size="16" />
                     <Trash2 v-else-if="occurrence.status === 'deleted'" :size="16" />
-                    {{ formatOccurrenceStatus(occurrence.status) }}
+                    {{ displayStatus(occurrence.status) }}
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
@@ -285,7 +283,7 @@ import TaskTimeline from '@/components/tasks/TaskTimeline.vue';
 import { useToast } from '@/composables/useToast';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
-import { Pencil, Pause, Play, Trash2, FastForward, Circle, UserCheck, CircleCheck, SkipForward } from 'lucide-vue-next';
+import { Pencil, Pause, Play, Trash2, FastForward, Circle, CircleCheck, SkipForward } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -307,10 +305,10 @@ const error = computed(() => taskStore.error);
 const occurrences = ref<TaskOccurrence[]>([]);
 const hideDeleted = ref(true);
 const filteredOccurrences = computed(() => {
-  if (hideDeleted.value) {
-    return occurrences.value.filter(o => o.status !== 'deleted');
-  }
-  return occurrences.value;
+  const filtered = hideDeleted.value
+    ? occurrences.value.filter(o => o.status !== 'deleted')
+    : occurrences.value;
+  return [...filtered].sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
 });
 const categories = ref<Category[]>([]);
 const householdUsers = ref<User[]>([]); // State for household users
@@ -559,7 +557,8 @@ const formatDate = (date: Date | string): string => {
   });
 };
 
-const formatOccurrenceStatus = (status: string): string => {
+const displayStatus = (status: string): string => {
+  if (status === 'created' || status === 'assigned') return 'Pending';
   return status.charAt(0).toUpperCase() + status.slice(1);
 };
 
