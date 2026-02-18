@@ -285,6 +285,7 @@
     <SkipModal
       :show="showSkipModal"
       :is-variable-interval="skipTargetIsVariableInterval"
+      :is-recurring="skipTargetIsRecurring"
       :disabled="isSubmittingSkip"
       @confirm="handleSkipConfirm"
       @cancel="handleSkipCancel"
@@ -352,6 +353,7 @@ const openDropdownId = ref<string | null>(null);
 const showSkipModal = ref(false);
 const skipTargetId = ref<string | null>(null);
 const skipTargetIsVariableInterval = ref(false);
+const skipTargetIsRecurring = ref(false);
 const isSubmittingSkip = ref(false);
 
 // Complete modal state
@@ -579,7 +581,9 @@ const handleCompleteCancel = () => {
 const skipOccurrence = (occurrenceId: string, occurrence: TaskOccurrence) => {
   closeDropdown();
   skipTargetId.value = occurrenceId;
-  skipTargetIsVariableInterval.value = (occurrence.task?.scheduleConfig as any)?.type === 'variable_interval';
+  const scheduleType = (occurrence.task?.scheduleConfig as any)?.type;
+  skipTargetIsVariableInterval.value = scheduleType === 'variable_interval';
+  skipTargetIsRecurring.value = scheduleType !== 'once';
   showSkipModal.value = true;
 };
 

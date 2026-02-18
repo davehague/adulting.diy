@@ -148,6 +148,7 @@
         <SkipModal
             :show="showSkipModal"
             :is-variable-interval="isVariableInterval"
+            :is-recurring="isRecurring"
             :disabled="isSubmittingSkip"
             @confirm="handleSkipConfirm"
             @cancel="handleSkipCancel"
@@ -283,6 +284,11 @@ const isActionDisabled = computed(() => {
 // Determine if the task uses variable interval scheduling
 const isVariableInterval = computed(() => {
     return (fullTask.value?.scheduleConfig as any)?.type === 'variable_interval';
+});
+
+// Determine if the task is recurring (not a one-time task)
+const isRecurring = computed(() => {
+    return (fullTask.value?.scheduleConfig as any)?.type !== 'once';
 });
 
 // --- Formatting Helpers ---

@@ -11,6 +11,9 @@
             <p v-if="isVariableInterval" class="text-sm text-amber-700 bg-amber-50 p-3 rounded mb-4">
               This is a variable-interval task. The next occurrence will be scheduled based on today's date rather than the original due date.
             </p>
+            <p v-else-if="isRecurring" class="text-sm text-stone-600 bg-stone-50 p-3 rounded mb-4">
+              The next occurrence will stay on its regular schedule.
+            </p>
             <p class="text-sm text-stone-500 mb-4">
               Optionally provide a reason for skipping this task occurrence.
             </p>
@@ -54,6 +57,7 @@ import { SkipForward, X } from 'lucide-vue-next';
 defineProps<{
   show: boolean;
   isVariableInterval?: boolean;
+  isRecurring?: boolean;
   disabled?: boolean;
 }>();
 
