@@ -1,4 +1,4 @@
-import type { ScheduleConfig, OnceScheduleConfig, FixedIntervalScheduleConfig, SpecificDaysScheduleConfig, SpecificDayOfMonthScheduleConfig, SpecificWeekdayOfMonthScheduleConfig, VariableIntervalScheduleConfig } from "@/types";
+import type { ScheduleConfig, OnceScheduleConfig, FixedIntervalScheduleConfig, SpecificDaysScheduleConfig, SpecificDayOfMonthScheduleConfig, SpecificWeekdayOfMonthScheduleConfig, VariableIntervalScheduleConfig, AnnualFixedScheduleConfig, AnnualVariableScheduleConfig } from "@/types";
 import { addDays, addWeeks, addMonths, addYears, startOfDay, getDay, getDaysInMonth, setDate, getDate, startOfMonth, format, isAfter, isBefore, isSameDay } from "date-fns"; // Using date-fns for date manipulation
 
 /**
@@ -193,15 +193,15 @@ export function calculateNextDueDate(
       // Schedule X days/weeks/months after the last completion/skip date
       const config_ = config as VariableIntervalScheduleConfig;
       const { variableInterval } = config_;
-      
+
       // Variable intervals require a completion date to calculate from
       if (!lastCompletedDate) {
         console.warn("Variable interval requires lastCompletedDate but none provided");
         return null;
       }
-      
+
       const baseDate = startOfDay(lastCompletedDate);
-      
+
       switch (variableInterval.unit) {
         case "day":
           return addDays(baseDate, variableInterval.interval);
@@ -215,6 +215,45 @@ export function calculateNextDueDate(
           console.error(`Unknown variable interval unit: ${variableInterval.unit}`);
           return null;
       }
+    }
+
+    case "annual_fixed": {
+      // Fixed annual date: always recurs on the same month/day regardless of completion date
+      const config_ = config as AnnualFixedScheduleConfig;
+      const { month, dayOfMonth } = config_;
+
+      // Determine base date for calculating next occurrence
+      const baseDate = lastCompletedDate ? startOfDay(lastCompletedDate) : today;
+
+      // Try this year's occurrence
+      const thisYear = baseDate.getFullYear();
+      const thisYearDate = new Date(thisYear, month - 1, dayOfMonth);
+
+      // If the date is still in the future (strictly after baseDate), use it
+      if (isAfter(thisYearDate, baseDate)) {
+        return startOfDay(thisYearDate);
+      }
+
+      // Otherwise, roll to next year
+      return startOfDay(new Date(thisYear + 1, month - 1, dayOfMonth));
+    }
+
+    case "annual_variable": {
+      // Variable annual: shifts based on actual completion date
+      const config_ = config as AnnualVariableScheduleConfig;
+      const { month, dayOfMonth } = config_;
+
+      // If no completion date, use the anchor date (same logic as annual_fixed)
+      if (!lastCompletedDate) {
+        const thisYearDate = new Date(today.getFullYear(), month - 1, dayOfMonth);
+        if (isAfter(thisYearDate, today)) {
+          return startOfDay(thisYearDate);
+        }
+        return startOfDay(new Date(today.getFullYear() + 1, month - 1, dayOfMonth));
+      }
+
+      // With a completion date, return 1 year from completion
+      return addYears(startOfDay(lastCompletedDate), 1);
     }
 
     default:
@@ -250,9 +289,15 @@ export function calculateCatchUpDueDate(
 
   const today = startOfDay(new Date());
 
-  if (config.type === "variable_interval") {
-    // Variable interval: next due date is today + interval
+  if (config.type === "variable_interval" || config.type === "annual_variable") {
+    // Variable interval / annual variable: next due date is today + interval
     return calculateNextDueDate(config, today);
+  }
+
+  if (config.type === "annual_fixed") {
+    // Find next calendar occurrence of month/day from today
+    const yesterday = addDays(today, -1);
+    return calculateNextDueDate(config, yesterday);
   }
 
   // For day-of-week and day/weekday-of-month schedules, jump directly
