@@ -218,9 +218,18 @@
     </div>
 
     <!-- Default Assignees -->
-    <div>
-      <!-- Add Default Assignee functionality here if user list is available -->
-      <!-- This would require fetching household users and allowing selections -->
+    <div class="border rounded-lg p-4 bg-stone-50">
+      <h3 class="text-lg font-medium text-stone-700 mb-4 font-heading">Default Assignees (Optional)</h3>
+      <div v-if="householdUsers.length > 0" class="space-y-2 max-h-40 overflow-y-auto">
+        <div v-for="user in householdUsers" :key="user.id">
+          <label class="inline-flex items-center">
+            <input type="checkbox" :value="user.id" v-model="formData.defaultAssigneeIds"
+              class="rounded border-stone-300 text-amber-700 shadow-sm focus:border-amber-300 focus:ring focus:ring-amber-200 focus:ring-opacity-50" />
+            <span class="ml-2">{{ user.name }} ({{ user.email }})</span>
+          </label>
+        </div>
+      </div>
+      <p v-else class="text-sm text-stone-500">Loading users or no other users found in the household.</p>
     </div>
 
     <!-- Form Buttons -->
@@ -264,6 +273,7 @@ import type {
   EndConditionType,
   OnceScheduleConfig,
   DaysOfWeek,
+  User,
 } from '@/types';
 
 // Props
@@ -287,6 +297,7 @@ const emit = defineEmits<{
 // Setup
 const api = useApi();
 const categories = ref<Category[]>([]);
+const householdUsers = ref<Pick<User, 'id' | 'name' | 'email'>[]>([]);
 const isSubmitting = ref(false);
 const validationError = ref('');
 
@@ -364,6 +375,13 @@ onMounted(async () => {
   } catch (err) {
     console.error('Error initializing form:', err);
     validationError.value = 'Failed to load form data. Please try refreshing the page.';
+  }
+
+  try {
+    const usersData = await api.get<Pick<User, 'id' | 'name' | 'email'>[]>('/api/household/users');
+    householdUsers.value = usersData;
+  } catch (err) {
+    console.error('Error fetching household users:', err);
   }
 });
 
