@@ -190,17 +190,20 @@
       <h3 class="text-lg font-medium text-stone-700 mb-4 font-heading">Reminders</h3>
 
       <div v-for="(reminder, index) in formData.reminders" :key="index" class="mb-3 flex items-center gap-2">
-        <input v-if="reminder.timing !== 'on'" v-model.number="reminder.days" type="number" min="0"
-          class="w-20 rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
-          placeholder="0" />
-        <span v-if="reminder.timing !== 'on'" class="text-sm text-stone-600">days</span>
         <select v-model="reminder.timing"
           class="rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-sm"
           @change="onTimingChange(index)">
-          <option value="before">before due date</option>
           <option value="on">on due date</option>
+          <option value="before">before due date</option>
           <option value="after">after due date</option>
         </select>
+        <template v-if="reminder.timing !== 'on'">
+          <span class="text-sm text-stone-600">by</span>
+          <input v-model.number="reminder.days" type="number" min="0"
+            class="w-20 rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
+            placeholder="0" />
+          <span class="text-sm text-stone-600">days</span>
+        </template>
         <button type="button" @click="removeReminder(index)"
           class="text-stone-400 hover:text-red-500 transition-colors p-1">
           <X :size="16" />
@@ -529,9 +532,12 @@ const handleSubmit = async () => {
       instructions: formData.instructions ?? undefined, // Use ?? undefined
       // Deep copy schedule config to avoid modifying reactive formData directly
       scheduleConfig: JSON.parse(JSON.stringify(formData.scheduleConfig)),
-      reminderConfig: formData.reminders.length > 0
-        ? { reminders: formData.reminders.map(r => ({ ...r })) }
-        : undefined,
+      reminderConfig: (() => {
+        const unique = formData.reminders.filter((r, i, arr) =>
+          arr.findIndex(o => o.timing === r.timing && o.days === r.days) === i
+        );
+        return unique.length > 0 ? { reminders: unique.map(r => ({ ...r })) } : undefined;
+      })(),
       defaultAssigneeIds: formData.defaultAssigneeIds
     };
 

@@ -207,7 +207,7 @@
       <CatchUpModal
         ref="catchUpModalRef"
         :visible="showCatchUpModal"
-        :task-name="task.name"
+        :task-name="task.name || ''"
         :overdue-count="overdueOccurrenceCount"
         :calculated-next-due-date="calculatedNextDueDate"
         @confirm="handleCatchUp"
