@@ -52,7 +52,11 @@ export default defineEventHandler(async (event) => {
         name: user.name,
         picture: user.picture,
         householdId: user.householdId,
-        isAdmin: user.isAdmin
+        isAdmin: user.isAdmin,
+        notificationPreferences: user.notificationPreferences,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        lastLogin: user.lastLogin
       }
     };
   } catch (error) {

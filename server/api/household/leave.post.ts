@@ -7,7 +7,7 @@ export default defineHouseholdProtectedEventHandler(async (event, authUser, hous
     const householdService = new HouseholdService();
 
     // Check if user is the only admin
-    const isOnlyAdmin = await householdService.isOnlyAdmin(authUser.id, householdId);
+    const isOnlyAdmin = await householdService.isOnlyAdmin(authUser.userId, householdId);
     
     if (isOnlyAdmin) {
       // Get member count to see if there are other members
@@ -23,7 +23,7 @@ export default defineHouseholdProtectedEventHandler(async (event, authUser, hous
     }
 
     // Remove user from household
-    await householdService.removeUser(authUser.id);
+    await householdService.removeUser(authUser.userId);
 
     return {
       success: true,

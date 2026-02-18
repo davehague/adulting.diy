@@ -53,11 +53,19 @@
               <span v-if="authStore.user.isAdmin"
                 class="ml-2 px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded">Admin</span>
             </p>
-            <div class="mt-2">
-              <NuxtLink to="/household" class="text-amber-700 hover:text-amber-800 text-sm">
+            <div class="mt-3 flex items-center gap-4">
+              <NuxtLink v-if="authStore.user.isAdmin" to="/household" class="text-amber-700 hover:text-amber-800 text-sm">
                 Manage Household Settings
               </NuxtLink>
+              <button
+                @click="checkCanLeave"
+                class="text-red-600 hover:text-red-700 text-sm"
+                :disabled="leavingHousehold || checkingLeave"
+              >
+                {{ checkingLeave ? 'Checking...' : 'Leave Household' }}
+              </button>
             </div>
+            <p v-if="leaveError" class="mt-2 text-sm text-red-600">{{ leaveError }}</p>
           </div>
           <div v-else class="bg-yellow-50 rounded p-4">
             <p class="text-yellow-800">You are not currently a member of any household.</p>
@@ -66,6 +74,56 @@
                 Set Up or Join a Household
               </NuxtLink>
             </div>
+          </div>
+        </div>
+
+        <!-- Leave Household Confirmation Dialog -->
+        <div v-if="showLeaveConfirm" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="showLeaveConfirm = false">
+          <div class="bg-white rounded-xl shadow-lg p-6 max-w-md mx-4">
+            <!-- Admin who is the only admin -->
+            <template v-if="isOnlyAdmin">
+              <h3 class="text-lg font-medium text-stone-900 font-heading">You're the only admin</h3>
+              <p class="mt-2 text-sm text-stone-600">
+                You need to make another household member an admin before you can leave. Go to Household Settings to transfer admin privileges.
+              </p>
+              <div class="mt-4 flex justify-end gap-3">
+                <button
+                  @click="showLeaveConfirm = false"
+                  class="px-4 py-2 text-sm text-stone-700 hover:text-stone-900"
+                >
+                  Cancel
+                </button>
+                <NuxtLink
+                  to="/household"
+                  class="px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                >
+                  Household Settings
+                </NuxtLink>
+              </div>
+            </template>
+            <!-- Regular leave confirmation -->
+            <template v-else>
+              <h3 class="text-lg font-medium text-stone-900 font-heading">Leave Household?</h3>
+              <p class="mt-2 text-sm text-stone-600">
+                Are you sure you want to leave this household? You will lose access to all shared tasks and data. You'll need to join or create a new household to continue using the app.
+              </p>
+              <div class="mt-4 flex justify-end gap-3">
+                <button
+                  @click="showLeaveConfirm = false"
+                  class="px-4 py-2 text-sm text-stone-700 hover:text-stone-900"
+                  :disabled="leavingHousehold"
+                >
+                  Cancel
+                </button>
+                <button
+                  @click="leaveHousehold"
+                  class="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                  :disabled="leavingHousehold"
+                >
+                  {{ leavingHousehold ? 'Leaving...' : 'Leave Household' }}
+                </button>
+              </div>
+            </template>
           </div>
         </div>
 
@@ -95,6 +153,75 @@ import { ref, computed } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
+const router = useRouter();
+
+// Leave household state
+const showLeaveConfirm = ref(false);
+const leavingHousehold = ref(false);
+const leaveError = ref('');
+const isOnlyAdmin = ref(false);
+const checkingLeave = ref(false);
+
+const checkCanLeave = async () => {
+  if (!authStore.user?.isAdmin) {
+    isOnlyAdmin.value = false;
+    showLeaveConfirm.value = true;
+    return;
+  }
+
+  checkingLeave.value = true;
+  try {
+    const response = await fetch('/api/household/users', {
+      headers: {
+        ...(authStore.accessToken ? { Authorization: `Bearer ${authStore.accessToken}` } : {}),
+      },
+    });
+    if (response.ok) {
+      const members = await response.json();
+      const adminCount = members.filter((m: any) => m.isAdmin).length;
+      const hasOtherMembers = members.length > 1;
+      isOnlyAdmin.value = adminCount === 1 && hasOtherMembers;
+    }
+  } catch {
+    // If we can't check, let the backend enforce it
+    isOnlyAdmin.value = false;
+  } finally {
+    checkingLeave.value = false;
+    showLeaveConfirm.value = true;
+  }
+};
+
+const leaveHousehold = async () => {
+  leavingHousehold.value = true;
+  leaveError.value = '';
+  try {
+    const response = await fetch('/api/household/leave', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authStore.accessToken ? { Authorization: `Bearer ${authStore.accessToken}` } : {}),
+      },
+      body: JSON.stringify({}),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.statusMessage || 'Failed to leave household. Please try again.');
+    }
+
+    const result = await response.json();
+    if (result.success) {
+      authStore.setUser({ ...authStore.user!, householdId: undefined, isAdmin: undefined });
+      showLeaveConfirm.value = false;
+      router.push(result.redirectTo || '/setup-household');
+    }
+  } catch (error: any) {
+    leaveError.value = error?.message || 'Failed to leave household. Please try again.';
+    showLeaveConfirm.value = false;
+  } finally {
+    leavingHousehold.value = false;
+  }
+};
 
 // Debug mode
 const debugMode = ref(false);

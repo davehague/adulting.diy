@@ -300,34 +300,6 @@
         </div>
       </div>
 
-      <!-- Danger Zone -->
-      <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden border-l-4 border-red-500">
-        <div class="px-6 py-4 bg-red-50 border-b border-red-200">
-          <h2 class="text-lg font-semibold text-red-800 font-heading">
-            {{ householdInfo.isCurrentUserAdmin ? 'Admin Settings' : 'Account Settings' }}
-          </h2>
-        </div>
-        <div class="p-6">
-          <div class="space-y-4">
-            <div>
-              <h3 class="text-sm font-medium text-stone-900 mb-2 font-heading">Leave Household</h3>
-              <p class="text-sm text-stone-600 mb-3">
-                Once you leave, you'll lose access to all household tasks and data. 
-                <span v-if="householdInfo.isCurrentUserAdmin">
-                  As an admin, you may need to transfer admin privileges to another member first.
-                </span>
-                <span v-else>
-                  You can rejoin using the household invite code if needed.
-                </span>
-              </p>
-              <button @click="leaveHousehold"
-                      class="inline-flex items-center gap-1.5 text-red-500 text-sm font-medium px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
-                <LogOut :size="16" />Leave Household
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Confirmation Modal -->
@@ -365,7 +337,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useApi } from '@/utils/api';
 import { useAuthStore } from '@/stores/auth';
 import { ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
-import { Check, X, Copy, RefreshCw, LogOut } from 'lucide-vue-next';
+import { Check, X, Copy, RefreshCw } from 'lucide-vue-next';
 import type { User } from '@/types';
 
 const api = useApi();
@@ -656,28 +628,6 @@ const removeMember = async (userId: string, userName: string) => {
     console.error('Error removing member:', err);
     error.value = err.data?.message || 'Failed to remove member';
   }
-};
-
-const leaveHousehold = () => {
-  const message = householdInfo.value.isCurrentUserAdmin && householdInfo.value.memberCount > 1
-    ? 'As an admin, you may need to transfer admin privileges to another member first. You will lose access to all household tasks and data.'
-    : 'You will lose access to all household tasks and data. You can rejoin later using the household invite code.';
-
-  showConfirm({
-    title: 'Leave Household',
-    message,
-    confirmLabel: 'Leave Household',
-    destructive: true,
-    onConfirm: async () => {
-      try {
-        await api.post('/api/household/leave', {});
-        await navigateTo('/setup-household');
-      } catch (err: any) {
-        console.error('Error leaving household:', err);
-        error.value = err.data?.message || 'Failed to leave household';
-      }
-    },
-  });
 };
 
 // Page metadata
