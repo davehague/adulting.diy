@@ -860,3 +860,364 @@ describe('Notification preferences vs reminder config interaction', () => {
     )).toBe(false)
   })
 })
+
+/**
+ * Integration tests for the full sendNotification flow.
+ *
+ * These verify that the three layers work together:
+ *   Layer 1 – Channel toggles (channels.email / channels.slack)
+ *   Layer 2 – Event preference (reminders: 'any' | 'mine' | 'none')
+ *   Layer 3 – Task-level reminder config (timing/days entries)
+ *
+ * Each test mocks prisma.user.findMany to return a user with specific
+ * notificationPreferences, then asserts whether EmailProvider.send is called.
+ */
+describe('sendNotification – three-layer integration', () => {
+  let service: NotificationService
+
+  beforeEach(() => {
+    service = new NotificationService()
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  const householdId = 'household-1'
+  const reminderContext: NotificationContext = {
+    user: {} as any,
+    task: { id: 't1', name: 'Mow Lawn', householdId } as any,
+    occurrence: { id: 'occ-1', dueDate: new Date(), assigneeIds: [userId] } as any,
+    household: { id: householdId, name: 'Test House' },
+    reminderEntry: { days: 1, timing: 'before' as const },
+  }
+
+  async function mockHouseholdUser(prefs: NotificationPreferences, uid = userId) {
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+    vi.mocked(prisma.user.findMany).mockResolvedValueOnce([
+      { id: uid, email: 'alice@test.com', name: 'Alice', notificationPreferences: prefs },
+    ] as any)
+  }
+
+  // ---------- Layer 1: channel toggles ----------
+
+  it('does NOT send email when channels.email is false, even if reminders = "any"', async () => {
+    const prefs: NotificationPreferences = {
+      ...allAnyPrefs,
+      reminders: 'any',
+      channels: { email: false, slack: false },
+    }
+    await mockHouseholdUser(prefs)
+
+    const emailSendSpy = vi.spyOn(EmailProvider.prototype, 'send')
+    const result = await service.sendNotification(householdId, 'task_reminder', reminderContext)
+
+    expect(result).toBe(false)
+    expect(emailSendSpy).not.toHaveBeenCalled()
+  })
+
+  it('sends email when channels.email is true and reminders = "any"', async () => {
+    const prefs: NotificationPreferences = {
+      ...allAnyPrefs,
+      reminders: 'any',
+      channels: { email: true, slack: false },
+    }
+    await mockHouseholdUser(prefs)
+
+    const emailSendSpy = vi.spyOn(EmailProvider.prototype, 'send').mockResolvedValueOnce()
+    const result = await service.sendNotification(householdId, 'task_reminder', reminderContext)
+
+    expect(result).toBe(true)
+    expect(emailSendSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('defaults to email ON when channels field is missing (legacy prefs)', async () => {
+    const legacyPrefs = { ...allAnyPrefs, reminders: 'any' as const } as any
+    // No channels or channelConfig
+    delete legacyPrefs.channels
+    delete legacyPrefs.channelConfig
+    await mockHouseholdUser(legacyPrefs)
+
+    const emailSendSpy = vi.spyOn(EmailProvider.prototype, 'send').mockResolvedValueOnce()
+    const result = await service.sendNotification(householdId, 'task_reminder', reminderContext)
+
+    expect(result).toBe(true)
+    expect(emailSendSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // ---------- Layer 2: event preference ----------
+
+  it('does NOT send when reminders = "none", even with email channel ON', async () => {
+    const prefs: NotificationPreferences = {
+      ...allAnyPrefs,
+      reminders: 'none',
+      channels: { email: true, slack: false },
+    }
+    await mockHouseholdUser(prefs)
+
+    const emailSendSpy = vi.spyOn(EmailProvider.prototype, 'send')
+    const result = await service.sendNotification(householdId, 'task_reminder', reminderContext)
+
+    expect(result).toBe(false)
+    expect(emailSendSpy).not.toHaveBeenCalled()
+  })
+
+  it('sends when reminders = "mine" and user IS assignee', async () => {
+    const prefs: NotificationPreferences = {
+      ...allNonePrefs,
+      reminders: 'mine',
+      channels: { email: true, slack: false },
+    }
+    // User is assignee (userId is in occurrence.assigneeIds)
+    await mockHouseholdUser(prefs, userId)
+
+    const emailSendSpy = vi.spyOn(EmailProvider.prototype, 'send').mockResolvedValueOnce()
+    const result = await service.sendNotification(householdId, 'task_reminder', reminderContext)
+
+    expect(result).toBe(true)
+    expect(emailSendSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('does NOT send when reminders = "mine" and user is NOT assignee', async () => {
+    const prefs: NotificationPreferences = {
+      ...allNonePrefs,
+      reminders: 'mine',
+      channels: { email: true, slack: false },
+    }
+    const nonAssigneeContext: NotificationContext = {
+      ...reminderContext,
+      occurrence: { id: 'occ-1', dueDate: new Date(), assigneeIds: [otherUserId] } as any,
+    }
+    await mockHouseholdUser(prefs, userId)
+
+    const emailSendSpy = vi.spyOn(EmailProvider.prototype, 'send')
+    const result = await service.sendNotification(householdId, 'task_reminder', nonAssigneeContext)
+
+    expect(result).toBe(false)
+    expect(emailSendSpy).not.toHaveBeenCalled()
+  })
+
+  // ---------- Layer 1 + 2 combined ----------
+
+  it('does NOT send when channels.email is false AND reminders = "mine" (both would block)', async () => {
+    const prefs: NotificationPreferences = {
+      ...allNonePrefs,
+      reminders: 'mine',
+      channels: { email: false, slack: false },
+    }
+    await mockHouseholdUser(prefs, userId)
+
+    const emailSendSpy = vi.spyOn(EmailProvider.prototype, 'send')
+    const result = await service.sendNotification(householdId, 'task_reminder', reminderContext)
+
+    expect(result).toBe(false)
+    expect(emailSendSpy).not.toHaveBeenCalled()
+  })
+
+  // ---------- Multiple users with different preferences ----------
+
+  it('sends to user with email ON, skips user with email OFF', async () => {
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+    vi.mocked(prisma.user.findMany).mockResolvedValueOnce([
+      {
+        id: 'user-email-on',
+        email: 'on@test.com',
+        name: 'Email On',
+        notificationPreferences: {
+          ...allAnyPrefs,
+          reminders: 'any',
+          channels: { email: true, slack: false },
+        },
+      },
+      {
+        id: 'user-email-off',
+        email: 'off@test.com',
+        name: 'Email Off',
+        notificationPreferences: {
+          ...allAnyPrefs,
+          reminders: 'any',
+          channels: { email: false, slack: false },
+        },
+      },
+    ] as any)
+
+    const emailSendSpy = vi.spyOn(EmailProvider.prototype, 'send').mockResolvedValue()
+    const result = await service.sendNotification(householdId, 'task_reminder', reminderContext)
+
+    expect(result).toBe(true)
+    expect(emailSendSpy).toHaveBeenCalledTimes(1)
+    expect(emailSendSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'on@test.com' }),
+      'task_reminder',
+      expect.anything()
+    )
+  })
+
+  it('sends to assignee with "mine", skips non-assignee with "mine"', async () => {
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+    vi.mocked(prisma.user.findMany).mockResolvedValueOnce([
+      {
+        id: userId, // is assignee
+        email: 'assignee@test.com',
+        name: 'Assignee',
+        notificationPreferences: {
+          ...allNonePrefs,
+          reminders: 'mine',
+          channels: { email: true, slack: false },
+        },
+      },
+      {
+        id: otherUserId, // not assignee
+        email: 'other@test.com',
+        name: 'Other',
+        notificationPreferences: {
+          ...allNonePrefs,
+          reminders: 'mine',
+          channels: { email: true, slack: false },
+        },
+      },
+    ] as any)
+
+    const emailSendSpy = vi.spyOn(EmailProvider.prototype, 'send').mockResolvedValue()
+    const result = await service.sendNotification(householdId, 'task_reminder', reminderContext)
+
+    expect(result).toBe(true)
+    expect(emailSendSpy).toHaveBeenCalledTimes(1)
+    expect(emailSendSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'assignee@test.com' }),
+      'task_reminder',
+      expect.anything()
+    )
+  })
+
+  it('sends to no one when all users have reminders = "none"', async () => {
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+    vi.mocked(prisma.user.findMany).mockResolvedValueOnce([
+      {
+        id: userId,
+        email: 'a@test.com',
+        name: 'User A',
+        notificationPreferences: {
+          ...allAnyPrefs,
+          reminders: 'none',
+          channels: { email: true, slack: false },
+        },
+      },
+      {
+        id: otherUserId,
+        email: 'b@test.com',
+        name: 'User B',
+        notificationPreferences: {
+          ...allAnyPrefs,
+          reminders: 'none',
+          channels: { email: true, slack: false },
+        },
+      },
+    ] as any)
+
+    const emailSendSpy = vi.spyOn(EmailProvider.prototype, 'send')
+    const result = await service.sendNotification(householdId, 'task_reminder', reminderContext)
+
+    expect(result).toBe(false)
+    expect(emailSendSpy).not.toHaveBeenCalled()
+  })
+
+  // ---------- Non-reminder events through the same flow ----------
+
+  it('occurrence_assigned respects email channel OFF', async () => {
+    const prefs: NotificationPreferences = {
+      ...allAnyPrefs,
+      occurrence_assigned: 'any',
+      channels: { email: false, slack: false },
+    }
+    await mockHouseholdUser(prefs)
+
+    const assignContext: NotificationContext = {
+      user: {} as any,
+      task: { id: 't1', name: 'Mow Lawn' } as any,
+      occurrence: { id: 'occ-1', dueDate: new Date(), assigneeIds: [userId] } as any,
+      actionUser: { id: otherUserId } as any,
+    }
+
+    const emailSendSpy = vi.spyOn(EmailProvider.prototype, 'send')
+    const result = await service.sendNotification(householdId, 'occurrence_assigned', assignContext)
+
+    expect(result).toBe(false)
+    expect(emailSendSpy).not.toHaveBeenCalled()
+  })
+
+  it('task_created respects email channel OFF', async () => {
+    const prefs: NotificationPreferences = {
+      ...allAnyPrefs,
+      task_created: 'any',
+      channels: { email: false, slack: false },
+    }
+    await mockHouseholdUser(prefs)
+
+    const createContext: NotificationContext = {
+      user: {} as any,
+      task: { id: 't1', name: 'New Task' } as any,
+      actionUser: { id: otherUserId } as any,
+      household: { id: householdId, name: 'Test House' },
+    }
+
+    const emailSendSpy = vi.spyOn(EmailProvider.prototype, 'send')
+    const result = await service.sendNotification(householdId, 'task_created', createContext)
+
+    expect(result).toBe(false)
+    expect(emailSendSpy).not.toHaveBeenCalled()
+  })
+
+  // ---------- excludeUserId ----------
+
+  it('excludeUserId prevents the triggering user from receiving notifications', async () => {
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+    vi.mocked(prisma.user.findMany).mockResolvedValueOnce([
+      {
+        id: otherUserId, // only non-excluded user returned
+        email: 'other@test.com',
+        name: 'Other',
+        notificationPreferences: {
+          ...allAnyPrefs,
+          reminders: 'any',
+          channels: { email: true, slack: false },
+        },
+      },
+    ] as any)
+
+    const emailSendSpy = vi.spyOn(EmailProvider.prototype, 'send').mockResolvedValue()
+    await service.sendNotification(householdId, 'task_reminder', reminderContext, userId)
+
+    // Prisma query should have excluded userId
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: { not: userId },
+        }),
+      })
+    )
+  })
+
+  // ---------- User with null/missing preferences (backward compat) ----------
+
+  it('uses default preferences when user has null notificationPreferences', async () => {
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+    vi.mocked(prisma.user.findMany).mockResolvedValueOnce([
+      {
+        id: userId,
+        email: 'alice@test.com',
+        name: 'Alice',
+        notificationPreferences: null, // no prefs saved yet
+      },
+    ] as any)
+
+    // Default prefs have reminders: 'mine' and channels.email: true
+    // userId is in assigneeIds, so 'mine' should match
+    const emailSendSpy = vi.spyOn(EmailProvider.prototype, 'send').mockResolvedValue()
+    const result = await service.sendNotification(householdId, 'task_reminder', reminderContext)
+
+    expect(result).toBe(true)
+    expect(emailSendSpy).toHaveBeenCalledTimes(1)
+  })
+})
