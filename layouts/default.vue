@@ -65,7 +65,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <div class="relative">
+            <div ref="userMenuRef" class="relative">
               <button
                 @click="toggleUserMenu"
                 class="flex items-center text-sm rounded-full focus:outline-none transition-colors duration-150"
@@ -182,6 +182,7 @@ const showMobileMenu = ref(false);
 
 // User dropdown menu
 const showUserMenu = ref(false);
+const userMenuRef = ref<HTMLElement | null>(null);
 
 const toggleUserMenu = () => {
   showUserMenu.value = !showUserMenu.value;
@@ -194,8 +195,7 @@ watch(() => route.path, () => {
 
 // Click outside handler (replacing the onClickOutside composable)
 const handleClickOutside = (event: MouseEvent) => {
-  const dropdown = document.querySelector('.relative');
-  if (dropdown && !dropdown.contains(event.target as Node) && showUserMenu.value) {
+  if (userMenuRef.value && !userMenuRef.value.contains(event.target as Node) && showUserMenu.value) {
     showUserMenu.value = false;
   }
 };
