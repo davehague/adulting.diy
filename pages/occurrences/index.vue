@@ -290,6 +290,14 @@
       @cancel="handleSkipCancel"
     />
 
+    <!-- Complete Modal -->
+    <CompleteModal
+      :show="showCompleteModal"
+      :disabled="isSubmittingComplete"
+      @confirm="handleCompleteConfirm"
+      @cancel="handleCompleteCancel"
+    />
+
     <!-- Edit Modal -->
     <div v-if="showEditModal"
       class="fixed inset-0 z-10 overflow-y-auto bg-stone-500 bg-opacity-75 transition-opacity"
@@ -321,6 +329,7 @@ import { useRouter } from 'vue-router';
 import { useApi } from '@/utils/api';
 import { useAuthStore } from '@/stores/auth';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
+import CompleteModal from '@/components/occurrences/CompleteModal.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
 import { Plus } from 'lucide-vue-next';
 import type { TaskOccurrence, Category, User } from '@/types';
@@ -344,6 +353,11 @@ const showSkipModal = ref(false);
 const skipTargetId = ref<string | null>(null);
 const skipTargetIsVariableInterval = ref(false);
 const isSubmittingSkip = ref(false);
+
+// Complete modal state
+const showCompleteModal = ref(false);
+const completeTargetId = ref<string | null>(null);
+const isSubmittingComplete = ref(false);
 
 // Edit modal state
 const showEditModal = ref(false);
@@ -533,15 +547,33 @@ const closeDropdown = () => {
 };
 
 // Occurrence actions
-const executeOccurrence = async (occurrenceId: string) => {
+const executeOccurrence = (occurrenceId: string) => {
   closeDropdown();
+  completeTargetId.value = occurrenceId;
+  showCompleteModal.value = true;
+};
+
+const handleCompleteConfirm = async (completionDate: string) => {
+  if (!completeTargetId.value) return;
+  isSubmittingComplete.value = true;
   try {
-    await api.post(`/api/occurrences/${occurrenceId}/execute`, {});
-    await fetchOccurrences(); // Refresh the list
+    await api.post(`/api/occurrences/${completeTargetId.value}/execute`, {
+      executedAt: completionDate,
+    });
+    showCompleteModal.value = false;
+    completeTargetId.value = null;
+    await fetchOccurrences();
   } catch (err) {
     console.error('Error executing occurrence:', err);
     alert('Failed to complete occurrence. Please try again.');
+  } finally {
+    isSubmittingComplete.value = false;
   }
+};
+
+const handleCompleteCancel = () => {
+  showCompleteModal.value = false;
+  completeTargetId.value = null;
 };
 
 const skipOccurrence = (occurrenceId: string, occurrence: TaskOccurrence) => {

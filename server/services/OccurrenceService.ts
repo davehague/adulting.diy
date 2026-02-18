@@ -391,8 +391,10 @@ export class OccurrenceService {
   /**
    * Execute (complete) an occurrence
    */
-  async execute(id: string, userId: string): Promise<TaskOccurrence> {
+  async execute(id: string, userId: string, executedAt?: Date): Promise<TaskOccurrence> {
     try {
+      const completionDate = executedAt || new Date();
+
       // Start a transaction to log the change and potentially generate next occurrence
       const updatedOccurrence = await prisma.$transaction(async (tx) => {
         // First, get the current occurrence to capture its current status
@@ -411,7 +413,7 @@ export class OccurrenceService {
           where: { id },
           data: {
             status: "completed",
-            completedAt: new Date(),
+            completedAt: completionDate,
             updatedAt: new Date(),
           },
           include: {

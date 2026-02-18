@@ -43,7 +43,7 @@
                             <SkipForward :size="16" />
                             Skip
                         </button>
-                        <button type="button" @click="executeOccurrence" :disabled="isActionDisabled"
+                        <button type="button" @click="showCompleteModal = true" :disabled="isActionDisabled"
                             class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50">
                             <CheckCircle :size="16" />
                             Complete
@@ -153,6 +153,14 @@
             @cancel="handleSkipCancel"
         />
 
+        <!-- Complete Modal -->
+        <CompleteModal
+            :show="showCompleteModal"
+            :disabled="isSubmittingComplete"
+            @confirm="handleCompleteConfirm"
+            @cancel="handleCompleteCancel"
+        />
+
     </div>
 </template>
 
@@ -164,6 +172,7 @@ import type { TaskOccurrence, User, Category, TaskDefinition } from '@/types';
 import OccurrenceTimeline from '@/components/occurrences/OccurrenceTimeline.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
+import CompleteModal from '@/components/occurrences/CompleteModal.vue';
 import { Pencil, SkipForward, CheckCircle, MessageSquare } from 'lucide-vue-next';
 import { format } from 'date-fns';
 
@@ -188,10 +197,12 @@ const timelineComponent = ref<InstanceType<typeof OccurrenceTimeline> | null>(nu
 // Modals State
 const showSkipModal = ref(false);
 const showEditModal = ref(false);
+const showCompleteModal = ref(false);
 const isSubmittingEdit = ref(false);
 const editError = ref<string | null>(null);
 const isSubmittingSkip = ref(false);
 const skipError = ref<string | null>(null);
+const isSubmittingComplete = ref(false);
 
 // Fetch Occurrence Data
 const fetchOccurrence = async () => {
@@ -337,20 +348,29 @@ const addComment = async () => {
     }
 };
 
-const executeOccurrence = async () => {
+// --- Complete Occurrence Logic ---
+const handleCompleteConfirm = async (completionDate: string) => {
     if (!occurrenceId.value || isActionDisabled.value) return;
-    // Consider adding a loading state for the button
+    isSubmittingComplete.value = true;
     try {
-        await api.post(`/api/occurrences/${occurrenceId.value}/execute`, {});
-        // Refresh data after action
+        await api.post(`/api/occurrences/${occurrenceId.value}/execute`, {
+            executedAt: completionDate,
+        });
+        showCompleteModal.value = false;
         fetchOccurrence();
         if (timelineComponent.value) {
             timelineComponent.value.fetchHistory();
         }
     } catch (err: any) {
         console.error("Error executing occurrence:", err);
-        error.value = err.data?.message || 'Failed to complete occurrence'; // Show error on page
+        error.value = err.data?.message || 'Failed to complete occurrence';
+    } finally {
+        isSubmittingComplete.value = false;
     }
+};
+
+const handleCompleteCancel = () => {
+    showCompleteModal.value = false;
 };
 
 // --- Edit Occurrence Logic ---
