@@ -8,40 +8,74 @@
     </div>
 
     <!-- Filters and Search -->
-    <div class="bg-white rounded-xl shadow-sm border border-stone-200 p-4 mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <!-- Status filter -->
-        <div>
-          <label for="statusFilter" class="block text-sm font-medium text-stone-700 mb-1">Status</label>
-          <select id="statusFilter" v-model="filters.status"
-            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
-            <option value="">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="overdue">Overdue</option>
-            <option value="paused">Paused</option>
-            <option value="soft-deleted">Deleted</option>
-            <option value="completed">Completed</option>
-          </select>
+    <div class="flex flex-col gap-2 mb-6">
+      <!-- Compact toolbar row -->
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Search input with icon -->
+        <div class="relative flex-1 min-w-[200px] max-w-sm">
+          <Search :size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+          <input
+            v-model="filters.search"
+            type="text"
+            placeholder="Search tasks..."
+            class="w-full pl-9 pr-3 py-2 bg-white border border-stone-300 rounded-lg text-sm text-stone-700 placeholder:text-stone-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-colors"
+          />
         </div>
 
-        <!-- Category filter -->
-        <div>
-          <label for="categoryFilter" class="block text-sm font-medium text-stone-700 mb-1">Category</label>
-          <select id="categoryFilter" v-model="filters.categoryId"
-            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
-            <option value="">All Categories</option>
-            <option v-for="category in categories" :key="category.id" :value="category.id">
-              {{ category.name }}
-            </option>
-          </select>
-        </div>
+        <!-- Status select -->
+        <select
+          v-model="filters.status"
+          class="bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-700 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-colors min-w-[140px]"
+        >
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="overdue">Overdue</option>
+          <option value="paused">Paused</option>
+          <option value="soft-deleted">Deleted</option>
+          <option value="completed">Completed</option>
+        </select>
 
-        <!-- Search -->
-        <div>
-          <label for="search" class="block text-sm font-medium text-stone-700 mb-1">Search</label>
-          <input id="search" v-model="filters.search" type="text" placeholder="Search tasks..."
-            class="w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
-        </div>
+        <!-- Category select -->
+        <select
+          v-model="filters.categoryId"
+          class="bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm text-stone-700 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-colors min-w-[150px]"
+        >
+          <option value="">All Categories</option>
+          <option v-for="category in categories" :key="category.id" :value="category.id">
+            {{ category.name }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Active filter chips -->
+      <div v-if="activeFilterCount > 0" class="flex items-center gap-2 flex-wrap">
+        <span
+          v-if="filters.status"
+          class="inline-flex items-center gap-1 bg-amber-100 text-amber-800 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+        >
+          Status: {{ filters.status.charAt(0).toUpperCase() + filters.status.slice(1) }}
+          <button @click="clearFilter('status')" class="hover:text-amber-900"><X :size="12" /></button>
+        </span>
+        <span
+          v-if="filters.categoryId"
+          class="inline-flex items-center gap-1 bg-amber-100 text-amber-800 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+        >
+          {{ getCategoryName(filters.categoryId) }}
+          <button @click="clearFilter('categoryId')" class="hover:text-amber-900"><X :size="12" /></button>
+        </span>
+        <span
+          v-if="filters.search"
+          class="inline-flex items-center gap-1 bg-amber-100 text-amber-800 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+        >
+          Search: "{{ filters.search }}"
+          <button @click="clearFilter('search')" class="hover:text-amber-900"><X :size="12" /></button>
+        </span>
+        <button
+          @click="clearFilters"
+          class="text-xs text-stone-500 hover:text-stone-700 transition-colors"
+        >
+          Clear all
+        </button>
       </div>
     </div>
 
@@ -121,25 +155,45 @@
       <table class="min-w-full divide-y divide-stone-200">
         <thead class="bg-stone-50">
           <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
-              Task
+            <th scope="col" @click="toggleSort('name')"
+              class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider cursor-pointer hover:text-stone-700 transition-colors select-none">
+              <span class="inline-flex items-center gap-1">
+                Task
+                <ChevronUp v-if="sortColumn === 'name' && sortDirection === 'asc'" :size="14" class="text-amber-600" />
+                <ChevronDown v-else-if="sortColumn === 'name' && sortDirection === 'desc'" :size="14" class="text-amber-600" />
+              </span>
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
-              Category
+            <th scope="col" @click="toggleSort('category')"
+              class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider cursor-pointer hover:text-stone-700 transition-colors select-none">
+              <span class="inline-flex items-center gap-1">
+                Category
+                <ChevronUp v-if="sortColumn === 'category' && sortDirection === 'asc'" :size="14" class="text-amber-600" />
+                <ChevronDown v-else-if="sortColumn === 'category' && sortDirection === 'desc'" :size="14" class="text-amber-600" />
+              </span>
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider">
               Schedule
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
-              Next Due
+            <th scope="col" @click="toggleSort('nextDue')"
+              class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider cursor-pointer hover:text-stone-700 transition-colors select-none">
+              <span class="inline-flex items-center gap-1">
+                Next Due
+                <ChevronUp v-if="sortColumn === 'nextDue' && sortDirection === 'asc'" :size="14" class="text-amber-600" />
+                <ChevronDown v-else-if="sortColumn === 'nextDue' && sortDirection === 'desc'" :size="14" class="text-amber-600" />
+              </span>
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider">
               Assignee(s)
             </th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">
-              Status
+            <th scope="col" @click="toggleSort('status')"
+              class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider cursor-pointer hover:text-stone-700 transition-colors select-none">
+              <span class="inline-flex items-center gap-1">
+                Status
+                <ChevronUp v-if="sortColumn === 'status' && sortDirection === 'asc'" :size="14" class="text-amber-600" />
+                <ChevronDown v-else-if="sortColumn === 'status' && sortDirection === 'desc'" :size="14" class="text-amber-600" />
+              </span>
             </th>
-            <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-stone-500 uppercase tracking-wider">
+            <th scope="col" class="px-6 py-3 text-right text-xs font-semibold text-stone-500 uppercase tracking-wider">
               Actions
             </th>
           </tr>
@@ -303,7 +357,7 @@ import { useAuthStore } from '@/stores/auth'; // Import auth store
 import type { TaskDefinition, Category, User } from '@/types';
 import CatchUpModal from '@/components/tasks/CatchUpModal.vue';
 import { useToast } from '@/composables/useToast';
-import { Plus } from 'lucide-vue-next';
+import { Plus, Search, X, ChevronUp, ChevronDown } from 'lucide-vue-next';
 
 const api = useApi(); // Keep for categories for now
 const taskStore = useTaskStore();
@@ -314,13 +368,44 @@ const toast = useToast();
 // State
 // Use computed properties to get state from the store
 const loading = computed(() => taskStore.isLoading);
-const tasks = computed(() => {
-  if (filters.status === 'overdue') {
-    return taskStore.tasks.filter(task => task.nextOccurrence && isOverdue(task.nextOccurrence.dueDate));
-  }
-  return taskStore.tasks;
-});
 const error = computed(() => taskStore.error);
+
+const tasks = computed(() => {
+  let list = taskStore.tasks;
+
+  // Client-side overdue filter
+  if (filters.status === 'overdue') {
+    list = list.filter(task => task.nextOccurrence && isOverdue(task.nextOccurrence.dueDate));
+  }
+
+  // Client-side sorting
+  const sorted = [...list];
+  sorted.sort((a, b) => {
+    let cmp = 0;
+    switch (sortColumn.value) {
+      case 'name':
+        cmp = a.name.localeCompare(b.name);
+        break;
+      case 'category':
+        cmp = getCategoryName(a.categoryId).localeCompare(getCategoryName(b.categoryId));
+        break;
+      case 'nextDue': {
+        const aDate = a.nextOccurrence ? new Date(a.nextOccurrence.dueDate).getTime() : Infinity;
+        const bDate = b.nextOccurrence ? new Date(b.nextOccurrence.dueDate).getTime() : Infinity;
+        cmp = aDate - bDate;
+        break;
+      }
+      case 'status':
+        cmp = a.metaStatus.localeCompare(b.metaStatus);
+        break;
+      default:
+        cmp = 0;
+    }
+    return sortDirection.value === 'desc' ? -cmp : cmp;
+  });
+
+  return sorted;
+});
 
 // Keep local state for categories filter and household users
 const categories = ref<Category[]>([]);
@@ -335,6 +420,37 @@ const filters = reactive({
   categoryId: '',
   search: ''
 });
+
+// Sort state
+const sortColumn = ref<string>('name');
+const sortDirection = ref<'asc' | 'desc'>('asc');
+
+const toggleSort = (column: string) => {
+  if (sortColumn.value === column) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = column;
+    sortDirection.value = 'asc';
+  }
+};
+
+const activeFilterCount = computed(() => {
+  let count = 0;
+  if (filters.status) count++;
+  if (filters.categoryId) count++;
+  if (filters.search) count++;
+  return count;
+});
+
+const clearFilters = () => {
+  filters.status = '';
+  filters.categoryId = '';
+  filters.search = '';
+};
+
+const clearFilter = (key: 'status' | 'categoryId' | 'search') => {
+  filters[key] = '';
+};
 
 // Map UI filters to API filters (overdue → active for the API, filtered client-side)
 const apiFilters = (f: typeof filters) => ({
