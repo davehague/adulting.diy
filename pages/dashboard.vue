@@ -56,7 +56,9 @@
         <NuxtLink to="/occurrences?status=pending" class="block bg-white rounded-xl shadow-sm border border-stone-100 p-5 hover:shadow-md transition-shadow">
           <div class="flex items-center justify-between mb-3">
             <span class="text-sm font-medium text-stone-500">Overdue</span>
-            <span class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500 text-sm">!</span>
+            <span class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500">
+              <AlertTriangle :size="16" />
+            </span>
           </div>
           <div class="text-3xl font-bold" :class="overdueOccurrences.length > 0 ? 'text-red-600' : 'text-stone-300'">
             {{ overdueOccurrences.length }}
@@ -70,8 +72,8 @@
         <NuxtLink to="/occurrences?status=pending" class="block bg-white rounded-xl shadow-sm border border-stone-100 p-5 hover:shadow-md transition-shadow">
           <div class="flex items-center justify-between mb-3">
             <span class="text-sm font-medium text-stone-500">Due Today</span>
-            <span class="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 text-sm">
-              {{ todayFormatted }}
+            <span class="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-600">
+              <Clock :size="16" />
             </span>
           </div>
           <div class="text-3xl font-bold" :class="dueTodayOccurrences.length > 0 ? 'text-amber-700' : 'text-stone-300'">
@@ -110,15 +112,17 @@
             class="flex items-center gap-4 px-6 py-3.5 hover:bg-stone-50 transition-colors">
             <span v-if="isOverdue(occ)" class="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" title="Overdue"></span>
             <span v-else-if="isDueToday(occ)" class="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" title="Due today"></span>
-            <span v-else class="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" title="Upcoming"></span>
+            <span v-else class="w-2 h-2 rounded-full bg-stone-300 flex-shrink-0" title="Upcoming"></span>
             <div class="flex-1 min-w-0">
               <span class="text-sm font-medium text-stone-900 truncate block">{{ occ.task?.name || 'Unnamed task' }}</span>
               <span v-if="occ.task?.category" class="text-xs text-stone-400">{{ occ.task.category.name }}</span>
             </div>
             <div class="text-right flex-shrink-0">
-              <span class="text-xs font-medium" :class="isOverdue(occ) ? 'text-red-500' : isDueToday(occ) ? 'text-amber-600' : 'text-blue-500'">
-                {{ formatDueLabel(occ) }}
-              </span>
+              <div class="text-sm" :class="isOverdue(occ) ? 'text-red-600 font-semibold' : 'text-stone-900'">
+                {{ formatDate(occ.dueDate) }}
+              </div>
+              <div v-if="isOverdue(occ)" class="text-xs text-red-500 font-medium">Overdue</div>
+              <div v-else-if="isDueToday(occ)" class="text-xs text-amber-600 font-medium">Today</div>
             </div>
             <div class="text-xs text-stone-400 flex-shrink-0 hidden sm:block w-24 text-right truncate">
               {{ assigneeLabel(occ) }}
@@ -141,7 +145,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { useApi } from '@/utils/api';
 import type { DashboardData } from '@/types/task';
-import { Plus } from 'lucide-vue-next';
+import { Plus, Clock, AlertTriangle } from 'lucide-vue-next';
 
 type PendingOccurrence = DashboardData['pendingOccurrences'][number];
 
@@ -162,11 +166,6 @@ const greeting = computed(() => {
   if (hour < 12) return 'Good morning';
   if (hour < 17) return 'Good afternoon';
   return 'Good evening';
-});
-
-const todayFormatted = computed(() => {
-  const d = new Date();
-  return d.getDate().toString();
 });
 
 // Date helpers
@@ -214,18 +213,14 @@ const dueTodayBarWidth = computed(() => barScale(dueTodayOccurrences.value.lengt
 const completedBarWidth = computed(() => barScale(recentlyCompletedCount.value));
 
 
-// Labels
-const formatDueLabel = (occ: PendingOccurrence): string => {
-  const due = new Date(occ.dueDate);
-  const today = startOfDay(new Date());
-  const diffMs = today.getTime() - startOfDay(due).getTime();
-  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return 'Due today';
-  if (diffDays === 1) return '1 day late';
-  if (diffDays > 1) return `${diffDays}d late`;
-  if (diffDays === -1) return 'Tomorrow';
-  return `In ${Math.abs(diffDays)}d`;
+// Format date consistently with tasks/occurrences grids
+const formatDate = (date: Date | string): string => {
+  const d = new Date(date);
+  return d.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
 };
 
 const assigneeLabel = (occ: PendingOccurrence): string => {

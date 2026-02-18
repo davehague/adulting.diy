@@ -165,6 +165,7 @@
                   {{ formatDate(task.nextOccurrence.dueDate) }}
                 </span>
                 <span v-if="isOverdue(task.nextOccurrence.dueDate)" class="text-xs text-red-500 ml-1">Overdue</span>
+                <span v-else-if="isToday(task.nextOccurrence.dueDate)" class="text-xs text-amber-600 ml-1">Today</span>
               </template>
               <span v-else class="text-stone-400 italic">No due date</span>
             </div>
@@ -263,6 +264,9 @@
                 </div>
                 <div v-if="isOverdue(task.nextOccurrence.dueDate)" class="text-xs text-red-500 font-medium">
                   Overdue
+                </div>
+                <div v-else-if="isToday(task.nextOccurrence.dueDate)" class="text-xs text-amber-600 font-medium">
+                  Today
                 </div>
               </template>
               <span v-else class="text-sm text-stone-400 italic">None</span>
@@ -676,6 +680,14 @@ const isOverdue = (dueDate: Date | string): boolean => {
   const due = new Date(dueDate);
   due.setHours(0, 0, 0, 0);
   return due < today;
+};
+
+const isToday = (dueDate: Date | string): boolean => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  return due.getTime() === today.getTime();
 };
 
 const getAssigneeNames = (assigneeIds: string[]): { name: string; departed: boolean }[] => {
