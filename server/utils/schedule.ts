@@ -227,6 +227,62 @@ export function calculateNextDueDate(
 }
 
 /**
+ * Calculates the next future due date for a task catch-up.
+ *
+ * For fixed_interval: walks forward from lastOverdueDueDate preserving
+ * the schedule anchor until finding a date >= today.
+ *
+ * For specific_days_of_week, specific_day_of_month, specific_weekday_of_month:
+ * jumps directly to the next future occurrence using yesterday as base.
+ *
+ * For variable_interval: returns today + interval (catch-up acts as
+ * a virtual completion).
+ *
+ * For once: returns null (no new occurrence).
+ */
+export function calculateCatchUpDueDate(
+  config: ScheduleConfig,
+  lastOverdueDueDate: Date
+): Date | null {
+  if (config.type === "once") {
+    return null;
+  }
+
+  const today = startOfDay(new Date());
+
+  if (config.type === "variable_interval") {
+    // Variable interval: next due date is today + interval
+    return calculateNextDueDate(config, today);
+  }
+
+  // For day-of-week and day/weekday-of-month schedules, jump directly
+  // to the next future occurrence. These schedules don't have a fixed
+  // cadence that needs preserving — they find the "next matching slot."
+  // Pass yesterday so scanning starts from today.
+  if (
+    config.type === "specific_days_of_week" ||
+    config.type === "specific_day_of_month" ||
+    config.type === "specific_weekday_of_month"
+  ) {
+    const yesterday = addDays(today, -1);
+    return calculateNextDueDate(config, yesterday);
+  }
+
+  // For fixed_interval: walk forward from the last overdue due date
+  // to preserve the schedule anchor (e.g., "every 2 weeks" stays
+  // on the same cadence as the original schedule).
+  let current = startOfDay(lastOverdueDueDate);
+  for (let i = 0; i < 1000; i++) {
+    const next = calculateNextDueDate(config, current);
+    if (!next) return null;
+    if (next >= today) return next;
+    current = next;
+  }
+
+  return null;
+}
+
+/**
  * Checks if a task's end conditions have been met
  * @param config The schedule configuration
  * @param occurrenceCount Total number of occurrences generated so far
