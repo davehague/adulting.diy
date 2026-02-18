@@ -60,6 +60,11 @@ const prismaMock = {
     create: vi.fn(),
     findMany: vi.fn(),
   },
+  formerHouseholdMember: {
+    upsert: vi.fn(),
+    findMany: vi.fn(),
+    deleteMany: vi.fn(),
+  },
   $transaction: vi.fn((cb: (tx: any) => any) => cb(prismaMock)),
 }
 
