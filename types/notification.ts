@@ -5,7 +5,7 @@ export interface NotificationPreferences {
   task_paused: 'any' | 'none';
   task_completed: 'any' | 'none';
   task_deleted: 'any' | 'none';
-  
+
   // Occurrence notifications
   occurrence_assigned: 'any' | 'mine' | 'none';
   occurrence_executed: 'any' | 'mine' | 'none';
@@ -16,6 +16,17 @@ export interface NotificationPreferences {
   reminder_initial: 'any' | 'mine' | 'none';
   reminder_followup: 'any' | 'mine' | 'none';
   reminder_overdue: 'any' | 'mine' | 'none';
+
+  // Channel toggles
+  channels?: {
+    email: boolean;
+    slack: boolean;
+  };
+
+  // Channel-specific configuration
+  channelConfig?: {
+    slackWebhookUrl?: string;
+  };
 }
 
 export const defaultNotificationPreferences: NotificationPreferences = {
@@ -24,7 +35,7 @@ export const defaultNotificationPreferences: NotificationPreferences = {
   task_paused: 'any',
   task_completed: 'any',
   task_deleted: 'any',
-  
+
   // Occurrence notifications - defaults to 'mine'
   occurrence_assigned: 'mine',
   occurrence_executed: 'mine',
@@ -34,5 +45,12 @@ export const defaultNotificationPreferences: NotificationPreferences = {
   // Reminder notifications - defaults to 'mine'
   reminder_initial: 'mine',
   reminder_followup: 'mine',
-  reminder_overdue: 'mine'
+  reminder_overdue: 'mine',
+
+  // Channel defaults - email on, slack off
+  channels: {
+    email: true,
+    slack: false,
+  },
+  channelConfig: {},
 };
