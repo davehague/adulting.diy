@@ -328,6 +328,79 @@ describe('renderEmailTemplate', () => {
     expect(html).not.toContain('color: ;')
   })
 
+  it('task_paused renders with warning styling', () => {
+    const html = service.renderEmailTemplate('task_paused', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      pausedByName: 'Bob',
+      taskUrl: 'http://localhost/tasks/1',
+    })
+    expect(html).toContain('Alice')
+    expect(html).toContain('Clean Kitchen')
+    expect(html).toContain('Task Paused')
+    expect(html).toContain('Bob')
+    expect(html).not.toContain('{{')
+  })
+
+  it('task_deleted renders with red styling', () => {
+    const html = service.renderEmailTemplate('task_deleted', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      deletedByName: 'Bob',
+    })
+    expect(html).toContain('Alice')
+    expect(html).toContain('Clean Kitchen')
+    expect(html).toContain('Task Deleted')
+    expect(html).toContain('Bob')
+    expect(html).not.toContain('{{')
+  })
+
+  it('occurrence_executed renders with green styling', () => {
+    const html = service.renderEmailTemplate('occurrence_executed', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      completedByName: 'Bob',
+      dueDate: 'January 20, 2025',
+      occurrenceUrl: 'http://localhost/occurrences/1',
+    })
+    expect(html).toContain('Alice')
+    expect(html).toContain('Clean Kitchen')
+    expect(html).toContain('Task Completed')
+    expect(html).toContain('Bob')
+    expect(html).not.toContain('{{')
+  })
+
+  it('occurrence_skipped renders with amber styling', () => {
+    const html = service.renderEmailTemplate('occurrence_skipped', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      skippedByName: 'Bob',
+      dueDate: 'January 20, 2025',
+      occurrenceUrl: 'http://localhost/occurrences/1',
+    })
+    expect(html).toContain('Alice')
+    expect(html).toContain('Clean Kitchen')
+    expect(html).toContain('Task Skipped')
+    expect(html).toContain('Bob')
+    expect(html).not.toContain('{{')
+  })
+
+  it('occurrence_commented renders with comment content', () => {
+    const html = service.renderEmailTemplate('occurrence_commented', {
+      userName: 'Alice',
+      taskName: 'Clean Kitchen',
+      commentedByName: 'Bob',
+      comment: 'Need to buy supplies first',
+      occurrenceUrl: 'http://localhost/occurrences/1',
+    })
+    expect(html).toContain('Alice')
+    expect(html).toContain('Clean Kitchen')
+    expect(html).toContain('New Comment')
+    expect(html).toContain('Bob')
+    expect(html).toContain('Need to buy supplies first')
+    expect(html).not.toContain('{{')
+  })
+
   it('unknown template falls back to generic', () => {
     const html = service.renderEmailTemplate('unknown_template', {
       userName: 'Alice',
@@ -376,6 +449,44 @@ describe('generateEmailContent', () => {
     }
     const result = service.generateEmailContent('task_created', noDescContext, baseContext.user)
     expect(result.body).not.toContain('Description:')
+  })
+
+  it('task_paused returns proper subject and body', () => {
+    const result = service.generateEmailContent('task_paused', baseContext, baseContext.user)
+    expect(result.subject).toContain('Task Paused')
+    expect(result.subject).toContain('Clean Kitchen')
+    expect(result.body).toContain('Task Paused')
+    expect(result.body).not.toContain('Adulting.DIY Notification')
+  })
+
+  it('task_deleted returns proper subject and body', () => {
+    const result = service.generateEmailContent('task_deleted', baseContext, baseContext.user)
+    expect(result.subject).toContain('Task Deleted')
+    expect(result.body).toContain('Task Deleted')
+    expect(result.body).not.toContain('Adulting.DIY Notification')
+  })
+
+  it('occurrence_executed returns proper subject and body', () => {
+    const result = service.generateEmailContent('occurrence_executed', baseContext, baseContext.user)
+    expect(result.subject).toContain('Task Completed')
+    expect(result.body).toContain('Task Completed')
+    expect(result.body).not.toContain('Adulting.DIY Notification')
+  })
+
+  it('occurrence_skipped returns proper subject and body', () => {
+    const result = service.generateEmailContent('occurrence_skipped', baseContext, baseContext.user)
+    expect(result.subject).toContain('Task Skipped')
+    expect(result.body).toContain('Task Skipped')
+    expect(result.body).not.toContain('Adulting.DIY Notification')
+  })
+
+  it('occurrence_commented returns proper subject with comment content', () => {
+    const commentContext = { ...baseContext, comment: 'Test comment' }
+    const result = service.generateEmailContent('occurrence_commented', commentContext, baseContext.user)
+    expect(result.subject).toContain('New Comment')
+    expect(result.body).toContain('New Comment')
+    expect(result.body).toContain('Test comment')
+    expect(result.body).not.toContain('Adulting.DIY Notification')
   })
 })
 

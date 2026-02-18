@@ -709,6 +709,7 @@ export class OccurrenceService {
                 occurrence: occurrence as unknown as TaskOccurrence,
                 actionUser: actionUser as any,
                 household: { id: occurrence.task.householdId, name: household?.name || "" },
+                comment: comment,
               },
               userId
             );
