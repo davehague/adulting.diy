@@ -47,7 +47,7 @@ export default defineHouseholdProtectedEventHandler(
       }
 
       // Pause the task using the service
-      const updatedTask = await taskService.pause(taskId);
+      const updatedTask = await taskService.pause(taskId, authUser.userId);
 
       return updatedTask;
     } catch (error) {

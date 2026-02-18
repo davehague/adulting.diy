@@ -44,7 +44,7 @@ export default defineHouseholdProtectedEventHandler(
       }
 
       // Soft delete task using the service
-      const task = await taskService.softDelete(taskId);
+      const task = await taskService.softDelete(taskId, authUser.userId);
 
       return {
         success: true,
