@@ -217,6 +217,7 @@ describe('checkAndSendTaskReminders', () => {
     const task = {
       id: 'task-1',
       householdId: 'household-1',
+      createdByUserId: 'user-1',
       metaStatus: 'active',
       reminderConfig: { overdueReminder: 3 },
     }
@@ -234,6 +235,11 @@ describe('checkAndSendTaskReminders', () => {
         updatedAt: threeDaysAgo,
       },
     ] as any)
+
+    // No prior reminder sent today
+    vi.mocked(prisma.occurrenceHistoryLog.findFirst).mockResolvedValueOnce(null)
+    // Mock the log creation for dedup tracking
+    vi.mocked(prisma.occurrenceHistoryLog.create).mockResolvedValueOnce({} as any)
 
     // Mock sendNotification to track calls
     const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue()
@@ -530,6 +536,106 @@ describe('isUserRelatedToOccurrence with comment history', () => {
       occurrence: { assigneeIds: ['u2'] } as any,
     }
     expect(service.isUserRelatedToOccurrence('u1', context)).toBe(false)
+  })
+})
+
+describe('duplicate reminder prevention', () => {
+  it('does not send reminder if one was already sent today', async () => {
+    const service = new NotificationService()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const dueDate = new Date()
+    dueDate.setDate(dueDate.getDate() + 3)
+    dueDate.setHours(0, 0, 0, 0)
+
+    const task = {
+      id: 'task-1',
+      householdId: 'household-1',
+      createdByUserId: 'user-1',
+      reminderConfig: { initialReminder: 3 },
+    }
+
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+
+    vi.mocked(prisma.taskOccurrence.findMany).mockResolvedValueOnce([
+      {
+        id: 'occ-1',
+        taskId: 'task-1',
+        dueDate: dueDate,
+        status: 'assigned',
+        assigneeIds: ['user-1'],
+        createdAt: today,
+        updatedAt: today,
+      },
+    ] as any)
+
+    // Simulate that a reminder was already sent today
+    vi.mocked(prisma.occurrenceHistoryLog.findFirst).mockResolvedValueOnce({
+      id: 'log-1',
+      occurrenceId: 'occ-1',
+      userId: 'user-1',
+      logType: 'reminder_sent',
+      newValue: 'task_reminder_initial',
+      createdAt: new Date(),
+    } as any)
+
+    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue()
+    const count = await service.checkAndSendTaskReminders(task as any)
+
+    expect(count).toBe(0)
+    expect(sendSpy).not.toHaveBeenCalled()
+
+    sendSpy.mockRestore()
+  })
+
+  it('sends reminder if none was sent today', async () => {
+    const service = new NotificationService()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const dueDate = new Date()
+    dueDate.setDate(dueDate.getDate() + 3)
+    dueDate.setHours(0, 0, 0, 0)
+
+    const task = {
+      id: 'task-1',
+      householdId: 'household-1',
+      createdByUserId: 'user-1',
+      reminderConfig: { initialReminder: 3 },
+    }
+
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+
+    vi.mocked(prisma.taskOccurrence.findMany).mockResolvedValueOnce([
+      {
+        id: 'occ-1',
+        taskId: 'task-1',
+        dueDate: dueDate,
+        status: 'assigned',
+        assigneeIds: ['user-1'],
+        createdAt: today,
+        updatedAt: today,
+      },
+    ] as any)
+
+    // No prior reminder sent
+    vi.mocked(prisma.occurrenceHistoryLog.findFirst).mockResolvedValueOnce(null)
+
+    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue()
+    // Mock the log creation
+    vi.mocked(prisma.occurrenceHistoryLog.create).mockResolvedValueOnce({} as any)
+
+    const count = await service.checkAndSendTaskReminders(task as any)
+
+    expect(count).toBe(1)
+    expect(sendSpy).toHaveBeenCalledWith(
+      'household-1',
+      'task_reminder_initial',
+      expect.any(Object)
+    )
+
+    sendSpy.mockRestore()
   })
 })
 

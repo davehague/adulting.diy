@@ -54,6 +54,7 @@ const prismaMock = {
   occurrenceHistoryLog: {
     create: vi.fn(),
     findMany: vi.fn(),
+    findFirst: vi.fn(),
   },
   taskHistoryLog: {
     create: vi.fn(),
