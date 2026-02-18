@@ -131,6 +131,9 @@
         </div>
       </div>
 
+      <!-- Task Activity Timeline -->
+      <TaskTimeline ref="taskTimelineRef" :task-id="taskId" />
+
       <!-- Back to Tasks List -->
       <div class="mt-8">
         <NuxtLink to="/tasks" class="text-amber-700 hover:text-amber-800">
@@ -169,6 +172,7 @@ const categories = ref<Category[]>([]);
 const householdUsers = ref<User[]>([]); // State for household users
 const loadingOccurrences = ref(true);
 const loadingUsers = ref(false); // Add loading state for users
+const taskTimelineRef = ref<InstanceType<typeof TaskTimeline> | null>(null);
 
 // Load data
 onMounted(async () => {
