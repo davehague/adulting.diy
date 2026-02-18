@@ -141,9 +141,49 @@
       </div>
     </div>
 
-    <!-- Loading and Empty States -->
-    <div v-if="loading" class="text-center py-8">
-      <p class="text-stone-600">Loading occurrences...</p>
+    <!-- Skeleton Loader -->
+    <div v-if="showSkeleton" class="bg-white rounded-xl shadow-sm border border-stone-200">
+      <!-- Mobile skeleton -->
+      <div class="md:hidden divide-y divide-stone-100">
+        <div v-for="i in 5" :key="i" class="p-4 animate-pulse">
+          <div class="flex items-start justify-between mb-2">
+            <div class="h-4 bg-stone-200 rounded w-40"></div>
+            <div class="h-4 bg-stone-200 rounded w-16"></div>
+          </div>
+          <div class="flex items-center gap-2 mb-2">
+            <div class="h-5 bg-stone-200 rounded-full w-20"></div>
+          </div>
+          <div class="flex items-center justify-between mb-1">
+            <div class="h-4 bg-stone-200 rounded w-28"></div>
+          </div>
+          <div class="h-3 bg-stone-200 rounded w-20 mt-1"></div>
+        </div>
+      </div>
+      <!-- Desktop skeleton -->
+      <div class="hidden md:block overflow-x-auto">
+        <table class="min-w-full divide-y divide-stone-200">
+          <thead class="bg-stone-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider">Task</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider">Category</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider">Due Date</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider">Assignee(s)</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-stone-500 uppercase tracking-wider">Status</th>
+              <th class="px-6 py-3 text-right text-xs font-semibold text-stone-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-stone-200">
+            <tr v-for="i in 6" :key="i" class="animate-pulse">
+              <td class="px-6 py-4"><div class="h-4 bg-stone-200 rounded w-36"></div><div class="h-3 bg-stone-100 rounded w-48 mt-1"></div></td>
+              <td class="px-6 py-4"><div class="h-5 bg-stone-200 rounded-full w-20"></div></td>
+              <td class="px-6 py-4"><div class="h-4 bg-stone-200 rounded w-24"></div></td>
+              <td class="px-6 py-4"><div class="h-4 bg-stone-200 rounded w-20"></div></td>
+              <td class="px-6 py-4"><div class="h-4 bg-stone-200 rounded w-16"></div></td>
+              <td class="px-6 py-4"><div class="h-4 bg-stone-200 rounded w-5 ml-auto"></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div v-else-if="!occurrences.length" class="bg-white rounded-xl shadow-sm border border-stone-200 p-8 text-center">
@@ -427,6 +467,8 @@ const router = useRouter();
 
 // State
 const loading = ref(false);
+const initialLoadComplete = ref(false);
+const showSkeleton = computed(() => !initialLoadComplete.value);
 const rawOccurrences = ref<TaskOccurrence[]>([]);
 const categories = ref<Category[]>([]);
 const householdUsers = ref<User[]>([]);
@@ -587,17 +629,17 @@ onMounted(async () => {
   });
 
   // Fetch initial occurrences only after auth is ready
-  watch(() => authStore.isReady, (ready) => {
+  watch(() => authStore.isReady, async (ready) => {
     if (ready) {
-      console.log('[Occurrences Page] Auth ready, fetching occurrences.');
-      fetchOccurrences();
+      await fetchOccurrences();
+      initialLoadComplete.value = true;
     }
   }, { immediate: true });
 
   // Also handle the case where auth is already ready when component mounts
   if (authStore.isReady) {
-    console.log('[Occurrences Page] Auth already ready on mount, fetching occurrences.');
     await fetchOccurrences();
+    initialLoadComplete.value = true;
   }
 });
 
