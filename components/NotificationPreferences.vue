@@ -75,14 +75,6 @@
           </div>
           
           <div class="flex items-center justify-between">
-            <label class="text-sm text-stone-700">Task Completed</label>
-            <select v-model="preferences.task_completed" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
-              <option value="any">Any task</option>
-              <option value="none">None</option>
-            </select>
-          </div>
-          
-          <div class="flex items-center justify-between">
             <label class="text-sm text-stone-700">Task Deleted</label>
             <select v-model="preferences.task_deleted" class="px-3 py-1 border border-stone-300 rounded-md text-sm">
               <option value="any">Any task</option>
@@ -198,7 +190,6 @@ const saveError = ref(false);
 const preferences = ref<NotificationPreferences>({
   task_created: 'any',
   task_paused: 'any',
-  task_completed: 'any',
   task_deleted: 'any',
   occurrence_assigned: 'mine',
   occurrence_executed: 'mine',

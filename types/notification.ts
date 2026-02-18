@@ -3,7 +3,6 @@ export interface NotificationPreferences {
   // Task notifications
   task_created: 'any' | 'none';
   task_paused: 'any' | 'none';
-  task_completed: 'any' | 'none';
   task_deleted: 'any' | 'none';
 
   // Occurrence notifications
@@ -33,7 +32,6 @@ export const defaultNotificationPreferences: NotificationPreferences = {
   // Task notifications - defaults to 'any'
   task_created: 'any',
   task_paused: 'any',
-  task_completed: 'any',
   task_deleted: 'any',
 
   // Occurrence notifications - defaults to 'mine'

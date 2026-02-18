@@ -9,7 +9,6 @@ import type { NotificationEventType, NotificationContext } from '@/server/servic
 const allAnyPrefs: NotificationPreferences = {
   task_created: 'any',
   task_paused: 'any',
-  task_completed: 'any',
   task_deleted: 'any',
   occurrence_assigned: 'any',
   occurrence_executed: 'any',
@@ -23,7 +22,6 @@ const allAnyPrefs: NotificationPreferences = {
 const allNonePrefs: NotificationPreferences = {
   task_created: 'none',
   task_paused: 'none',
-  task_completed: 'none',
   task_deleted: 'none',
   occurrence_assigned: 'none',
   occurrence_executed: 'none',
@@ -37,7 +35,6 @@ const allNonePrefs: NotificationPreferences = {
 const minePrefs: NotificationPreferences = {
   task_created: 'none',
   task_paused: 'none',
-  task_completed: 'none',
   task_deleted: 'none',
   occurrence_assigned: 'mine',
   occurrence_executed: 'mine',
@@ -71,7 +68,7 @@ describe('NotificationService.shouldSendNotification', () => {
   // --- "none" preference blocks all notifications ---
   describe('when preference is "none"', () => {
     it.each([
-      'task_created', 'task_paused', 'task_completed', 'task_deleted',
+      'task_created', 'task_paused', 'task_deleted',
       'occurrence_assigned', 'occurrence_executed', 'occurrence_skipped', 'occurrence_commented',
     ] as NotificationEventType[])('blocks %s notification', (eventType) => {
       expect(service.shouldSendNotification(eventType, allNonePrefs, baseContext, userId)).toBe(false)
@@ -81,7 +78,7 @@ describe('NotificationService.shouldSendNotification', () => {
   // --- "any" preference sends to non-actors ---
   describe('when preference is "any"', () => {
     it.each([
-      'task_created', 'task_paused', 'task_completed', 'task_deleted',
+      'task_created', 'task_paused', 'task_deleted',
     ] as NotificationEventType[])('sends %s notification', (eventType) => {
       expect(service.shouldSendNotification(eventType, allAnyPrefs, baseContext, userId)).toBe(true)
     })

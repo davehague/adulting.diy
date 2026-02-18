@@ -190,18 +190,19 @@ describe('Notification Logic Tests', () => {
     const defaultPreferences: NotificationPreferences = {
       task_created: 'any',
       task_paused: 'any',
-      task_completed: 'any',
       task_deleted: 'any',
       occurrence_assigned: 'mine',
       occurrence_executed: 'mine',
       occurrence_skipped: 'mine',
-      occurrence_commented: 'mine'
+      occurrence_commented: 'mine',
+      reminder_initial: 'mine',
+      reminder_followup: 'mine',
+      reminder_overdue: 'mine'
     }
 
     it('should have correct default values for task notifications', () => {
       expect(defaultPreferences.task_created).toBe('any')
       expect(defaultPreferences.task_paused).toBe('any')
-      expect(defaultPreferences.task_completed).toBe('any')
       expect(defaultPreferences.task_deleted).toBe('any')
     })
 
