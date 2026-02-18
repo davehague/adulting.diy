@@ -104,17 +104,14 @@
 
         <div v-if="task.reminderConfig" class="mb-4">
           <h4 class="text-sm font-medium text-stone-500 mb-1">Reminders</h4>
-          <ul class="list-disc pl-5 text-stone-800">
-            <li v-if="task.reminderConfig.initialReminder">
-              Initial: {{ task.reminderConfig.initialReminder }} days before due date
-            </li>
-            <li v-if="task.reminderConfig.followUpReminder">
-              Follow-up: {{ task.reminderConfig.followUpReminder }} days before due date
-            </li>
-            <li v-if="task.reminderConfig.overdueReminder">
-              Overdue: {{ task.reminderConfig.overdueReminder }} days after due date
+          <ul v-if="task.reminderConfig.reminders?.length" class="list-disc pl-5 text-stone-800">
+            <li v-for="(reminder, index) in task.reminderConfig.reminders" :key="index">
+              <template v-if="reminder.timing === 'on'">On due date</template>
+              <template v-else-if="reminder.timing === 'before'">{{ reminder.days }} day{{ reminder.days !== 1 ? 's' : '' }} before due date</template>
+              <template v-else>{{ reminder.days }} day{{ reminder.days !== 1 ? 's' : '' }} after due date</template>
             </li>
           </ul>
+          <p v-else class="text-stone-400 text-sm">No reminders configured</p>
         </div>
 
         <div class="mb-4">

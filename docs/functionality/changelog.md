@@ -7,6 +7,9 @@
 - Reminders support before, on, and after due date timing
 - Overdue reminders ("X days after") provide nudges for incomplete tasks
 - Reminder subject lines adapt based on timing context
+- New tasks default to an "on due date" reminder (removable)
+- Task detail view updated to display the new reminder format
+- All existing active tasks backfilled with an "on due date" reminder
 
 ### Notification Channels
 - Added Slack as a notification channel alongside email

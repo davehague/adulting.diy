@@ -88,6 +88,10 @@ A task with due date February 25 and this config:
 
 Triggers reminders on: Feb 18, Feb 24, Feb 25, and Feb 28.
 
+### Defaults
+
+New tasks are created with a single **"on due date"** reminder by default. Users can remove it or add additional reminders (up to 5 total).
+
 ### Reminder Delivery
 
 - Reminders run daily via a scheduled cron job
