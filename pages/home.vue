@@ -99,7 +99,7 @@
         </NuxtLink>
 
         <!-- Completed (7d) -->
-        <div class="bg-white rounded-xl shadow-sm border border-stone-100 p-5">
+        <NuxtLink to="/occurrences?status=completed" class="block bg-white rounded-xl shadow-sm border border-stone-100 p-5 hover:shadow-md transition-shadow">
           <div class="flex items-center justify-between mb-3">
             <span class="text-sm font-medium text-stone-500">Completed (7d)</span>
             <span class="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-green-500 text-sm">&#10003;</span>
@@ -110,7 +110,7 @@
           <div class="mt-2 w-full bg-stone-100 rounded-full h-1.5">
             <div class="bg-green-500 h-1.5 rounded-full transition-all" :style="{ width: completedBarWidth }"></div>
           </div>
-        </div>
+        </NuxtLink>
       </div>
 
       <!-- Coming Up -->
