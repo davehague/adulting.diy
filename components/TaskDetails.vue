@@ -89,7 +89,12 @@
         <div class="mb-4">
           <h4 class="text-sm font-medium text-stone-500 mb-1">Default Assignees</h4>
           <p class="text-stone-800">
-            {{ getDefaultAssigneeNames(task.defaultAssigneeIds) }}
+            <template v-if="getDefaultAssigneeNames(task.defaultAssigneeIds).length === 0">
+              No default assignees
+            </template>
+            <template v-for="(assignee, idx) in getDefaultAssigneeNames(task.defaultAssigneeIds)" :key="idx">
+              <span :class="assignee.departed ? 'text-stone-400 italic' : ''">{{ assignee.name }}</span><span v-if="idx < getDefaultAssigneeNames(task.defaultAssigneeIds).length - 1">, </span>
+            </template>
           </p>
         </div>
       </div>
@@ -132,12 +137,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import type { TaskDefinition, Category, User } from '@/types';
+import type { FormerHouseholdMember } from '@/types/user';
 import { EllipsisVertical, Eye, Pencil } from 'lucide-vue-next';
 
 interface Props {
   task: TaskDefinition;
   categories?: Category[];
   householdUsers?: User[];
+  formerMembers?: FormerHouseholdMember[];
   collapsible?: boolean;
   defaultExpanded?: boolean;
 }
@@ -145,6 +152,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   categories: () => [],
   householdUsers: () => [],
+  formerMembers: () => [],
   collapsible: false,
   defaultExpanded: true
 });
@@ -251,18 +259,14 @@ const formatSchedule = (scheduleConfig: any): string => {
   }
 };
 
-const getDefaultAssigneeNames = (assigneeIds: string[] | undefined): string => {
-  if (!assigneeIds || assigneeIds.length === 0) {
-    return 'No default assignees';
-  }
-  
-  const names = assigneeIds
-    .map(id => {
-      const user = props.householdUsers.find(user => user.id === id);
-      return user?.name;
-    })
-    .filter(name => !!name);
-
-  return names.length > 0 ? names.join(', ') : 'Unknown User(s)';
+const getDefaultAssigneeNames = (assigneeIds: string[] | undefined): { name: string; departed: boolean }[] => {
+  if (!assigneeIds || assigneeIds.length === 0) return [];
+  return assigneeIds.map(id => {
+    const active = props.householdUsers.find(user => user.id === id);
+    if (active) return { name: active.name, departed: false };
+    const former = props.formerMembers.find(u => u.userId === id);
+    if (former) return { name: former.name, departed: true };
+    return { name: 'Unknown User', departed: false };
+  });
 };
 </script>

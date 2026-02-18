@@ -91,8 +91,8 @@ const fetchHouseholdUsers = async () => {
     loadingUsers.value = true;
     userError.value = null;
     try {
-        const usersData = await api.get<Pick<User, 'id' | 'name' | 'email'>[]>('/api/household/users');
-        householdUsers.value = usersData;
+        const data = await api.get<{ members: Pick<User, 'id' | 'name' | 'email'>[] }>('/api/household/users');
+        householdUsers.value = data.members;
     } catch (err) {
         console.error('Error fetching household users:', err);
         userError.value = 'Failed to load users for assignment.';

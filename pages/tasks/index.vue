@@ -270,7 +270,9 @@
             <td class="px-6 py-4 whitespace-nowrap">
               <template v-if="task.nextOccurrence && task.nextOccurrence.assigneeIds.length > 0">
                 <div class="text-sm text-stone-900">
-                  {{ getAssigneeNames(task.nextOccurrence.assigneeIds).join(', ') }}
+                  <template v-for="(assignee, idx) in getAssigneeNames(task.nextOccurrence.assigneeIds)" :key="idx">
+                    <span :class="assignee.departed ? 'text-stone-400 italic' : ''">{{ assignee.name }}</span><span v-if="idx < getAssigneeNames(task.nextOccurrence.assigneeIds).length - 1">, </span>
+                  </template>
                 </div>
               </template>
               <span v-else class="text-sm text-stone-400 italic">Unassigned</span>
@@ -413,6 +415,7 @@ import { useApi } from '@/utils/api';
 import { useTaskStore } from '@/stores/tasks';
 import { useAuthStore } from '@/stores/auth'; // Import auth store
 import type { TaskDefinition, Category, User } from '@/types';
+import type { FormerHouseholdMember } from '@/types/user';
 import CatchUpModal from '@/components/tasks/CatchUpModal.vue';
 import PauseModal from '@/components/tasks/PauseModal.vue';
 import DeleteModal from '@/components/tasks/DeleteModal.vue';
@@ -471,6 +474,7 @@ const tasks = computed(() => {
 // Keep local state for categories filter and household users
 const categories = ref<Category[]>([]);
 const householdUsers = ref<User[]>([]);
+const formerMembers = ref<FormerHouseholdMember[]>([]);
 
 // Dropdown state
 const openDropdownId = ref<string | null>(null);
@@ -561,8 +565,8 @@ onMounted(async () => {
     .then(data => { categories.value = data; })
     .catch(err => { console.error('Error loading categories:', err); });
 
-  const fetchUsers = api.get<User[]>('/api/household/users')
-    .then(data => { householdUsers.value = data; })
+  const fetchUsers = api.get<{ members: User[], formerMembers: FormerHouseholdMember[] }>('/api/household/users')
+    .then(data => { householdUsers.value = data.members; formerMembers.value = data.formerMembers; })
     .catch(err => { console.error('Error loading household users:', err); });
 
   // Fetch tasks once auth is ready
@@ -674,10 +678,13 @@ const isOverdue = (dueDate: Date | string): boolean => {
   return due < today;
 };
 
-const getAssigneeNames = (assigneeIds: string[]): string[] => {
+const getAssigneeNames = (assigneeIds: string[]): { name: string; departed: boolean }[] => {
   return assigneeIds.map(id => {
-    const user = householdUsers.value.find(u => u.id === id);
-    return user ? user.name : 'Unknown User';
+    const active = householdUsers.value.find(u => u.id === id);
+    if (active) return { name: active.name, departed: false };
+    const former = formerMembers.value.find(u => u.userId === id);
+    if (former) return { name: former.name, departed: true };
+    return { name: 'Unknown User', departed: false };
   });
 };
 

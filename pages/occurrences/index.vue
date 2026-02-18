@@ -250,7 +250,9 @@
           </div>
           <div class="text-xs text-stone-500">
             <template v-if="occurrence.assigneeIds && occurrence.assigneeIds.length > 0">
-              {{ getAssigneeNames(occurrence.assigneeIds).join(', ') }}
+              <template v-for="(assignee, idx) in getAssigneeNames(occurrence.assigneeIds)" :key="idx">
+                <span :class="assignee.departed ? 'text-stone-400 italic' : ''">{{ assignee.name }}</span><span v-if="idx < getAssigneeNames(occurrence.assigneeIds).length - 1">, </span>
+              </template>
             </template>
             <span v-else class="italic">Unassigned</span>
           </div>
@@ -327,7 +329,9 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div v-if="occurrence.assigneeIds && occurrence.assigneeIds.length > 0" class="text-sm text-stone-900">
-                  {{ getAssigneeNames(occurrence.assigneeIds).join(', ') }}
+                  <template v-for="(assignee, idx) in getAssigneeNames(occurrence.assigneeIds)" :key="idx">
+                    <span :class="assignee.departed ? 'text-stone-400 italic' : ''">{{ assignee.name }}</span><span v-if="idx < getAssigneeNames(occurrence.assigneeIds).length - 1">, </span>
+                  </template>
                 </div>
                 <div v-else class="text-sm text-stone-500 italic">
                   Unassigned
@@ -460,6 +464,7 @@ import CompleteModal from '@/components/occurrences/CompleteModal.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
 import { Plus, Search, X, ChevronUp, ChevronDown, SlidersHorizontal, Circle, UserCheck, CircleCheck, SkipForward, Trash2 } from 'lucide-vue-next';
 import type { TaskOccurrence, Category, User } from '@/types';
+import type { FormerHouseholdMember } from '@/types/user';
 
 const api = useApi();
 const authStore = useAuthStore();
@@ -472,6 +477,7 @@ const showSkeleton = computed(() => !initialLoadComplete.value);
 const rawOccurrences = ref<TaskOccurrence[]>([]);
 const categories = ref<Category[]>([]);
 const householdUsers = ref<User[]>([]);
+const formerMembers = ref<FormerHouseholdMember[]>([]);
 // Sort state
 const sortColumn = ref<string>('dueDate');
 const sortDirection = ref<'asc' | 'desc'>('asc');
@@ -614,8 +620,9 @@ onMounted(async () => {
 
   // Fetch household users for the assignee filter
   try {
-    const usersData = await api.get<User[]>('/api/household/users');
-    householdUsers.value = usersData;
+    const usersData = await api.get<{ members: User[], formerMembers: FormerHouseholdMember[] }>('/api/household/users');
+    householdUsers.value = usersData.members;
+    formerMembers.value = usersData.formerMembers;
   } catch (err) {
     console.error('Error loading household users:', err);
   }
@@ -706,10 +713,13 @@ const getCategoryName = (category: any): string => {
   return 'Unknown';
 };
 
-const getAssigneeNames = (assigneeIds: string[]): string[] => {
+const getAssigneeNames = (assigneeIds: string[]): { name: string; departed: boolean }[] => {
   return assigneeIds.map(id => {
-    const user = householdUsers.value.find(u => u.id === id);
-    return user ? user.name : 'Unknown User';
+    const active = householdUsers.value.find(u => u.id === id);
+    if (active) return { name: active.name, departed: false };
+    const former = formerMembers.value.find(u => u.userId === id);
+    if (former) return { name: former.name, departed: true };
+    return { name: 'Unknown User', departed: false };
   });
 };
 

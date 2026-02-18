@@ -416,11 +416,11 @@ const fetchHouseholdData = async () => {
     // Fetch household info and members in parallel
     const [householdResponse, membersResponse] = await Promise.all([
       api.get('/api/household'),
-      api.get<User[]>('/api/household/users')
+      api.get<{ members: User[] }>('/api/household/users')
     ]);
-    
+
     householdInfo.value = householdResponse;
-    members.value = membersResponse;
+    members.value = membersResponse.members;
   } catch (err: any) {
     console.error('Error fetching household data:', err);
     error.value = err.data?.message || 'Failed to load household information';

@@ -45,10 +45,11 @@
       </div>
 
       <!-- Task Content -->
-      <TaskDetails 
-        :task="task" 
-        :categories="categories" 
+      <TaskDetails
+        :task="task"
+        :categories="categories"
         :household-users="householdUsers"
+        :former-members="formerMembers"
         class="mb-6"
       />
 
@@ -93,7 +94,12 @@
                   {{ formatOccurrenceStatus(occurrence.status) }}
                 </span>
               </div>
-              <div class="text-xs text-stone-500">{{ getAssigneeNames(occurrence.assigneeIds) }}</div>
+              <div class="text-xs text-stone-500">
+                <template v-if="getAssigneeNames(occurrence.assigneeIds).length === 0">Unassigned</template>
+                <template v-for="(assignee, idx) in getAssigneeNames(occurrence.assigneeIds)" :key="idx">
+                  <span :class="assignee.departed ? 'text-stone-400 italic' : ''">{{ assignee.name }}</span><span v-if="idx < getAssigneeNames(occurrence.assigneeIds).length - 1">, </span>
+                </template>
+              </div>
             </div>
           </div>
           <!-- Desktop table -->
@@ -133,7 +139,10 @@
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-stone-500">
-                  {{ getAssigneeNames(occurrence.assigneeIds) }}
+                  <template v-if="getAssigneeNames(occurrence.assigneeIds).length === 0">Unassigned</template>
+                  <template v-for="(assignee, idx) in getAssigneeNames(occurrence.assigneeIds)" :key="idx">
+                    <span :class="assignee.departed ? 'text-stone-400 italic' : ''">{{ assignee.name }}</span><span v-if="idx < getAssigneeNames(occurrence.assigneeIds).length - 1">, </span>
+                  </template>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
                     @click.stop>
@@ -269,7 +278,8 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/utils/api'; // Keep for categories/occurrences for now
 import { useTaskStore } from '@/stores/tasks';
-import type { TaskDefinition, TaskOccurrence, Category, User } from '@/types'; // Add User type
+import type { TaskDefinition, TaskOccurrence, Category, User } from '@/types';
+import type { FormerHouseholdMember } from '@/types/user';
 import CatchUpModal from '@/components/tasks/CatchUpModal.vue';
 import TaskTimeline from '@/components/tasks/TaskTimeline.vue';
 import { useToast } from '@/composables/useToast';
@@ -304,6 +314,7 @@ const filteredOccurrences = computed(() => {
 });
 const categories = ref<Category[]>([]);
 const householdUsers = ref<User[]>([]); // State for household users
+const formerMembers = ref<FormerHouseholdMember[]>([]);
 const loadingOccurrences = ref(true);
 const loadingUsers = ref(false); // Add loading state for users
 const taskTimelineRef = ref<InstanceType<typeof TaskTimeline> | null>(null);
@@ -386,9 +397,9 @@ const fetchOccurrences = async () => {
 const fetchHouseholdUsers = async () => {
   try {
     loadingUsers.value = true;
-    const usersData = await api.get<User[]>('/api/household/users');
-    householdUsers.value = usersData;
-    // Removed debug log
+    const data = await api.get<{ members: User[], formerMembers: FormerHouseholdMember[] }>('/api/household/users');
+    householdUsers.value = data.members;
+    formerMembers.value = data.formerMembers;
   } catch (err: any) {
     console.error('Error loading household users:', err);
     // Handle user loading error if needed, maybe display a message
@@ -556,22 +567,16 @@ const formatOccurrenceStatus = (status: string): string => {
 
 
 // Helper to get assignee names
-const getAssigneeNames = (assigneeIds: string[] | undefined): string => {
-  if (!assigneeIds || assigneeIds.length === 0) {
-    return 'Unassigned';
-  }
-  if (loadingUsers.value) {
-    return 'Loading...'; // Indicate users are still loading
-  }
-  // Removed debug logs from getAssigneeNames
-  const names = assigneeIds
-    .map(id => {
-      const user = householdUsers.value.find(user => user.id === id);
-      return user?.name;
-    })
-    .filter(name => !!name); // Filter out undefined names if user not found
-
-  return names.length > 0 ? names.join(', ') : 'Unknown User(s)';
+const getAssigneeNames = (assigneeIds: string[] | undefined): { name: string; departed: boolean }[] => {
+  if (!assigneeIds || assigneeIds.length === 0) return [];
+  if (loadingUsers.value) return [{ name: 'Loading...', departed: false }];
+  return assigneeIds.map(id => {
+    const active = householdUsers.value.find(u => u.id === id);
+    if (active) return { name: active.name, departed: false };
+    const former = formerMembers.value.find(u => u.userId === id);
+    if (former) return { name: former.name, departed: true };
+    return { name: 'Unknown User', departed: false };
+  });
 };
 
 // Catch-up state

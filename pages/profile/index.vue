@@ -177,7 +177,8 @@ const checkCanLeave = async () => {
       },
     });
     if (response.ok) {
-      const members = await response.json();
+      const data = await response.json();
+      const members = data.members;
       const adminCount = members.filter((m: any) => m.isAdmin).length;
       const hasOtherMembers = members.length > 1;
       isOnlyAdmin.value = adminCount === 1 && hasOtherMembers;

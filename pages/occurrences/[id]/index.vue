@@ -19,11 +19,12 @@
             </div>
 
             <!-- Task Details -->
-            <TaskDetails 
-                v-if="fullTask" 
-                :task="fullTask" 
+            <TaskDetails
+                v-if="fullTask"
+                :task="fullTask"
                 :categories="categories"
                 :household-users="householdUsers"
+                :former-members="formerMembers"
                 :collapsible="true"
                 :default-expanded="true"
             />
@@ -74,7 +75,10 @@
                         <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                             <dt class="text-sm font-medium text-stone-500">Assignees</dt>
                             <dd class="mt-1 text-sm text-stone-900 sm:col-span-2 sm:mt-0">
-                                {{ formatAssignees(occurrence.assigneeIds) || 'Unassigned' }}
+                                <template v-if="formatAssignees(occurrence.assigneeIds).length === 0">Unassigned</template>
+                                <template v-for="(assignee, idx) in formatAssignees(occurrence.assigneeIds)" :key="idx">
+                                    <span :class="assignee.departed ? 'text-stone-400 italic' : ''">{{ assignee.name }}</span><span v-if="idx < formatAssignees(occurrence.assigneeIds).length - 1">, </span>
+                                </template>
                             </dd>
                         </div>
                         <div v-if="occurrence.status === 'completed'"
@@ -116,7 +120,7 @@
 
 
             <!-- History Timeline -->
-            <OccurrenceTimeline :occurrence-id="occurrenceId" ref="timelineComponent" />
+            <OccurrenceTimeline :occurrence-id="occurrenceId" :former-members="formerMembers" ref="timelineComponent" />
 
         </div>
         <div v-else class="text-center py-10 text-stone-500">
@@ -170,6 +174,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/utils/api';
 import type { TaskOccurrence, User, Category, TaskDefinition } from '@/types';
+import type { FormerHouseholdMember } from '@/types/user';
 import OccurrenceTimeline from '@/components/occurrences/OccurrenceTimeline.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
@@ -187,6 +192,7 @@ const occurrenceId = computed(() => route.params.id as string);
 const occurrence = ref<TaskOccurrence | null>(null);
 const fullTask = ref<TaskDefinition | null>(null); // Full task details for TaskDetails component
 const householdUsers = ref<Pick<User, 'id' | 'name'>[]>([]); // For assignee formatting
+const formerMembers = ref<FormerHouseholdMember[]>([]);
 const categories = ref<Category[]>([]); // For category names
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -228,10 +234,8 @@ const fetchOccurrence = async () => {
             fetchFullTask(data.taskId);
         }
 
-        // Fetch household users if needed for formatting assignees (can be optimized)
-        if (data.assigneeIds?.length > 0) {
-            fetchHouseholdUsers();
-        }
+        // Fetch household users for formatting assignees and former member display
+        fetchHouseholdUsers();
 
     } catch (err: any) {
         console.error("Error fetching occurrence:", err);
@@ -245,8 +249,9 @@ const fetchOccurrence = async () => {
 // Fetch Household Users (for assignee formatting)
 const fetchHouseholdUsers = async () => {
     try {
-        const usersData = await api.get<Pick<User, 'id' | 'name'>[]>('/api/household/users');
-        householdUsers.value = usersData;
+        const data = await api.get<{ members: Pick<User, 'id' | 'name'>[], formerMembers: FormerHouseholdMember[] }>('/api/household/users');
+        householdUsers.value = data.members;
+        formerMembers.value = data.formerMembers;
     } catch (err) {
         console.error('Error fetching household users for formatting:', err);
         // Non-critical, assignee IDs will be shown instead of names
@@ -310,14 +315,15 @@ const formatDateTime = (date: Date | string | undefined): string => {
     }
 };
 
-const formatAssignees = (assigneeIds: string[] | undefined): string => {
-    if (!assigneeIds || assigneeIds.length === 0) return '';
-    if (householdUsers.value.length === 0) return assigneeIds.join(', '); // Fallback to IDs
-
+const formatAssignees = (assigneeIds: string[] | undefined): { name: string; departed: boolean }[] => {
+    if (!assigneeIds || assigneeIds.length === 0) return [];
     return assigneeIds.map(id => {
         const user = householdUsers.value.find(u => u.id === id);
-        return user ? user.name : id; // Show name or ID if user not found
-    }).join(', ');
+        if (user) return { name: user.name, departed: false };
+        const former = formerMembers.value.find(u => u.userId === id);
+        if (former) return { name: former.name, departed: true };
+        return { name: 'Unknown User', departed: false };
+    });
 };
 
 const getStatusClass = (status: string): string => {

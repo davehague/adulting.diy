@@ -22,7 +22,7 @@
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm text-stone-500">
                                     {{ formatLogMessage(log) }}
-                                    <span class="font-medium text-stone-900">{{ log.user?.name || 'System' }}</span>
+                                    <span class="font-medium" :class="log.user && isFormerMember(log.userId) ? 'text-stone-400 italic' : 'text-stone-900'">{{ log.user?.name || 'System' }}</span>
                                 </p>
                                 <!-- Comment display / edit -->
                                 <div v-if="log.logType === 'comment' && log.comment">
@@ -78,6 +78,7 @@ import { ref, watch } from 'vue';
 import { useApi } from '@/utils/api';
 import { useAuthStore } from '@/stores/auth';
 import type { OccurrenceHistoryLog } from '@/types';
+import type { FormerHouseholdMember } from '@/types/user';
 import { formatDistanceToNow } from 'date-fns';
 
 import {
@@ -93,7 +94,12 @@ import {
 // Props
 const props = defineProps<{
     occurrenceId: string;
+    formerMembers?: FormerHouseholdMember[];
 }>();
+
+const isFormerMember = (userId: string): boolean => {
+    return (props.formerMembers || []).some(fm => fm.userId === userId);
+};
 
 // State
 const historyLogs = ref<OccurrenceHistoryLog[]>([]);
