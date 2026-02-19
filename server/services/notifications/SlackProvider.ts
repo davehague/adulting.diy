@@ -53,8 +53,7 @@ export class SlackProvider implements NotificationProvider {
     context: NotificationContext
   ): SlackBlock[] {
     const { task, occurrence, actionUser } = context;
-    const baseUrl =
-      process.env.NUXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = useRuntimeConfig().appUrl;
     const taskName = task?.name || "Unknown Task";
     const categoryName = task?.category?.name;
     const dueDate = occurrence?.dueDate

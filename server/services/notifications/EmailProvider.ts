@@ -47,7 +47,7 @@ export class EmailProvider implements NotificationProvider {
     context: NotificationContext,
     user: User
   ): { subject: string; body: string } {
-    const baseUrl = process.env.NUXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = useRuntimeConfig().appUrl;
     const { task, occurrence, actionUser, household } = context;
 
     switch (eventType) {
