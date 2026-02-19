@@ -15,7 +15,7 @@ A task definition includes:
 
 ## Scheduling Patterns
 
-Tasks support 6 recurrence patterns:
+Tasks support 8 recurrence patterns:
 
 | Pattern | Example | Configuration |
 |---------|---------|---------------|
@@ -25,6 +25,8 @@ Tasks support 6 recurrence patterns:
 | **Specific Day of Month** | "15th of each month" | Day number (1-31) |
 | **Specific Weekday of Month** | "First Monday of each month" | Weekday + occurrence (first/second/third/fourth/last) |
 | **Variable Interval** | "30 days after last completion" | Interval + unit, anchored to actual completion date |
+| **Annual Fixed** | "Replace smoke detector batteries every Jan 1" | Month + day of month, recurs on the same calendar date each year regardless of completion |
+| **Annual Variable** | "Annual furnace inspection" | Month + day of month as anchor, but shifts based on actual completion date (like variable interval, but yearly) |
 
 ### Fixed vs Variable Intervals
 
@@ -59,6 +61,7 @@ Each occurrence represents a specific instance of a task with:
 | **Reassign** | Changes assignees for this specific occurrence |
 | **Change due date** | Reschedules this specific occurrence |
 | **Comment** | Adds a comment visible to household members |
+| **Edit comment** | Authors can edit their own comments after posting |
 
 Completing or skipping an occurrence automatically triggers generation of the next occurrence (for recurring tasks).
 
@@ -99,3 +102,33 @@ When overdue occurrences pile up, users can "catch up" a task:
 3. The next date respects the task's scheduling pattern (e.g., next Monday for a weekly-on-Monday task)
 
 Users can optionally override the calculated next date with a custom one.
+
+## Filtering and Sorting
+
+Both the tasks list and occurrences list pages provide a compact toolbar for filtering, sorting, and searching.
+
+### Task List Filters
+
+| Filter | Options |
+|--------|---------|
+| **Search** | Free-text search across task names |
+| **Status** | Active (default), Overdue, Paused, Deleted |
+| **Category** | All categories or a specific one |
+
+Sortable columns: Task name, Category, Next Due date, Status. Click a column header to toggle ascending/descending.
+
+### Occurrences List Filters
+
+| Filter | Options |
+|--------|---------|
+| **Search** | Free-text search across task names |
+| **Status** | Pending (default), Completed, Skipped, Deleted |
+| **Category** | All categories or a specific one |
+| **Assignee** | All assignees or a specific household member |
+| **Date range** | Optional from/to date filter (collapsible) |
+
+Sortable columns: Task name, Due Date, Status, Assignees.
+
+### Filter Persistence
+
+All filter and sort selections are saved to `localStorage` and restored on the next visit, so users return to their preferred view.

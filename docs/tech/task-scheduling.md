@@ -36,6 +36,8 @@ All patterns are implemented in `calculateNextDueDate()` in `server/utils/schedu
 | Specific Day of Month | `specific_day_of_month` | `dayOfMonth` (1-31) | Target day of next month |
 | Specific Weekday of Month | `specific_weekday_of_month` | `weekday`, `occurrence` | Target weekday occurrence of next month |
 | Variable Interval | `variable_interval` | `variableInterval.interval`, `.unit` | Completion date + interval |
+| Annual Fixed | `annual_fixed` | `month` (1-12), `dayOfMonth` (1-31) | Same calendar date each year regardless of completion |
+| Annual Variable | `annual_variable` | `month` (1-12), `dayOfMonth` (1-31) | Shifts based on actual completion date (like variable interval, yearly) |
 
 ### Type System
 
@@ -49,6 +51,8 @@ type ScheduleConfig =
   | SpecificDayOfMonthScheduleConfig
   | SpecificWeekdayOfMonthScheduleConfig
   | VariableIntervalScheduleConfig
+  | AnnualFixedScheduleConfig
+  | AnnualVariableScheduleConfig
 ```
 
 Each config has a `type` discriminator field and pattern-specific required fields.
@@ -140,7 +144,7 @@ When a task's lifecycle state changes, occurrences are affected:
 ### Unpause
 - Sets `metaStatus` back to `"active"`
 - Immediately generates the next occurrence:
-  - For `variable_interval`: finds last completed/skipped occurrence as base date, calls `generateNextOccurrence()`
+  - For `variable_interval` / `annual_variable`: finds last completed/skipped occurrence as base date, calls `generateNextOccurrence()`
   - For all other recurring types: calls `createInitialOccurrence()` to calculate and create the next due date
   - For `once` type: no occurrence generated (one-time tasks don't recur)
 

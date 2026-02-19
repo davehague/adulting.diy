@@ -90,7 +90,7 @@ Triggers reminders on: Feb 18, Feb 24, Feb 25, and Feb 28.
 
 ### Defaults
 
-New tasks are created with a single **"on due date"** reminder by default. Users can remove it or add additional reminders (up to 5 total).
+New tasks are created with two default reminders: an **"on due date"** reminder and a **"3 days after"** overdue reminder. Users can remove either or add additional reminders (up to 5 total).
 
 ### Reminder Delivery
 

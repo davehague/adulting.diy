@@ -16,15 +16,25 @@ The API uses three authentication levels:
 | `GET` | `/api/categories` | Protected | Get all categories (predefined + custom) |
 | `POST` | `/api/categories/create` | Protected | Create custom category (admin only) |
 
+## Dashboard
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/dashboard` | Household | Get dashboard summary (pending occurrences, completed count, members) |
+
 ## Household Management
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | `POST` | `/api/household/create` | Protected | Create new household, set user as admin |
+| `GET` | `/api/household` | Household | Get household details |
+| `PUT` | `/api/household` | Household | Update household settings (name, timezone; admin only) |
 | `POST` | `/api/household/join` | Protected | Join household using invite code |
 | `GET` | `/api/household/users` | Household | Get active members and former members |
 | `POST` | `/api/household/leave` | Household | Leave current household |
 | `DELETE` | `/api/household/users/[userId]` | Household | Remove user from household (admin only) |
+| `PUT` | `/api/household/users/[userId]/admin` | Household | Promote or demote admin role (admin only) |
+| `POST` | `/api/household/invite-code/regenerate` | Household | Regenerate invite code (admin only) |
 
 ## Task Definitions
 
@@ -38,6 +48,9 @@ The API uses three authentication levels:
 | `POST` | `/api/tasks/[id]/pause` | Household | Pause task (stop generating occurrences) |
 | `POST` | `/api/tasks/[id]/unpause` | Household | Resume paused task |
 | `GET` | `/api/tasks/[id]/occurrences` | Household | Get all occurrences for specific task |
+| `GET` | `/api/tasks/[id]/history` | Household | Get task-level history/timeline |
+| `GET` | `/api/tasks/[id]/catch-up-preview` | Household | Preview catch-up: shows overdue count and calculated next date |
+| `POST` | `/api/tasks/[id]/catch-up` | Household | Execute catch-up: bulk-skip overdue, generate next occurrence |
 
 ## Task Occurrences
 
@@ -49,6 +62,7 @@ The API uses three authentication levels:
 | `POST` | `/api/occurrences/[id]/execute` | Household | Mark occurrence as completed |
 | `POST` | `/api/occurrences/[id]/skip` | Household | Mark occurrence as skipped with reason |
 | `POST` | `/api/occurrences/[id]/comments` | Household | Add comment to occurrence |
+| `PUT` | `/api/occurrences/[id]/comments/[commentId]` | Household | Edit own comment (author only) |
 | `GET` | `/api/occurrences/[id]/history` | Household | Get occurrence history/timeline |
 
 ## User Management

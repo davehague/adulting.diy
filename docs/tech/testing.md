@@ -35,7 +35,7 @@ E2E tests are excluded from the default run via `vitest.config.ts` configuration
 
 | Area | What's Tested |
 |------|--------------|
-| **Schedule Logic** | All 6 recurrence patterns, date calculations, edge cases |
+| **Schedule Logic** | All 8 recurrence patterns, date calculations, edge cases |
 | **Notification Logic** | User preferences, email templates, reminder timing |
 | **Integration** | Scheduler endpoints, business rule validation |
 | **E2E** | Task lifecycle (exists but excluded from default run) |
@@ -48,4 +48,4 @@ E2E tests are excluded from the default run via `vitest.config.ts` configuration
 3. **E2E tests** for task lifecycle workflows (exist but excluded from default run)
 4. **Type tests** for TypeScript type validation
 
-The test suite includes 41+ tests ensuring reliability of critical functionality including task scheduling, notification systems, and occurrence management.
+The test suite includes 416 tests across 20 test files, covering task scheduling, notification systems, occurrence management, filter logic, and edge cases.
