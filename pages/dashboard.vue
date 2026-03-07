@@ -53,7 +53,7 @@
       <!-- Stat Cards Row -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <!-- Overdue -->
-        <NuxtLink to="/occurrences?status=pending" class="block bg-white rounded-xl shadow-sm border border-stone-100 p-5 hover:shadow-md transition-shadow">
+        <NuxtLink :to="overdueLink" class="block bg-white rounded-xl shadow-sm border border-stone-100 p-5 hover:shadow-md transition-shadow">
           <div class="flex items-center justify-between mb-3">
             <span class="text-sm font-medium text-stone-500">Overdue</span>
             <span class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500">
@@ -69,7 +69,7 @@
         </NuxtLink>
 
         <!-- Due Today -->
-        <NuxtLink to="/occurrences?status=pending" class="block bg-white rounded-xl shadow-sm border border-stone-100 p-5 hover:shadow-md transition-shadow">
+        <NuxtLink :to="dueTodayLink" class="block bg-white rounded-xl shadow-sm border border-stone-100 p-5 hover:shadow-md transition-shadow">
           <div class="flex items-center justify-between mb-3">
             <span class="text-sm font-medium text-stone-500">Due Today</span>
             <span class="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center text-amber-600">
@@ -204,6 +204,20 @@ const dueTodayOccurrences = computed(() =>
 const comingUp = computed(() => {
   // Server returns sorted by dueDate asc, just take first 5
   return pendingOccurrences.value.slice(0, 5);
+});
+
+// Dashboard card links with date filters
+const formatDateParam = (d: Date): string => d.toISOString().split('T')[0];
+
+const overdueLink = computed(() => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return `/occurrences?status=pending&dueDateTo=${formatDateParam(yesterday)}`;
+});
+
+const dueTodayLink = computed(() => {
+  const today = formatDateParam(new Date());
+  return `/occurrences?status=pending&dueDateTo=${today}`;
 });
 
 // Bar widths for stat cards (relative to a reasonable max of ~20)

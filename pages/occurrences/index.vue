@@ -487,6 +487,7 @@ import type { FormerHouseholdMember } from '@/types/user';
 const api = useApi();
 const authStore = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 
 // State
 const loading = ref(false);
@@ -609,20 +610,42 @@ const occurrences = computed(() => {
 
 // Load initial data
 onMounted(async () => {
-  // Restore persisted state from localStorage
-  const savedFilters = JSON.parse(localStorage.getItem('adulting-occurrences-filters') || 'null');
-  const savedSort = JSON.parse(localStorage.getItem('adulting-occurrences-sort') || 'null');
-  if (savedFilters) {
-    Object.assign(filters, {
-      status: savedFilters.status ?? 'pending',
-      categoryId: savedFilters.categoryId ?? '',
-      assigneeId: savedFilters.assigneeId ?? '',
-      search: savedFilters.search ?? '',
-      dueDateFrom: savedFilters.dueDateFrom ?? '',
-      dueDateTo: savedFilters.dueDateTo ?? '',
-    });
+  // URL query params take priority over localStorage
+  const queryStatus = route.query.status as string | undefined;
+  const queryCategoryId = route.query.categoryId as string | undefined;
+  const queryAssigneeId = route.query.assigneeId as string | undefined;
+  const querySearch = route.query.search as string | undefined;
+  const queryDueDateFrom = route.query.dueDateFrom as string | undefined;
+  const queryDueDateTo = route.query.dueDateTo as string | undefined;
+  const hasQueryParams = queryStatus || queryCategoryId || queryAssigneeId || querySearch || queryDueDateFrom || queryDueDateTo;
+
+  if (hasQueryParams) {
+    // Apply URL query params
+    filters.status = queryStatus ?? 'pending';
+    filters.categoryId = queryCategoryId ?? '';
+    filters.assigneeId = queryAssigneeId ?? '';
+    filters.search = querySearch ?? '';
+    filters.dueDateFrom = queryDueDateFrom ?? '';
+    filters.dueDateTo = queryDueDateTo ?? '';
     showDateFilters.value = !!(filters.dueDateFrom || filters.dueDateTo);
+  } else {
+    // Fall back to persisted state from localStorage
+    const savedFilters = JSON.parse(localStorage.getItem('adulting-occurrences-filters') || 'null');
+    if (savedFilters) {
+      Object.assign(filters, {
+        status: savedFilters.status ?? 'pending',
+        categoryId: savedFilters.categoryId ?? '',
+        assigneeId: savedFilters.assigneeId ?? '',
+        search: savedFilters.search ?? '',
+        dueDateFrom: savedFilters.dueDateFrom ?? '',
+        dueDateTo: savedFilters.dueDateTo ?? '',
+      });
+      showDateFilters.value = !!(filters.dueDateFrom || filters.dueDateTo);
+    }
   }
+
+  // Restore sort state from localStorage
+  const savedSort = JSON.parse(localStorage.getItem('adulting-occurrences-sort') || 'null');
   if (savedSort) {
     sortColumn.value = savedSort.column ?? 'dueDate';
     sortDirection.value = savedSort.direction ?? 'asc';

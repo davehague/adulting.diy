@@ -10,45 +10,45 @@
           <div class="flex">
             <!-- Logo/Brand -->
             <div class="flex-shrink-0 flex items-center">
-              <a href="/dashboard" class="font-heading text-xl font-semibold">
+              <NuxtLink to="/dashboard" class="font-heading text-xl font-semibold">
                 <span class="text-stone-900">Adulting</span><span class="text-amber-600">.DIY</span>
-              </a>
+              </NuxtLink>
             </div>
 
             <!-- Navigation Links -->
             <nav class="hidden sm:ml-6 sm:flex sm:space-x-4">
-              <a
-                href="/dashboard"
+              <NuxtLink
+                to="/dashboard"
                 class="inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors duration-150"
                 :class="route.path === '/dashboard' ? 'border-amber-500 text-stone-900' : 'border-transparent text-stone-600 hover:text-stone-900 hover:border-stone-300'"
               >
                 Dashboard
-              </a>
+              </NuxtLink>
 
-              <a
-                href="/tasks"
+              <NuxtLink
+                to="/tasks"
                 class="inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors duration-150"
                 :class="route.path.startsWith('/tasks') ? 'border-amber-500 text-stone-900' : 'border-transparent text-stone-600 hover:text-stone-900 hover:border-stone-300'"
               >
                 Tasks
-              </a>
+              </NuxtLink>
 
-              <a
-                href="/occurrences"
+              <NuxtLink
+                to="/occurrences"
                 class="inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors duration-150"
                 :class="route.path.startsWith('/occurrences') ? 'border-amber-500 text-stone-900' : 'border-transparent text-stone-600 hover:text-stone-900 hover:border-stone-300'"
               >
                 Occurrences
-              </a>
+              </NuxtLink>
 
-              <a
+              <NuxtLink
                 v-if="authStore.user?.isAdmin"
-                href="/household"
+                to="/household"
                 class="inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors duration-150"
                 :class="route.path === '/household' ? 'border-amber-500 text-stone-900' : 'border-transparent text-stone-600 hover:text-stone-900 hover:border-stone-300'"
               >
                 Household
-              </a>
+              </NuxtLink>
             </nav>
           </div>
 
@@ -93,13 +93,13 @@
                 v-show="showUserMenu"
                 class="absolute right-0 mt-2 w-48 rounded-lg shadow-md py-1 bg-white ring-1 ring-black ring-opacity-5 z-50"
               >
-                <a
-                  href="/profile"
+                <NuxtLink
+                  to="/profile"
                   class="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors duration-150"
                   @click="showUserMenu = false"
                 >
                   Your Profile
-                </a>
+                </NuxtLink>
                 <button
                   @click="logout"
                   class="block w-full text-left px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors duration-150"
@@ -116,39 +116,39 @@
     <!-- Mobile Navigation Menu -->
     <div v-if="showMobileMenu && authStore.isAuthenticated" class="sm:hidden bg-white border-b border-stone-200 shadow-sm">
       <div class="px-4 py-3 space-y-1">
-        <a
-          href="/dashboard"
+        <NuxtLink
+          to="/dashboard"
           class="block px-3 py-2 rounded-md text-base font-medium transition-colors duration-150"
           :class="route.path === '/dashboard' ? 'bg-amber-50 text-amber-700' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'"
           @click="showMobileMenu = false"
         >
           Dashboard
-        </a>
-        <a
-          href="/tasks"
+        </NuxtLink>
+        <NuxtLink
+          to="/tasks"
           class="block px-3 py-2 rounded-md text-base font-medium transition-colors duration-150"
           :class="route.path.startsWith('/tasks') ? 'bg-amber-50 text-amber-700' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'"
           @click="showMobileMenu = false"
         >
           Tasks
-        </a>
-        <a
-          href="/occurrences"
+        </NuxtLink>
+        <NuxtLink
+          to="/occurrences"
           class="block px-3 py-2 rounded-md text-base font-medium transition-colors duration-150"
           :class="route.path.startsWith('/occurrences') ? 'bg-amber-50 text-amber-700' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'"
           @click="showMobileMenu = false"
         >
           Occurrences
-        </a>
-        <a
+        </NuxtLink>
+        <NuxtLink
           v-if="authStore.user?.isAdmin"
-          href="/household"
+          to="/household"
           class="block px-3 py-2 rounded-md text-base font-medium transition-colors duration-150"
           :class="route.path === '/household' ? 'bg-amber-50 text-amber-700' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'"
           @click="showMobileMenu = false"
         >
           Household
-        </a>
+        </NuxtLink>
       </div>
     </div>
 
