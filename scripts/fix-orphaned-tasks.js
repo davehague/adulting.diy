@@ -4,7 +4,7 @@ import { addMonths, addDays, addWeeks, addYears, startOfDay } from 'date-fns';
 const prisma = new PrismaClient();
 
 /**
- * Calculate next due date for a fixed_interval schedule from a base date.
+ * Calculate next due date from a base date based on interval config.
  */
 function calculateNextDueDate(scheduleConfig, baseDate) {
   const base = startOfDay(baseDate);
@@ -12,6 +12,17 @@ function calculateNextDueDate(scheduleConfig, baseDate) {
     case 'fixed_interval': {
       const { interval, intervalUnit } = scheduleConfig;
       switch (intervalUnit) {
+        case 'day': return addDays(base, interval);
+        case 'week': return addWeeks(base, interval);
+        case 'month': return addMonths(base, interval);
+        case 'year': return addYears(base, interval);
+      }
+      break;
+    }
+    case 'variable_interval': {
+      const { variableInterval } = scheduleConfig;
+      const { interval, unit } = variableInterval;
+      switch (unit) {
         case 'day': return addDays(base, interval);
         case 'week': return addWeeks(base, interval);
         case 'month': return addMonths(base, interval);
