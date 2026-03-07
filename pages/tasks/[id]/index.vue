@@ -624,7 +624,7 @@ const handleEditSubmit = async (formData: { dueDate: string; assigneeIds: string
   editError.value = null;
   try {
     await taskStore.updateOccurrence(editTargetOccurrence.value.id, {
-      dueDate: new Date(formData.dueDate),
+      dueDate: formData.dueDate,
       assigneeIds: formData.assigneeIds,
     });
     showEditModal.value = false;

@@ -290,7 +290,7 @@ export const useTaskStore = defineStore(
     // Update an occurrence (Blueprint Step 4.12 / 4.13)
     async function updateOccurrence(
       occurrenceId: string,
-      occurrenceData: Partial<Pick<TaskOccurrence, "dueDate" | "assigneeIds">>
+      occurrenceData: { dueDate?: string; assigneeIds?: string[] }
     ) {
       isLoading.value = true; // Consider more granular loading
       error.value = null;
