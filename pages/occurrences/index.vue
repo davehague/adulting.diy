@@ -160,7 +160,7 @@
         </div>
       </div>
       <!-- Desktop skeleton -->
-      <div class="hidden md:block overflow-x-auto">
+      <div class="hidden md:block">
         <table class="min-w-full divide-y divide-stone-200">
           <thead class="bg-stone-50">
             <tr>
@@ -274,7 +274,7 @@
         </div>
       </div>
       <!-- Desktop table -->
-      <div class="hidden md:block overflow-x-auto">
+      <div class="hidden md:block">
         <table class="min-w-full divide-y divide-stone-200">
           <thead class="bg-stone-50">
             <tr>
