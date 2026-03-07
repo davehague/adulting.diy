@@ -971,7 +971,7 @@ export class OccurrenceService {
         return null;
       }
 
-      // Check if occurrence already exists for this date
+      // Check if a pending/active occurrence already exists for this date
       const existingForDate = await prisma.taskOccurrence.findFirst({
         where: {
           taskId: task.id,
@@ -980,8 +980,18 @@ export class OccurrenceService {
       });
 
       if (existingForDate) {
-        console.log(`[OccurrenceService] Occurrence already exists for task ${task.id} on ${nextDueDate.toISOString()}`);
-        return existingForDate as unknown as TaskOccurrence;
+        // If the existing occurrence is still pending (not completed/skipped),
+        // no need to create a new one
+        if (!["completed", "skipped"].includes(existingForDate.status)) {
+          console.log(`[OccurrenceService] Pending occurrence already exists for task ${task.id} on ${nextDueDate.toISOString()}`);
+          return existingForDate as unknown as TaskOccurrence;
+        }
+
+        // Existing occurrence is completed/skipped — keep advancing to find
+        // a free date. This handles the case where a user edited a pending
+        // occurrence's due date to before a completed one, then completed it.
+        console.log(`[OccurrenceService] Occurrence on ${nextDueDate.toISOString()} is already ${existingForDate.status} for task ${task.id}, advancing to next date`);
+        return this.generateNextOccurrence(task, nextDueDate, userId);
       }
 
       const initialAssignees = task.defaultAssigneeIds || [];

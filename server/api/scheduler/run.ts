@@ -94,7 +94,7 @@ export default defineSchedulerProtectedEventHandler(async (event) => {
         continue;
       }
 
-      // 4. Find the last generated occurrence date for this task
+      // 4. Find the last occurrence to determine base date for next generation
       const lastOccurrence = await prisma.taskOccurrence.findFirst({
         where: { taskId: task.id },
         orderBy: { dueDate: "desc" },
@@ -105,13 +105,33 @@ export default defineSchedulerProtectedEventHandler(async (event) => {
         `[Scheduler API] Generating occurrences for task ${task.id} (Last Due: ${lastDueDate})`
       );
 
-      // 5. Generate and create occurrences using the service method
-      const newOccurrences = await occurrenceService.generateAndCreateOccurrences(
-        task,
-        horizonDate,
-        'system' // Use 'system' as userId for scheduler-generated occurrences
-      );
-      occurrencesGenerated += newOccurrences.length;
+      // 5. Generate next occurrence. Use generateNextOccurrence (not bounded
+      //    by horizon) so tasks with long intervals (e.g. 6 months) still get
+      //    their next occurrence created even when it's beyond the 3-month window.
+      if (lastOccurrence && task.scheduleConfig.type !== "once") {
+        // For fixed schedules, base date is the due date (preserves cadence).
+        // For variable intervals, base date is the completion/skip date.
+        const baseDate = task.scheduleConfig.type === "variable_interval"
+          ? (lastOccurrence.completedAt || lastOccurrence.skippedAt || lastOccurrence.dueDate)
+          : lastOccurrence.dueDate;
+
+        const newOccurrence = await occurrenceService.generateNextOccurrence(
+          task,
+          baseDate,
+          'system'
+        );
+        if (newOccurrence) {
+          occurrencesGenerated++;
+        }
+      } else {
+        // No existing occurrences — use bulk generation for new tasks
+        const newOccurrences = await occurrenceService.generateAndCreateOccurrences(
+          task,
+          horizonDate,
+          'system'
+        );
+        occurrencesGenerated += newOccurrences.length;
+      }
     }
 
     console.log(
