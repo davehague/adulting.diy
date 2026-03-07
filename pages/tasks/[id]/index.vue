@@ -327,6 +327,14 @@
         @cancel="showCatchUpModal = false"
       />
 
+      <!-- Complete Modal -->
+      <CompleteModal
+        :show="showCompleteModal"
+        :disabled="isSubmittingComplete"
+        @confirm="handleCompleteConfirm"
+        @cancel="handleCompleteCancel"
+      />
+
       <!-- Skip Modal -->
       <SkipModal
         :show="showSkipModal"
@@ -396,6 +404,7 @@ import CatchUpModal from '@/components/tasks/CatchUpModal.vue';
 import TaskTimeline from '@/components/tasks/TaskTimeline.vue';
 import { useToast } from '@/composables/useToast';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
+import CompleteModal from '@/components/occurrences/CompleteModal.vue';
 import OccurrenceEditForm from '@/components/occurrences/OccurrenceEditForm.vue';
 import DeleteModal from '@/components/tasks/DeleteModal.vue';
 import PauseModal from '@/components/tasks/PauseModal.vue';
@@ -443,6 +452,11 @@ const isSubmittingPause = ref(false);
 // Delete modal state
 const showDeleteModal = ref(false);
 const isSubmittingDelete = ref(false);
+
+// Complete modal state
+const showCompleteModal = ref(false);
+const completeTargetId = ref<string | null>(null);
+const isSubmittingComplete = ref(false);
 
 // Skip modal state
 const showSkipModal = ref(false);
@@ -540,16 +554,34 @@ const closeDropdown = () => {
 };
 
 // Occurrence action handlers
-const handleExecute = async (occurrenceId: string) => {
+const handleExecute = (occurrenceId: string) => {
   closeDropdown();
+  completeTargetId.value = occurrenceId;
+  showCompleteModal.value = true;
+};
+
+const handleCompleteConfirm = async (completionDate: string) => {
+  if (!completeTargetId.value) return;
+  isSubmittingComplete.value = true;
   try {
-    await taskStore.executeOccurrence(occurrenceId);
+    await api.post(`/api/occurrences/${completeTargetId.value}/execute`, {
+      executedAt: completionDate,
+    });
+    showCompleteModal.value = false;
+    completeTargetId.value = null;
     await fetchOccurrences();
     taskTimelineRef.value?.fetchHistory();
   } catch (err) {
     console.error("Execute failed:", err);
     toast.error(`Error completing occurrence: ${taskStore.error || 'Unknown error'}`);
+  } finally {
+    isSubmittingComplete.value = false;
   }
+};
+
+const handleCompleteCancel = () => {
+  showCompleteModal.value = false;
+  completeTargetId.value = null;
 };
 
 const handleSkip = (occurrenceId: string) => {
