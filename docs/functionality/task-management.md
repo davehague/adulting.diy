@@ -22,16 +22,22 @@ Tasks support 8 recurrence patterns:
 | **Once** | "Set up the new router" | Single due date, no recurrence |
 | **Fixed Interval** | "Every 2 weeks" | Interval + unit (day/week/month/year) |
 | **Specific Days of Week** | "Every Monday and Friday" | Boolean flags per weekday |
-| **Specific Day of Month** | "15th of each month" | Day number (1-31) |
+| **Specific Day of Month** | "15th of each month" | Day number (1-31), or "last day of month" option |
 | **Specific Weekday of Month** | "First Monday of each month" | Weekday + occurrence (first/second/third/fourth/last) |
 | **Variable Interval** | "30 days after last completion" | Interval + unit, anchored to actual completion date |
 | **Annual Fixed** | "Replace smoke detector batteries every Jan 1" | Month + day of month, recurs on the same calendar date each year regardless of completion |
 | **Annual Variable** | "Annual furnace inspection" | Month + day of month as anchor, but shifts based on actual completion date (like variable interval, but yearly) |
 
-### Fixed vs Variable Intervals
+### Fixed vs Variable Scheduling
 
-- **Fixed interval**: Next occurrence calculated from the original due date, preserving the cadence regardless of when the task was actually completed.
-- **Variable interval**: Next occurrence calculated from the actual completion/skip date, allowing the schedule to "float" based on when work was done. Useful for tasks like "Change air filter every 90 days."
+When creating a task, users first choose a scheduling mode, then a pattern:
+
+- **Fixed schedule**: Next occurrence calculated from the original due date, preserving the cadence regardless of when the task was actually completed. All patterns are available.
+- **Variable schedule**: Next occurrence calculated from the actual completion/skip date, allowing the schedule to "float" based on when work was done. Only interval-based and annual patterns are available (calendar-anchored patterns like specific days of week or day of month are inherently fixed).
+
+### Last Day of Month
+
+For the "Specific Day of Month" pattern, a "Last day of the month" option is available. When enabled, the scheduler resolves to the actual last day of each month (28/29/30/31), so no months are ever skipped. When using a specific day number of 29 or higher, a warning notes that some months will be skipped.
 
 ## End Conditions
 

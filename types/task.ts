@@ -58,6 +58,7 @@ export interface SpecificDaysScheduleConfig extends BaseScheduleConfig {
 export interface SpecificDayOfMonthScheduleConfig extends BaseScheduleConfig {
   type: "specific_day_of_month";
   dayOfMonth: number;
+  lastDayOfMonth?: boolean;
 }
 
 export interface SpecificWeekdayOfMonthScheduleConfig

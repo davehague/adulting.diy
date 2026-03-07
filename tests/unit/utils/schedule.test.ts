@@ -173,6 +173,50 @@ describe('calculateNextDueDate', () => {
       const result = calculateNextDueDate(config, localDate(2024, 1, 1))
       expect(result).toEqual(startOfDay(localDate(2024, 1, 8)))
     })
+
+    it('single day Sunday: finds next Sunday after Wednesday', () => {
+      // Wed Jan 3 2024 → starts from Thu Jan 4, scans → Sun Jan 7
+      const config: SpecificDaysScheduleConfig = {
+        type: 'specific_days_of_week',
+        daysOfWeek: daysOfWeek({ sunday: true }),
+        endCondition: never,
+      }
+      const result = calculateNextDueDate(config, localDate(2024, 1, 3))
+      expect(result).toEqual(startOfDay(localDate(2024, 1, 7)))
+    })
+
+    it('single day Sunday: wraps to next week when completed on Sunday', () => {
+      // Sun Jan 7 2024 → starts from Mon Jan 8, scans → Sun Jan 14
+      const config: SpecificDaysScheduleConfig = {
+        type: 'specific_days_of_week',
+        daysOfWeek: daysOfWeek({ sunday: true }),
+        endCondition: never,
+      }
+      const result = calculateNextDueDate(config, localDate(2024, 1, 7))
+      expect(result).toEqual(startOfDay(localDate(2024, 1, 14)))
+    })
+
+    it('multiple days: completed on Tuesday, next is Saturday', () => {
+      // Tue Jan 2 2024 → starts from Wed Jan 3, scans → Sat Jan 6
+      const config: SpecificDaysScheduleConfig = {
+        type: 'specific_days_of_week',
+        daysOfWeek: daysOfWeek({ tuesday: true, saturday: true }),
+        endCondition: never,
+      }
+      const result = calculateNextDueDate(config, localDate(2024, 1, 2))
+      expect(result).toEqual(startOfDay(localDate(2024, 1, 6)))
+    })
+
+    it('multiple days: completed on Saturday, next is Tuesday (wraps week)', () => {
+      // Sat Jan 6 2024 → starts from Sun Jan 7, scans → Tue Jan 9
+      const config: SpecificDaysScheduleConfig = {
+        type: 'specific_days_of_week',
+        daysOfWeek: daysOfWeek({ tuesday: true, saturday: true }),
+        endCondition: never,
+      }
+      const result = calculateNextDueDate(config, localDate(2024, 1, 6))
+      expect(result).toEqual(startOfDay(localDate(2024, 1, 9)))
+    })
   })
 
   describe('specific_day_of_month', () => {
@@ -219,6 +263,48 @@ describe('calculateNextDueDate', () => {
       expect(result).toEqual(startOfDay(localDate(2024, 2, 29)))
     })
 
+    it('returns the 1st of next month', () => {
+      const config: SpecificDayOfMonthScheduleConfig = {
+        type: 'specific_day_of_month',
+        dayOfMonth: 1,
+        endCondition: never,
+      }
+      const result = calculateNextDueDate(config, localDate(2024, 3, 15))
+      expect(result).toEqual(startOfDay(localDate(2024, 4, 1)))
+    })
+
+    it('day 1 wraps year boundary (Dec → Jan)', () => {
+      const config: SpecificDayOfMonthScheduleConfig = {
+        type: 'specific_day_of_month',
+        dayOfMonth: 1,
+        endCondition: never,
+      }
+      const result = calculateNextDueDate(config, localDate(2024, 12, 15))
+      expect(result).toEqual(startOfDay(localDate(2025, 1, 1)))
+    })
+
+    it('day 30 skips February (non-leap year)', () => {
+      const config: SpecificDayOfMonthScheduleConfig = {
+        type: 'specific_day_of_month',
+        dayOfMonth: 30,
+        endCondition: never,
+      }
+      // Jan 15 2025 → Feb has 28 days, no 30th → Mar 30
+      const result = calculateNextDueDate(config, localDate(2025, 1, 15))
+      expect(result).toEqual(startOfDay(localDate(2025, 3, 30)))
+    })
+
+    it('day 30 skips February (leap year)', () => {
+      const config: SpecificDayOfMonthScheduleConfig = {
+        type: 'specific_day_of_month',
+        dayOfMonth: 30,
+        endCondition: never,
+      }
+      // Jan 15 2024 → Feb has 29 days, no 30th → Mar 30
+      const result = calculateNextDueDate(config, localDate(2024, 1, 15))
+      expect(result).toEqual(startOfDay(localDate(2024, 3, 30)))
+    })
+
     it('returns null for invalid day of month', () => {
       const config: SpecificDayOfMonthScheduleConfig = {
         type: 'specific_day_of_month',
@@ -227,6 +313,63 @@ describe('calculateNextDueDate', () => {
       }
       const result = calculateNextDueDate(config, localDate(2024, 1, 10))
       expect(result).toBeNull()
+    })
+
+    describe('lastDayOfMonth', () => {
+      it('returns last day of February (non-leap year)', () => {
+        const config: SpecificDayOfMonthScheduleConfig = {
+          type: 'specific_day_of_month',
+          dayOfMonth: 1, // ignored when lastDayOfMonth is true
+          lastDayOfMonth: true,
+          endCondition: never,
+        }
+        const result = calculateNextDueDate(config, localDate(2025, 1, 15))
+        expect(result).toEqual(startOfDay(localDate(2025, 2, 28)))
+      })
+
+      it('returns last day of February (leap year)', () => {
+        const config: SpecificDayOfMonthScheduleConfig = {
+          type: 'specific_day_of_month',
+          dayOfMonth: 1,
+          lastDayOfMonth: true,
+          endCondition: never,
+        }
+        const result = calculateNextDueDate(config, localDate(2024, 1, 15))
+        expect(result).toEqual(startOfDay(localDate(2024, 2, 29)))
+      })
+
+      it('returns last day of April (30 days)', () => {
+        const config: SpecificDayOfMonthScheduleConfig = {
+          type: 'specific_day_of_month',
+          dayOfMonth: 1,
+          lastDayOfMonth: true,
+          endCondition: never,
+        }
+        const result = calculateNextDueDate(config, localDate(2024, 3, 15))
+        expect(result).toEqual(startOfDay(localDate(2024, 4, 30)))
+      })
+
+      it('returns last day of December (31 days)', () => {
+        const config: SpecificDayOfMonthScheduleConfig = {
+          type: 'specific_day_of_month',
+          dayOfMonth: 1,
+          lastDayOfMonth: true,
+          endCondition: never,
+        }
+        const result = calculateNextDueDate(config, localDate(2024, 11, 15))
+        expect(result).toEqual(startOfDay(localDate(2024, 12, 31)))
+      })
+
+      it('wraps year boundary', () => {
+        const config: SpecificDayOfMonthScheduleConfig = {
+          type: 'specific_day_of_month',
+          dayOfMonth: 1,
+          lastDayOfMonth: true,
+          endCondition: never,
+        }
+        const result = calculateNextDueDate(config, localDate(2024, 12, 15))
+        expect(result).toEqual(startOfDay(localDate(2025, 1, 31)))
+      })
     })
   })
 
@@ -273,6 +416,61 @@ describe('calculateNextDueDate', () => {
       // Jan 15 2024 → Feb 2024, second Saturday is Feb 10
       const result = calculateNextDueDate(config, localDate(2024, 1, 15))
       expect(result).toEqual(startOfDay(localDate(2024, 2, 10)))
+    })
+
+    it('finds the fourth Thursday of next month', () => {
+      const config: SpecificWeekdayOfMonthScheduleConfig = {
+        type: 'specific_weekday_of_month',
+        weekdayOfMonth: { weekday: 'thursday', occurrence: 'fourth' },
+        endCondition: never,
+      }
+      // Jan 15 2024 → Feb 2024, fourth Thursday is Feb 22
+      const result = calculateNextDueDate(config, localDate(2024, 1, 15))
+      expect(result).toEqual(startOfDay(localDate(2024, 2, 22)))
+    })
+
+    it('finds the first Sunday of next month', () => {
+      const config: SpecificWeekdayOfMonthScheduleConfig = {
+        type: 'specific_weekday_of_month',
+        weekdayOfMonth: { weekday: 'sunday', occurrence: 'first' },
+        endCondition: never,
+      }
+      // Jan 15 2024 → Feb 2024, first Sunday is Feb 4
+      const result = calculateNextDueDate(config, localDate(2024, 1, 15))
+      expect(result).toEqual(startOfDay(localDate(2024, 2, 4)))
+    })
+
+    it('finds the last Sunday of next month', () => {
+      const config: SpecificWeekdayOfMonthScheduleConfig = {
+        type: 'specific_weekday_of_month',
+        weekdayOfMonth: { weekday: 'sunday', occurrence: 'last' },
+        endCondition: never,
+      }
+      // Jan 15 2024 → Feb 2024, last Sunday is Feb 25
+      const result = calculateNextDueDate(config, localDate(2024, 1, 15))
+      expect(result).toEqual(startOfDay(localDate(2024, 2, 25)))
+    })
+
+    it('finds the last Monday of next month', () => {
+      const config: SpecificWeekdayOfMonthScheduleConfig = {
+        type: 'specific_weekday_of_month',
+        weekdayOfMonth: { weekday: 'monday', occurrence: 'last' },
+        endCondition: never,
+      }
+      // Jan 15 2024 → Feb 2024, last Monday is Feb 26
+      const result = calculateNextDueDate(config, localDate(2024, 1, 15))
+      expect(result).toEqual(startOfDay(localDate(2024, 2, 26)))
+    })
+
+    it('finds the fourth Tuesday of a month where 4th is last', () => {
+      const config: SpecificWeekdayOfMonthScheduleConfig = {
+        type: 'specific_weekday_of_month',
+        weekdayOfMonth: { weekday: 'tuesday', occurrence: 'fourth' },
+        endCondition: never,
+      }
+      // Feb 2024: Tuesdays are Feb 6, 13, 20, 27 → fourth = Feb 27
+      const result = calculateNextDueDate(config, localDate(2024, 1, 15))
+      expect(result).toEqual(startOfDay(localDate(2024, 2, 27)))
     })
 
     it('handles year boundary (Dec → Jan)', () => {
@@ -334,6 +532,68 @@ describe('calculateNextDueDate', () => {
       // Due Apr 29, completed Jul 15 → next Apr 29 (next year since Jul 15 > Apr 29)
       const result = calculateNextDueDate(config, localDate(2024, 7, 15))
       expect(result).toEqual(startOfDay(localDate(2025, 4, 29)))
+    })
+
+    it('Jan 1 annual from mid-year rolls to next year', () => {
+      const config: AnnualFixedScheduleConfig = {
+        type: 'annual_fixed',
+        month: 1,
+        dayOfMonth: 1,
+        endCondition: never,
+      }
+      // Completed Jun 15 2024 → Jan 1 2024 has passed → Jan 1 2025
+      const result = calculateNextDueDate(config, localDate(2024, 6, 15))
+      expect(result).toEqual(startOfDay(localDate(2025, 1, 1)))
+    })
+
+    it('Jan 1 annual from December stays in next year', () => {
+      const config: AnnualFixedScheduleConfig = {
+        type: 'annual_fixed',
+        month: 1,
+        dayOfMonth: 1,
+        endCondition: never,
+      }
+      // Completed Dec 15 2024 → Jan 1 2025
+      const result = calculateNextDueDate(config, localDate(2024, 12, 15))
+      expect(result).toEqual(startOfDay(localDate(2025, 1, 1)))
+    })
+
+    it('Feb 29 annual lands on leap year', () => {
+      const config: AnnualFixedScheduleConfig = {
+        type: 'annual_fixed',
+        month: 2,
+        dayOfMonth: 29,
+        endCondition: never,
+      }
+      // Completed Jan 1 2024 → Feb 29 2024 (leap year, still in future)
+      const result = calculateNextDueDate(config, localDate(2024, 1, 1))
+      expect(result).toEqual(startOfDay(localDate(2024, 2, 29)))
+    })
+
+    it('Feb 29 annual in non-leap year: JS Date rolls to Mar 1', () => {
+      const config: AnnualFixedScheduleConfig = {
+        type: 'annual_fixed',
+        month: 2,
+        dayOfMonth: 29,
+        endCondition: never,
+      }
+      // Completed Mar 1 2024 → next Feb 29... but 2025 is not a leap year
+      // JS Date(2025, 1, 29) = Mar 1 2025
+      const result = calculateNextDueDate(config, localDate(2024, 3, 1))
+      // This documents current behavior: it becomes Mar 1 in non-leap years
+      expect(result).toEqual(startOfDay(localDate(2025, 3, 1)))
+    })
+
+    it('Dec 31 annual (last day of year)', () => {
+      const config: AnnualFixedScheduleConfig = {
+        type: 'annual_fixed',
+        month: 12,
+        dayOfMonth: 31,
+        endCondition: never,
+      }
+      // Completed Jan 15 2024 → Dec 31 2024
+      const result = calculateNextDueDate(config, localDate(2024, 1, 15))
+      expect(result).toEqual(startOfDay(localDate(2024, 12, 31)))
     })
   })
 
@@ -613,6 +873,24 @@ describe('generateFutureOccurrences', () => {
       expect(result[0]).toEqual(startOfDay(localDate(2024, 11, 15)))
       expect(result[3]).toEqual(startOfDay(localDate(2025, 2, 15)))
     })
+
+    it('generates yearly occurrences up to horizon', () => {
+      const config: FixedIntervalScheduleConfig = {
+        type: 'fixed_interval',
+        interval: 1,
+        intervalUnit: 'year',
+        endCondition: never,
+      }
+      const lastCompleted = localDate(2024, 6, 1)
+      const horizon = localDate(2027, 12, 31)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // Jun 1 2025, Jun 1 2026, Jun 1 2027
+      expect(result).toHaveLength(3)
+      expect(result[0]).toEqual(startOfDay(localDate(2025, 6, 1)))
+      expect(result[1]).toEqual(startOfDay(localDate(2026, 6, 1)))
+      expect(result[2]).toEqual(startOfDay(localDate(2027, 6, 1)))
+    })
   })
 
   describe('specific_days_of_week schedule', () => {
@@ -887,6 +1165,58 @@ describe('generateFutureOccurrences', () => {
       expect(result).toHaveLength(2)
     })
 
+    it('stops at times limit for single-day specific_days_of_week (Sunday)', () => {
+      const config: SpecificDaysScheduleConfig = {
+        type: 'specific_days_of_week',
+        daysOfWeek: daysOfWeek({ sunday: true }),
+        endCondition: { type: 'times', times: 4 },
+      }
+      const lastCompleted = localDate(2024, 1, 1) // Mon
+      const horizon = localDate(2024, 12, 31)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // Sun Jan 7, Sun Jan 14, Sun Jan 21 — count=4 on next iteration triggers stop
+      expect(result).toHaveLength(3)
+      expect(result[0]).toEqual(startOfDay(localDate(2024, 1, 7)))
+      expect(result[1]).toEqual(startOfDay(localDate(2024, 1, 14)))
+      expect(result[2]).toEqual(startOfDay(localDate(2024, 1, 21)))
+    })
+
+    it('stops at date end condition for single-day specific_days_of_week (Monday)', () => {
+      const config: SpecificDaysScheduleConfig = {
+        type: 'specific_days_of_week',
+        daysOfWeek: daysOfWeek({ monday: true }),
+        endCondition: { type: 'date', date: localDate(2024, 1, 20) },
+      }
+      const lastCompleted = localDate(2024, 1, 1) // Mon
+      const horizon = localDate(2024, 12, 31)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // Mon Jan 8, Mon Jan 15 — Mon Jan 22 is after end date
+      expect(result).toHaveLength(2)
+      expect(result[0]).toEqual(startOfDay(localDate(2024, 1, 8)))
+      expect(result[1]).toEqual(startOfDay(localDate(2024, 1, 15)))
+    })
+
+    it('stops at times limit for Tue+Sat with existing count', () => {
+      const config: SpecificDaysScheduleConfig = {
+        type: 'specific_days_of_week',
+        daysOfWeek: daysOfWeek({ tuesday: true, saturday: true }),
+        endCondition: { type: 'times', times: 5 },
+      }
+      const lastCompleted = localDate(2024, 1, 1) // Mon
+      const horizon = localDate(2024, 12, 31)
+      // Already have 2 existing → count starts at 2
+      // iter 1: Tue Jan 2, count=3, check(3>=5)→false, push
+      // iter 2: Sat Jan 6, count=4, check(4>=5)→false, push
+      // iter 3: Tue Jan 9, count=5, check(5>=5)→true, BREAK
+      const result = generateFutureOccurrences(config, horizon, 2, lastCompleted)
+
+      expect(result).toHaveLength(2)
+      expect(result[0]).toEqual(startOfDay(localDate(2024, 1, 2)))
+      expect(result[1]).toEqual(startOfDay(localDate(2024, 1, 6)))
+    })
+
     it('stops at times limit for specific_day_of_month', () => {
       const config: SpecificDayOfMonthScheduleConfig = {
         type: 'specific_day_of_month',
@@ -953,6 +1283,130 @@ describe('generateFutureOccurrences', () => {
       })
       expect(result.length).toBeGreaterThanOrEqual(3)
     })
+
+    it('generates on the 1st of each month', () => {
+      const config: SpecificDayOfMonthScheduleConfig = {
+        type: 'specific_day_of_month',
+        dayOfMonth: 1,
+        endCondition: never,
+      }
+      const lastCompleted = localDate(2024, 10, 15)
+      const horizon = localDate(2025, 2, 28)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // Nov 1, Dec 1, Jan 1, Feb 1
+      expect(result).toHaveLength(4)
+      expect(result[0]).toEqual(startOfDay(localDate(2024, 11, 1)))
+      expect(result[1]).toEqual(startOfDay(localDate(2024, 12, 1)))
+      expect(result[2]).toEqual(startOfDay(localDate(2025, 1, 1)))
+      expect(result[3]).toEqual(startOfDay(localDate(2025, 2, 1)))
+    })
+
+    it('generates day 30, skipping February', () => {
+      const config: SpecificDayOfMonthScheduleConfig = {
+        type: 'specific_day_of_month',
+        dayOfMonth: 30,
+        endCondition: never,
+      }
+      const lastCompleted = localDate(2025, 1, 1)
+      const horizon = localDate(2025, 6, 30)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // Feb has 28 days → skip. Mar 30, Apr 30, May 30, Jun 30
+      expect(result).toHaveLength(4)
+      expect(result[0]).toEqual(startOfDay(localDate(2025, 3, 30)))
+      expect(result[1]).toEqual(startOfDay(localDate(2025, 4, 30)))
+      expect(result[2]).toEqual(startOfDay(localDate(2025, 5, 30)))
+      expect(result[3]).toEqual(startOfDay(localDate(2025, 6, 30)))
+    })
+
+    it('day 1 with date end condition', () => {
+      const config: SpecificDayOfMonthScheduleConfig = {
+        type: 'specific_day_of_month',
+        dayOfMonth: 1,
+        endCondition: { type: 'date', date: localDate(2024, 4, 1) },
+      }
+      const lastCompleted = localDate(2024, 1, 15)
+      const horizon = localDate(2024, 12, 31)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // Feb 1, Mar 1 — Apr 1 is ON end date → excluded
+      expect(result).toHaveLength(2)
+      expect(result[0]).toEqual(startOfDay(localDate(2024, 2, 1)))
+      expect(result[1]).toEqual(startOfDay(localDate(2024, 3, 1)))
+    })
+
+    it('lastDayOfMonth generates every month (no skipping)', () => {
+      const config: SpecificDayOfMonthScheduleConfig = {
+        type: 'specific_day_of_month',
+        dayOfMonth: 1,
+        lastDayOfMonth: true,
+        endCondition: never,
+      }
+      const lastCompleted = localDate(2025, 1, 1)
+      const horizon = localDate(2025, 6, 30)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // Feb 28, Mar 31, Apr 30, May 31, Jun 30
+      expect(result).toHaveLength(5)
+      expect(result[0]).toEqual(startOfDay(localDate(2025, 2, 28)))
+      expect(result[1]).toEqual(startOfDay(localDate(2025, 3, 31)))
+      expect(result[2]).toEqual(startOfDay(localDate(2025, 4, 30)))
+      expect(result[3]).toEqual(startOfDay(localDate(2025, 5, 31)))
+      expect(result[4]).toEqual(startOfDay(localDate(2025, 6, 30)))
+    })
+
+    it('lastDayOfMonth with date end condition', () => {
+      const config: SpecificDayOfMonthScheduleConfig = {
+        type: 'specific_day_of_month',
+        dayOfMonth: 1,
+        lastDayOfMonth: true,
+        endCondition: { type: 'date', date: localDate(2025, 4, 30) },
+      }
+      const lastCompleted = localDate(2025, 1, 1)
+      const horizon = localDate(2025, 12, 31)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // Feb 28, Mar 31 — Apr 30 is ON end date → excluded
+      expect(result).toHaveLength(2)
+      expect(result[0]).toEqual(startOfDay(localDate(2025, 2, 28)))
+      expect(result[1]).toEqual(startOfDay(localDate(2025, 3, 31)))
+    })
+
+    it('lastDayOfMonth with times end condition', () => {
+      const config: SpecificDayOfMonthScheduleConfig = {
+        type: 'specific_day_of_month',
+        dayOfMonth: 1,
+        lastDayOfMonth: true,
+        endCondition: { type: 'times', times: 4 },
+      }
+      const lastCompleted = localDate(2025, 1, 1)
+      const horizon = localDate(2025, 12, 31)
+      // Feb 28 (count=1), Mar 31 (count=2), Apr 30 (count=3), May 31 count=4→stop
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      expect(result).toHaveLength(3)
+      expect(result[0]).toEqual(startOfDay(localDate(2025, 2, 28)))
+      expect(result[1]).toEqual(startOfDay(localDate(2025, 3, 31)))
+      expect(result[2]).toEqual(startOfDay(localDate(2025, 4, 30)))
+    })
+
+    it('day 30 with times end condition skipping February', () => {
+      const config: SpecificDayOfMonthScheduleConfig = {
+        type: 'specific_day_of_month',
+        dayOfMonth: 30,
+        endCondition: { type: 'times', times: 4 },
+      }
+      const lastCompleted = localDate(2025, 1, 1)
+      const horizon = localDate(2025, 12, 31)
+      // Feb skipped. Mar 30 (count=1), Apr 30 (count=2), May 30 (count=3), Jun 30 count=4→stop
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      expect(result).toHaveLength(3)
+      expect(result[0]).toEqual(startOfDay(localDate(2025, 3, 30)))
+      expect(result[1]).toEqual(startOfDay(localDate(2025, 4, 30)))
+      expect(result[2]).toEqual(startOfDay(localDate(2025, 5, 30)))
+    })
   })
 
   describe('specific_weekday_of_month in generation loop', () => {
@@ -972,6 +1426,105 @@ describe('generateFutureOccurrences', () => {
       expect(result[0]).toEqual(startOfDay(localDate(2024, 2, 5)))
       expect(result[1]).toEqual(startOfDay(localDate(2024, 3, 4)))
       expect(result[2]).toEqual(startOfDay(localDate(2024, 4, 1)))
+    })
+
+    it('generates last Friday of each month', () => {
+      const config: SpecificWeekdayOfMonthScheduleConfig = {
+        type: 'specific_weekday_of_month',
+        weekdayOfMonth: { weekday: 'friday', occurrence: 'last' },
+        endCondition: never,
+      }
+      const lastCompleted = localDate(2024, 1, 15)
+      const horizon = localDate(2024, 4, 30)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // Last Friday of: Feb = Feb 23, Mar = Mar 29, Apr = Apr 26
+      expect(result).toHaveLength(3)
+      expect(result[0]).toEqual(startOfDay(localDate(2024, 2, 23)))
+      expect(result[1]).toEqual(startOfDay(localDate(2024, 3, 29)))
+      expect(result[2]).toEqual(startOfDay(localDate(2024, 4, 26)))
+    })
+
+    it('generates fourth Thursday of each month', () => {
+      const config: SpecificWeekdayOfMonthScheduleConfig = {
+        type: 'specific_weekday_of_month',
+        weekdayOfMonth: { weekday: 'thursday', occurrence: 'fourth' },
+        endCondition: never,
+      }
+      const lastCompleted = localDate(2024, 1, 15)
+      const horizon = localDate(2024, 4, 30)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // Fourth Thursday of: Feb = Feb 22, Mar = Mar 28, Apr = Apr 25
+      expect(result).toHaveLength(3)
+      expect(result[0]).toEqual(startOfDay(localDate(2024, 2, 22)))
+      expect(result[1]).toEqual(startOfDay(localDate(2024, 3, 28)))
+      expect(result[2]).toEqual(startOfDay(localDate(2024, 4, 25)))
+    })
+
+    it('generates first Sunday of each month', () => {
+      const config: SpecificWeekdayOfMonthScheduleConfig = {
+        type: 'specific_weekday_of_month',
+        weekdayOfMonth: { weekday: 'sunday', occurrence: 'first' },
+        endCondition: never,
+      }
+      const lastCompleted = localDate(2024, 1, 15)
+      const horizon = localDate(2024, 4, 30)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // First Sunday of: Feb = Feb 4, Mar = Mar 3, Apr = Apr 7
+      expect(result).toHaveLength(3)
+      expect(result[0]).toEqual(startOfDay(localDate(2024, 2, 4)))
+      expect(result[1]).toEqual(startOfDay(localDate(2024, 3, 3)))
+      expect(result[2]).toEqual(startOfDay(localDate(2024, 4, 7)))
+    })
+
+    it('stops at times limit for second Saturday', () => {
+      const config: SpecificWeekdayOfMonthScheduleConfig = {
+        type: 'specific_weekday_of_month',
+        weekdayOfMonth: { weekday: 'saturday', occurrence: 'second' },
+        endCondition: { type: 'times', times: 4 },
+      }
+      const lastCompleted = localDate(2024, 1, 15)
+      const horizon = localDate(2024, 12, 31)
+      // Feb 10 (count=1), Mar 9 (count=2), Apr 13 (count=3), May 11 count=4→stop
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      expect(result).toHaveLength(3)
+      expect(result[0]).toEqual(startOfDay(localDate(2024, 2, 10)))
+      expect(result[1]).toEqual(startOfDay(localDate(2024, 3, 9)))
+      expect(result[2]).toEqual(startOfDay(localDate(2024, 4, 13)))
+    })
+
+    it('stops at times limit for last Sunday with existing count', () => {
+      const config: SpecificWeekdayOfMonthScheduleConfig = {
+        type: 'specific_weekday_of_month',
+        weekdayOfMonth: { weekday: 'sunday', occurrence: 'last' },
+        endCondition: { type: 'times', times: 5 },
+      }
+      const lastCompleted = localDate(2024, 1, 15)
+      const horizon = localDate(2024, 12, 31)
+      // Already have 3 existing → count starts at 3
+      // Feb 25 (count=4), Mar 31 count=5→stop
+      const result = generateFutureOccurrences(config, horizon, 3, lastCompleted)
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toEqual(startOfDay(localDate(2024, 2, 25)))
+    })
+
+    it('stops at date end condition for fourth Thursday', () => {
+      const config: SpecificWeekdayOfMonthScheduleConfig = {
+        type: 'specific_weekday_of_month',
+        weekdayOfMonth: { weekday: 'thursday', occurrence: 'fourth' },
+        endCondition: { type: 'date', date: localDate(2024, 3, 28) },
+      }
+      const lastCompleted = localDate(2024, 1, 15)
+      const horizon = localDate(2024, 12, 31)
+      // Feb 22 — Mar 28 is ON end date → excluded
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toEqual(startOfDay(localDate(2024, 2, 22)))
     })
   })
 
@@ -993,6 +1546,76 @@ describe('generateFutureOccurrences', () => {
       expect(result[1]).toEqual(startOfDay(localDate(2025, 4, 29)))
       expect(result[2]).toEqual(startOfDay(localDate(2026, 4, 29)))
       expect(result[3]).toEqual(startOfDay(localDate(2027, 4, 29)))
+    })
+
+    it('generates Jan 1 annually across years', () => {
+      const config: AnnualFixedScheduleConfig = {
+        type: 'annual_fixed',
+        month: 1,
+        dayOfMonth: 1,
+        endCondition: never,
+      }
+      const lastCompleted = localDate(2024, 6, 1)
+      const horizon = localDate(2027, 6, 30)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // Jan 1 2025, Jan 1 2026, Jan 1 2027
+      expect(result).toHaveLength(3)
+      expect(result[0]).toEqual(startOfDay(localDate(2025, 1, 1)))
+      expect(result[1]).toEqual(startOfDay(localDate(2026, 1, 1)))
+      expect(result[2]).toEqual(startOfDay(localDate(2027, 1, 1)))
+    })
+
+    it('generates Dec 31 annually', () => {
+      const config: AnnualFixedScheduleConfig = {
+        type: 'annual_fixed',
+        month: 12,
+        dayOfMonth: 31,
+        endCondition: never,
+      }
+      const lastCompleted = localDate(2024, 1, 1)
+      const horizon = localDate(2026, 12, 31)
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      // Dec 31 2024, Dec 31 2025, Dec 31 2026
+      expect(result).toHaveLength(3)
+      expect(result[0]).toEqual(startOfDay(localDate(2024, 12, 31)))
+      expect(result[1]).toEqual(startOfDay(localDate(2025, 12, 31)))
+      expect(result[2]).toEqual(startOfDay(localDate(2026, 12, 31)))
+    })
+
+    it('times end condition with existing count', () => {
+      const config: AnnualFixedScheduleConfig = {
+        type: 'annual_fixed',
+        month: 7,
+        dayOfMonth: 4,
+        endCondition: { type: 'times', times: 5 },
+      }
+      const lastCompleted = localDate(2024, 1, 1)
+      const horizon = localDate(2030, 12, 31)
+      // Already have 3 existing → count starts at 3
+      // Jul 4 2024 (count=4), Jul 4 2025 count=5→stop
+      const result = generateFutureOccurrences(config, horizon, 3, lastCompleted)
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toEqual(startOfDay(localDate(2024, 7, 4)))
+    })
+
+    it('date end condition for Jan 1', () => {
+      const config: AnnualFixedScheduleConfig = {
+        type: 'annual_fixed',
+        month: 1,
+        dayOfMonth: 1,
+        endCondition: { type: 'date', date: localDate(2027, 1, 1) },
+      }
+      const lastCompleted = localDate(2024, 6, 1)
+      const horizon = localDate(2030, 12, 31)
+      // Jan 1 2025, Jan 1 2026 — Jan 1 2027 is ON end date → excluded
+      const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
+
+      expect(result).toHaveLength(2)
+      expect(result[0]).toEqual(startOfDay(localDate(2025, 1, 1)))
+      expect(result[1]).toEqual(startOfDay(localDate(2026, 1, 1)))
     })
   })
 

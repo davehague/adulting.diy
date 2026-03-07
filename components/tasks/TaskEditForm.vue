@@ -40,20 +40,61 @@
     <div class="border rounded-lg p-4 bg-stone-50">
       <h3 class="text-lg font-medium text-stone-700 mb-4 font-heading">Schedule Configuration</h3>
 
-      <!-- Schedule Type -->
+      <!-- Schedule Mode -->
       <div class="mb-4">
-        <label for="scheduleType" class="block text-sm font-medium text-stone-700">Schedule Type*</label>
+        <label class="block text-sm font-medium text-stone-700 mb-2">Schedule Mode*</label>
+        <div class="flex gap-4">
+          <label class="inline-flex items-center cursor-pointer">
+            <input type="radio" v-model="scheduleMode" value="once"
+              class="text-amber-700 focus:ring-amber-500" />
+            <span class="ml-2 text-sm">One Time</span>
+          </label>
+          <label class="inline-flex items-center cursor-pointer">
+            <input type="radio" v-model="scheduleMode" value="fixed"
+              class="text-amber-700 focus:ring-amber-500" />
+            <span class="ml-2 text-sm">Fixed Schedule</span>
+          </label>
+          <label class="inline-flex items-center cursor-pointer">
+            <input type="radio" v-model="scheduleMode" value="variable"
+              class="text-amber-700 focus:ring-amber-500" />
+            <span class="ml-2 text-sm">Variable Schedule</span>
+          </label>
+        </div>
+        <p class="mt-1 text-xs text-stone-500">
+          <template v-if="scheduleMode === 'once'">Task occurs only once.</template>
+          <template v-else-if="scheduleMode === 'fixed'">Next occurrence follows the calendar pattern, regardless of when completed.</template>
+          <template v-else>Next occurrence is based on when you actually complete it.</template>
+        </p>
+      </div>
+
+      <!-- Schedule Type (Fixed options) -->
+      <div v-if="scheduleMode === 'fixed'" class="mb-4">
+        <label for="scheduleType" class="block text-sm font-medium text-stone-700">Pattern*</label>
         <select id="scheduleType" v-model="formData.scheduleConfig.type" required
           class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
-          <option value="once">One Time</option>
-          <option value="fixed_interval">Fixed Interval</option>
+          <option value="fixed_interval">Every X Days/Weeks/Months</option>
           <option value="specific_days_of_week">Specific Days of Week</option>
           <option value="specific_day_of_month">Specific Day of Month</option>
           <option value="specific_weekday_of_month">Specific Weekday of Month</option>
-          <option value="variable_interval">Variable Interval (After Completion)</option>
-          <option value="annual_fixed">Annual (Fixed Date)</option>
-          <option value="annual_variable">Annual (After Completion)</option>
+          <option value="annual_fixed">Annual</option>
         </select>
+      </div>
+
+      <!-- Schedule Type (Variable options) -->
+      <div v-if="scheduleMode === 'variable'" class="mb-4">
+        <label for="scheduleType" class="block text-sm font-medium text-stone-700">Pattern*</label>
+        <select id="scheduleType" v-model="formData.scheduleConfig.type" required
+          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
+          <option value="variable_interval">Every X Days/Weeks/Months</option>
+          <option value="annual_variable">Annual</option>
+        </select>
+      </div>
+
+      <!-- Due Date for 'Once' Type -->
+      <div v-if="formData.scheduleConfig.type === 'once'" class="mb-4">
+        <label for="onceDueDate" class="block text-sm font-medium text-stone-700">Due Date*</label>
+        <input id="onceDueDate" v-model="onceDueDateString" type="date" required
+          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
       </div>
 
       <!-- Fixed Interval Options -->
@@ -91,11 +132,21 @@
       </div>
 
       <!-- Specific Day of Month Options -->
-      <div v-if="formData.scheduleConfig.type === 'specific_day_of_month'" class="mb-4">
-        <label for="dayOfMonth" class="block text-sm font-medium text-stone-700">Day of Month*</label>
-        <input id="dayOfMonth" v-model.number="formData.scheduleConfig.dayOfMonth" type="number" min="1" max="31"
-          required
-          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
+      <div v-if="formData.scheduleConfig.type === 'specific_day_of_month'" class="mb-4 space-y-3">
+        <label class="inline-flex items-center cursor-pointer">
+          <input type="checkbox" v-model="(formData.scheduleConfig as SpecificDayOfMonthScheduleConfig).lastDayOfMonth"
+            class="rounded border-stone-300 text-amber-700 shadow-sm focus:border-amber-300 focus:ring focus:ring-amber-200 focus:ring-opacity-50" />
+          <span class="ml-2 text-sm font-medium text-stone-700">Last day of the month</span>
+        </label>
+        <div v-if="!(formData.scheduleConfig as SpecificDayOfMonthScheduleConfig).lastDayOfMonth">
+          <label for="dayOfMonth" class="block text-sm font-medium text-stone-700">Day of Month*</label>
+          <input id="dayOfMonth" v-model.number="formData.scheduleConfig.dayOfMonth" type="number" min="1" max="31"
+            required
+            class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
+          <p v-if="formData.scheduleConfig.dayOfMonth >= 29" class="mt-1 text-xs text-amber-600">
+            Day {{ formData.scheduleConfig.dayOfMonth }} will skip months that don't have this day. Consider using "Last day of the month" instead.
+          </p>
+        </div>
       </div>
 
       <!-- Specific Weekday of Month Options -->
@@ -160,29 +211,30 @@
         </div>
       </div>
 
-      <!-- End Condition -->
-      <div class="mb-4">
-        <label for="endConditionType" class="block text-sm font-medium text-stone-700">End Condition*</label>
-        <select id="endConditionType" v-model="formData.scheduleConfig.endCondition.type" required
-          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
-          <option value="never">Never (Run indefinitely)</option>
-          <option value="times">After specified number of times</option>
-          <option value="date">Until specified date</option>
-        </select>
-      </div>
+      <!-- End Condition (not shown for one-time tasks) -->
+      <template v-if="scheduleMode !== 'once'">
+        <div class="mb-4">
+          <label for="endConditionType" class="block text-sm font-medium text-stone-700">End Condition*</label>
+          <select id="endConditionType" v-model="formData.scheduleConfig.endCondition.type" required
+            class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500">
+            <option value="never">Never (Run indefinitely)</option>
+            <option value="times">After specified number of times</option>
+            <option value="date">Until specified date</option>
+          </select>
+        </div>
 
-      <!-- End Condition Options -->
-      <div v-if="formData.scheduleConfig.endCondition.type === 'times'" class="mb-4">
-        <label for="endTimes" class="block text-sm font-medium text-stone-700">Number of Times*</label>
-        <input id="endTimes" v-model.number="formData.scheduleConfig.endCondition.times" type="number" min="1" required
-          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
-      </div>
+        <div v-if="formData.scheduleConfig.endCondition.type === 'times'" class="mb-4">
+          <label for="endTimes" class="block text-sm font-medium text-stone-700">Number of Times*</label>
+          <input id="endTimes" v-model.number="formData.scheduleConfig.endCondition.times" type="number" min="1" required
+            class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
+        </div>
 
-      <div v-if="formData.scheduleConfig.endCondition.type === 'date'" class="mb-4">
-        <label for="endDate" class="block text-sm font-medium text-stone-700">End Date*</label>
-        <input id="endDate" v-model="endDateString" type="date" required
-          class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
-      </div>
+        <div v-if="formData.scheduleConfig.endCondition.type === 'date'" class="mb-4">
+          <label for="endDate" class="block text-sm font-medium text-stone-700">End Date*</label>
+          <input id="endDate" v-model="endDateString" type="date" required
+            class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500" />
+        </div>
+      </template>
     </div>
 
     <!-- Reminder Configuration -->
@@ -253,7 +305,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watchEffect, computed } from 'vue';
+import { ref, reactive, onMounted, watchEffect, computed, watch } from 'vue';
 import { useApi } from '@/utils/api';
 import { Check, X, Plus } from 'lucide-vue-next';
 import type {
@@ -323,6 +375,62 @@ const formData = reactive({
   defaultAssigneeIds: [] as string[]
 });
 
+// Schedule mode: derives initial value from scheduleConfig.type
+const fixedTypes = ['fixed_interval', 'specific_days_of_week', 'specific_day_of_month', 'specific_weekday_of_month', 'annual_fixed'] as const;
+const variableTypes = ['variable_interval', 'annual_variable'] as const;
+
+const getScheduleMode = (type: string) => {
+  if (type === 'once') return 'once';
+  if ((variableTypes as readonly string[]).includes(type)) return 'variable';
+  return 'fixed';
+};
+
+const scheduleMode = ref<'once' | 'fixed' | 'variable'>(getScheduleMode(formData.scheduleConfig.type));
+
+// When schedule mode changes, set a sensible default type (type watcher handles initialization)
+watch(scheduleMode, (newMode) => {
+  const currentType = formData.scheduleConfig.type;
+  if (newMode === 'once' && currentType !== 'once') {
+    formData.scheduleConfig.type = 'once';
+  } else if (newMode === 'fixed' && !(fixedTypes as readonly string[]).includes(currentType)) {
+    formData.scheduleConfig.type = 'fixed_interval';
+  } else if (newMode === 'variable' && !(variableTypes as readonly string[]).includes(currentType)) {
+    formData.scheduleConfig.type = 'variable_interval';
+  }
+});
+
+// When schedule type changes within a mode, initialize required properties
+watch(() => formData.scheduleConfig.type, (newType, oldType) => {
+  if (newType === oldType) return;
+  const endCondition = formData.scheduleConfig.endCondition;
+  switch (newType) {
+    case 'once':
+      formData.scheduleConfig = { type: 'once', dueDate: new Date(), endCondition } as ScheduleConfig;
+      break;
+    case 'fixed_interval':
+      formData.scheduleConfig = { type: 'fixed_interval', interval: 1, intervalUnit: 'week', endCondition } as ScheduleConfig;
+      break;
+    case 'specific_days_of_week':
+      formData.scheduleConfig = { type: 'specific_days_of_week', daysOfWeek: { monday: false, tuesday: false, wednesday: false, thursday: false, friday: false, saturday: false, sunday: false }, endCondition } as ScheduleConfig;
+      break;
+    case 'specific_day_of_month':
+      formData.scheduleConfig = { type: 'specific_day_of_month', dayOfMonth: 1, endCondition } as ScheduleConfig;
+      break;
+    case 'specific_weekday_of_month':
+      formData.scheduleConfig = { type: 'specific_weekday_of_month', weekdayOfMonth: { weekday: 'monday', occurrence: 'first' }, endCondition } as ScheduleConfig;
+      break;
+    case 'variable_interval':
+      formData.scheduleConfig = { type: 'variable_interval', variableInterval: { interval: 1, unit: 'week' }, endCondition } as ScheduleConfig;
+      break;
+    case 'annual_fixed':
+      formData.scheduleConfig = { type: 'annual_fixed', month: 1, dayOfMonth: 1, endCondition } as ScheduleConfig;
+      break;
+    case 'annual_variable':
+      formData.scheduleConfig = { type: 'annual_variable', month: 1, dayOfMonth: 1, endCondition } as ScheduleConfig;
+      break;
+  }
+});
+
 // Days of week options for form
 const daysOfWeek = [
   { value: 'monday', label: 'Monday' },
@@ -349,6 +457,20 @@ const months = [
   { value: 11, label: 'November' },
   { value: 12, label: 'December' }
 ];
+
+// Computed property for once due date input binding
+const onceDueDateString = computed({
+  get: () => {
+    if (formData.scheduleConfig.type !== 'once') return '';
+    const date = (formData.scheduleConfig as OnceScheduleConfig).dueDate;
+    return date instanceof Date ? date.toISOString().split('T')[0] : '';
+  },
+  set: (value) => {
+    if (formData.scheduleConfig.type === 'once') {
+      (formData.scheduleConfig as OnceScheduleConfig).dueDate = value ? new Date(value + 'T00:00:00') : new Date();
+    }
+  }
+});
 
 // Computed property for date input binding
 const endDateString = computed({
@@ -408,6 +530,7 @@ const populateFormFromTask = () => {
     }
     else if (sc.type === 'specific_day_of_month') {
       (formData.scheduleConfig as SpecificDayOfMonthScheduleConfig).dayOfMonth = sc.dayOfMonth || 1;
+      (formData.scheduleConfig as SpecificDayOfMonthScheduleConfig).lastDayOfMonth = sc.lastDayOfMonth || false;
     }
     else if (sc.type === 'specific_weekday_of_month' && sc.weekdayOfMonth) {
       (formData.scheduleConfig as SpecificWeekdayOfMonthScheduleConfig).weekdayOfMonth = { ...sc.weekdayOfMonth };
@@ -438,6 +561,9 @@ const populateFormFromTask = () => {
       }
     }
   }
+
+  // Set schedule mode from loaded type
+  scheduleMode.value = getScheduleMode(formData.scheduleConfig.type);
 
   // Handle reminderConfig
   if (props.task.reminderConfig?.reminders) {
@@ -483,7 +609,7 @@ const validateForm = () => {
     }
   }
   else if (sc.type === 'specific_day_of_month') {
-    if (!sc.dayOfMonth || sc.dayOfMonth < 1 || sc.dayOfMonth > 31) {
+    if (!(sc as SpecificDayOfMonthScheduleConfig).lastDayOfMonth && (!sc.dayOfMonth || sc.dayOfMonth < 1 || sc.dayOfMonth > 31)) {
       validationError.value = 'Day of month must be between 1 and 31.';
       return false;
     }

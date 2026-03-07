@@ -33,7 +33,7 @@ All patterns are implemented in `calculateNextDueDate()` in `server/utils/schedu
 | Once | `once` | `dueDate` | Single occurrence only |
 | Fixed Interval | `fixed_interval` | `interval`, `intervalUnit` | Last due date + interval |
 | Specific Days of Week | `specific_days_of_week` | `daysOfWeek` (boolean map) | Next matching weekday |
-| Specific Day of Month | `specific_day_of_month` | `dayOfMonth` (1-31) | Target day of next month |
+| Specific Day of Month | `specific_day_of_month` | `dayOfMonth` (1-31), `lastDayOfMonth?` (boolean) | Target day of next month; when `lastDayOfMonth` is true, uses `getDaysInMonth()` so every month is included |
 | Specific Weekday of Month | `specific_weekday_of_month` | `weekday`, `occurrence` | Target weekday occurrence of next month |
 | Variable Interval | `variable_interval` | `variableInterval.interval`, `.unit` | Completion date + interval |
 | Annual Fixed | `annual_fixed` | `month` (1-12), `dayOfMonth` (1-31) | Same calendar date each year regardless of completion |

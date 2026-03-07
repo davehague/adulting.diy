@@ -97,17 +97,23 @@ export function calculateNextDueDate(
     case "specific_day_of_month": {
       // Schedule for a specific day of each month
       const config_ = config as SpecificDayOfMonthScheduleConfig;
-      const { dayOfMonth } = config_;
-      
+      const { dayOfMonth, lastDayOfMonth } = config_;
+
+      // Start from next month (or month after last completion)
+      const baseDate = lastCompletedDate ? startOfDay(lastCompletedDate) : today;
+      let nextMonth = addMonths(baseDate, 1);
+
+      if (lastDayOfMonth) {
+        // Last day of month: every month has one, no skipping needed
+        const daysInMonth = getDaysInMonth(nextMonth);
+        return setDate(startOfMonth(nextMonth), daysInMonth);
+      }
+
       if (dayOfMonth < 1 || dayOfMonth > 31) {
         console.error(`Invalid day of month: ${dayOfMonth}`);
         return null;
       }
-      
-      // Start from next month (or month after last completion)
-      const baseDate = lastCompletedDate ? startOfDay(lastCompletedDate) : today;
-      let nextMonth = addMonths(baseDate, 1);
-      
+
       // Handle months that don't have the target day (e.g., Feb 30th)
       while (true) {
         const daysInMonth = getDaysInMonth(nextMonth);
@@ -116,7 +122,7 @@ export function calculateNextDueDate(
         }
         // Skip this month and try the next one
         nextMonth = addMonths(nextMonth, 1);
-        
+
         // Safety check to prevent infinite loop
         if (nextMonth.getFullYear() > new Date().getFullYear() + 10) {
           console.error("Could not find valid day of month within reasonable timeframe");

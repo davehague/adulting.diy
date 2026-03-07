@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-03-07
+
+### Schedule Configuration UX Overhaul
+- Replaced the flat 8-option schedule type dropdown with a two-step selection: first choose a mode (One Time, Fixed Schedule, Variable Schedule) via radio buttons, then pick a pattern from a filtered dropdown
+- Added contextual helper text explaining each mode (e.g., "Next occurrence follows the calendar pattern, regardless of when completed")
+- Consistent pattern labels across fixed and variable modes (removed redundant "After Completion" / "Fixed Date" suffixes)
+- End condition (never/times/date) is now hidden for one-time tasks since it doesn't apply
+- Added due date field for one-time tasks on the edit form (was previously missing)
+
+### Last Day of Month Scheduling
+- Added "Last day of the month" checkbox option for the Specific Day of Month pattern
+- When checked, the day number input is hidden and the scheduler uses the actual last day of each month (28/29/30/31)
+- When unchecked with day 29/30/31 selected, a warning explains that some months will be skipped and suggests using "Last day of the month" instead
+
+### Schedule Test Coverage
+- Added comprehensive test coverage for all schedule patterns with all end conditions (never, times, date)
+- Covers edge cases: Sunday/Monday boundaries, Feb leap year handling, year boundary wraps, month-skipping for days 29-31, all weekday-of-month permutations (first through last × all weekdays)
+
 ## 2026-02-20
 
 ### Detail Page Polish
