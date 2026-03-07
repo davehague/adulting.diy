@@ -9,11 +9,11 @@
           <h3 class="text-lg font-medium leading-6 text-stone-900 font-heading" id="complete-modal-title">Complete Occurrence</h3>
           <div class="mt-4">
             <div>
-              <label for="completion-date" class="block text-sm font-medium text-stone-700">Completion Date</label>
+              <label for="completion-date" class="block text-sm font-medium text-stone-700">Completion Date & Time</label>
               <input
                 id="completion-date"
                 v-model="completionDate"
-                type="date"
+                type="datetime-local"
                 class="mt-1 block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm"
               />
             </div>
@@ -55,13 +55,13 @@ const emit = defineEmits<{
   (e: 'cancel'): void;
 }>();
 
-const completionDate = ref(format(new Date(), 'yyyy-MM-dd'));
+const completionDate = ref(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
 
 // Reset date to today each time the modal opens
 const { show } = toRefs(props);
 watch(show, (newVal) => {
   if (newVal) {
-    completionDate.value = format(new Date(), 'yyyy-MM-dd');
+    completionDate.value = format(new Date(), "yyyy-MM-dd'T'HH:mm");
   }
 });
 
@@ -70,7 +70,7 @@ const handleConfirm = () => {
 };
 
 const handleCancel = () => {
-  completionDate.value = format(new Date(), 'yyyy-MM-dd');
+  completionDate.value = format(new Date(), "yyyy-MM-dd'T'HH:mm");
   emit('cancel');
 };
 </script>
