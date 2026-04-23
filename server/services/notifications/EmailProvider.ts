@@ -143,6 +143,7 @@ export class EmailProvider implements NotificationProvider {
             buttonColor,
             dueSummary,
             occurrenceUrl: `${baseUrl}/occurrences/${occurrence?.id}`,
+            taskUrl: `${baseUrl}/tasks/${task?.id}`,
           }),
         };
       }
@@ -264,7 +265,10 @@ export class EmailProvider implements NotificationProvider {
             <h3 style="margin-top: 0;">{{taskName}}</h3>
             <p><strong>Due Date:</strong> {{dueDate}}</p>
           </div>
-          <p><a href="{{occurrenceUrl}}" style="background: {{buttonColor}}; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">Complete Task</a></p>
+          <p>
+            <a href="{{occurrenceUrl}}" style="background: {{buttonColor}}; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-right: 8px;">Complete Occurrence</a>
+            <a href="{{taskUrl}}" style="background: white; color: {{buttonColor}}; border: 1px solid {{buttonColor}}; padding: 7px 16px; text-decoration: none; border-radius: 4px; display: inline-block;">View Task</a>
+          </p>
           <p>Best regards,<br>Adulting.DIY</p>
         </div>
       `,
