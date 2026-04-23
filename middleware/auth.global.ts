@@ -40,7 +40,10 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
       console.log(
         `[Global Auth Middleware] Unauthenticated user accessing protected route ${to.path}. Redirecting to /login.`
       );
-      return navigateTo("/login"); // Redirect to login for protected routes
+      return navigateTo({
+        path: "/login",
+        query: { redirect: to.fullPath },
+      });
     }
   }
 
@@ -48,10 +51,15 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   if (isAuthenticated) {
     // Redirect away from login page if authenticated
     if (to.path === "/login") {
+      const redirectQuery = to.query.redirect;
+      const redirectTarget =
+        typeof redirectQuery === "string" && redirectQuery.startsWith("/") && !redirectQuery.startsWith("//")
+          ? redirectQuery
+          : "/dashboard";
       console.log(
-        "[Global Auth Middleware] Authenticated user accessing /login. Redirecting to /dashboard."
+        `[Global Auth Middleware] Authenticated user accessing /login. Redirecting to ${redirectTarget}.`
       );
-      return navigateTo("/dashboard");
+      return navigateTo(redirectTarget);
     }
 
     // Sub-scenario 2a: User HAS a household

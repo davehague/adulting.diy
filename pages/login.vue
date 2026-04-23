@@ -24,13 +24,22 @@
 import { ref } from 'vue';
 import { GoogleSignInButton, type CredentialResponse } from "vue3-google-signin";
 import { useAuthStore } from '@/stores/auth';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/utils/api';
 import type { User } from "~/types";
 
 const authStore = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 const api = useApi();
+
+const resolveRedirectTarget = (fallback: string): string => {
+    const raw = route.query.redirect;
+    if (typeof raw === 'string' && raw.startsWith('/') && !raw.startsWith('//')) {
+        return raw;
+    }
+    return fallback;
+};
 
 const isLoading = ref(false);
 const errorMessage = ref('');
@@ -60,7 +69,7 @@ const handleLoginSuccess = async (response: CredentialResponse) => {
 
             // Check if user has a household and redirect accordingly
             if (userData.householdId) {
-                router.push('/dashboard');
+                router.push(resolveRedirectTarget('/dashboard'));
             } else {
                 router.push('/setup-household');
             }
