@@ -5,7 +5,8 @@ import type {
   TaskDefinition,
   OccurrenceStatus, // Import OccurrenceStatus
 } from "@/types";
-import { calculateNextDueDate, generateFutureOccurrences, checkEndCondition } from "@/server/utils/schedule"; // Import the correct schedule utility
+import { calculateNextDueDate, generateFutureOccurrences, checkEndCondition, calculateCatchUpDueDate } from "@/server/utils/schedule"; // Import the correct schedule utility
+import { startOfDay } from "date-fns";
 import { Prisma } from "@prisma/client"; // Import Prisma namespace for types
 import { NotificationService } from "./NotificationService"; // Import NotificationService
 
@@ -456,7 +457,8 @@ export class OccurrenceService {
             await this.generateNextOccurrence(
               task,
               baseDate,
-              userId
+              userId,
+              { autoCatchUp: true }
             );
           } catch (error) {
             console.warn(
@@ -594,7 +596,8 @@ export class OccurrenceService {
             await this.generateNextOccurrence(
               task,
               baseDate,
-              userId
+              userId,
+              { autoCatchUp: true }
             );
           } catch (error) {
             console.warn(
@@ -943,7 +946,8 @@ export class OccurrenceService {
   async generateNextOccurrence(
     task: TaskDefinition,
     lastCompletedDate: Date,
-    userId: string
+    userId: string,
+    options: { autoCatchUp?: boolean } = {}
   ): Promise<TaskOccurrence | null> {
     try {
       // Get current occurrence count
@@ -958,11 +962,25 @@ export class OccurrenceService {
       }
 
       // Calculate next due date
-      const nextDueDate = calculateNextDueDate(task.scheduleConfig, lastCompletedDate);
-      
+      let nextDueDate = calculateNextDueDate(task.scheduleConfig, lastCompletedDate);
+
       if (!nextDueDate) {
         console.log(`[OccurrenceService] No next due date calculated for task ${task.id}`);
         return null;
+      }
+
+      // Auto catch-up: if the caller (execute/skip) opted in and the computed
+      // next due date is still in the past, advance forward to the next future
+      // slot so the user isn't immediately presented with another overdue
+      // occurrence. Preserves schedule anchor via calculateCatchUpDueDate.
+      const today = startOfDay(new Date());
+      let autoCaughtUpFrom: Date | null = null;
+      if (options.autoCatchUp && startOfDay(nextDueDate) < today) {
+        const futureDate = calculateCatchUpDueDate(task.scheduleConfig, nextDueDate);
+        if (futureDate && startOfDay(futureDate) >= today) {
+          autoCaughtUpFrom = nextDueDate;
+          nextDueDate = futureDate;
+        }
       }
 
       // Check if this would exceed the end date condition
@@ -991,7 +1009,7 @@ export class OccurrenceService {
         // a free date. This handles the case where a user edited a pending
         // occurrence's due date to before a completed one, then completed it.
         console.log(`[OccurrenceService] Occurrence on ${nextDueDate.toISOString()} is already ${existingForDate.status} for task ${task.id}, advancing to next date`);
-        return this.generateNextOccurrence(task, nextDueDate, userId);
+        return this.generateNextOccurrence(task, nextDueDate, userId, options);
       }
 
       const initialAssignees = task.defaultAssigneeIds || [];
@@ -1028,6 +1046,29 @@ export class OccurrenceService {
       console.log(
         `[OccurrenceService] Generated next occurrence ${occurrence.id} for task ${task.id} with due date ${nextDueDate.toISOString()}`
       );
+
+      if (autoCaughtUpFrom) {
+        try {
+          await prisma.taskHistoryLog.create({
+            data: {
+              taskId: task.id,
+              userId,
+              logType: "catch_up",
+              details: {
+                trigger: "auto_on_execute_or_skip",
+                originalNextDueDate: autoCaughtUpFrom.toISOString(),
+                adjustedDueDate: nextDueDate.toISOString(),
+              },
+            },
+          });
+        } catch (logError) {
+          // Audit-log failures must not mask a successful occurrence creation.
+          console.warn(
+            `[OccurrenceService] Failed to write catch_up audit log for task ${task.id}:`,
+            logError
+          );
+        }
+      }
 
       return occurrence as unknown as TaskOccurrence;
     } catch (error) {

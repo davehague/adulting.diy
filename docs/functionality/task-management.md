@@ -109,6 +109,12 @@ When overdue occurrences pile up, users can "catch up" a task:
 
 Users can optionally override the calculated next date with a custom one.
 
+### Automatic Catch-Up on Completion
+
+When a user completes (or skips) an overdue occurrence, the system generates the next occurrence anchored to the completed one's original due date so the schedule pattern stays aligned. If that computed next date would *also* be in the past, the system automatically advances it to the next future slot — equivalent to running catch-up on the user's behalf. This prevents the "complete one overdue, get another overdue" loop when a task has been missed for multiple cycles. Auto-catch-up events are logged on the task history as `catch_up` with `trigger: auto_on_execute_or_skip`.
+
+Note on `endCondition.times`: the count tracks *actual* occurrences created, not schedule slots. Auto-catch-up does not consume phantom slots for cycles that were skipped — a task set to "10 times, weekly" will produce 10 occurrences regardless of how many cycles were auto-caught-up, they'll just be spread across more calendar time.
+
 ## Filtering and Sorting
 
 Both the tasks list and occurrences list pages provide a compact toolbar for filtering, sorting, and searching.

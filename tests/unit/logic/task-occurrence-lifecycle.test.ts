@@ -420,6 +420,8 @@ describe('Occurrence execute → next occurrence generation', () => {
   })
 
   it('passes DUE DATE for fixed_interval (not completedAt)', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(localDate(2024, 1, 20))
     const config: ScheduleConfig = {
       type: 'fixed_interval',
       interval: 2,
@@ -448,9 +450,12 @@ describe('Occurrence execute → next occurrence generation', () => {
     const nextOccurrenceCreate = createCalls[createCalls.length - 1][0]
     const nextDueDate = nextOccurrenceCreate.data.dueDate
     expect(nextDueDate).toEqual(new Date(2024, 0, 29, 0, 0, 0, 0)) // Jan 29
+    vi.useRealTimers()
   })
 
   it('passes completedAt for variable_interval (not due date)', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(localDate(2024, 1, 20))
     const config: ScheduleConfig = {
       type: 'variable_interval',
       variableInterval: { interval: 14, unit: 'day' },
@@ -476,6 +481,146 @@ describe('Occurrence execute → next occurrence generation', () => {
     const nextOccurrenceCreate = createCalls[createCalls.length - 1][0]
     const nextDueDate = nextOccurrenceCreate.data.dueDate
     expect(nextDueDate).toEqual(new Date(2024, 1, 2, 0, 0, 0, 0)) // Feb 2
+    vi.useRealTimers()
+  })
+
+  describe('auto catch-up when next would be overdue', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    const setupCatchUpMocks = (task: any, occurrence: any) => {
+      const occurrenceWithTask = { ...occurrence, task, completedAt: new Date() }
+      db.taskOccurrence.findUnique.mockResolvedValue(occurrence)
+      db.taskOccurrence.update.mockResolvedValue(occurrenceWithTask)
+      db.occurrenceHistoryLog.create.mockResolvedValue({})
+      db.taskOccurrence.count.mockResolvedValue(1)
+      db.taskOccurrence.findFirst.mockResolvedValue(null)
+      db.taskOccurrence.create.mockImplementation(async (args: any) => ({
+        id: 'occ-next',
+        ...args.data,
+      }))
+      db.taskHistoryLog.create.mockResolvedValue({})
+    }
+
+    it('advances next due date to the future when fixed_interval next would still be overdue', async () => {
+      // Today = April 23 2026, weekly bath was due April 1 (3 weeks overdue).
+      // Completing it would normally generate April 8 (still overdue).
+      vi.setSystemTime(localDate(2026, 4, 23))
+
+      const config: ScheduleConfig = {
+        type: 'fixed_interval',
+        interval: 1,
+        intervalUnit: 'week',
+        endCondition: { type: 'never' },
+      }
+      const task = makeTask({ scheduleConfig: config })
+      const occ = makeOccurrence({ dueDate: localDate(2026, 4, 1) })
+      setupCatchUpMocks(task, occ)
+
+      await occurrenceService.execute(OCCURRENCE_ID, USER_ID)
+
+      const createCalls = db.taskOccurrence.create.mock.calls
+      const nextDueDate: Date = createCalls[createCalls.length - 1][0].data.dueDate
+      // calculateCatchUpDueDate walks forward preserving the weekly cadence
+      // from April 1 until it hits a date >= today (April 23).
+      // April 1 + 1w = 8 (past), +1w = 15 (past), +1w = 22 (past), +1w = 29 (future)
+      expect(nextDueDate.getTime()).toBeGreaterThanOrEqual(localDate(2026, 4, 23).getTime())
+      expect(nextDueDate).toEqual(localDate(2026, 4, 29))
+    })
+
+    it('does NOT adjust when the generated next is already in the future', async () => {
+      vi.setSystemTime(localDate(2024, 1, 20))
+
+      const config: ScheduleConfig = {
+        type: 'fixed_interval',
+        interval: 1,
+        intervalUnit: 'week',
+        endCondition: { type: 'never' },
+      }
+      const task = makeTask({ scheduleConfig: config })
+      const occ = makeOccurrence({ dueDate: localDate(2024, 1, 15) })
+      setupCatchUpMocks(task, occ)
+
+      await occurrenceService.execute(OCCURRENCE_ID, USER_ID)
+
+      const createCalls = db.taskOccurrence.create.mock.calls
+      const nextDueDate: Date = createCalls[createCalls.length - 1][0].data.dueDate
+      // Jan 15 + 1 week = Jan 22, which is in the future (today = Jan 20) → no adjustment
+      expect(nextDueDate).toEqual(localDate(2024, 1, 22))
+    })
+
+    it('logs a catch_up event on the task when auto-adjustment fires', async () => {
+      vi.setSystemTime(localDate(2026, 4, 23))
+
+      const config: ScheduleConfig = {
+        type: 'fixed_interval',
+        interval: 1,
+        intervalUnit: 'week',
+        endCondition: { type: 'never' },
+      }
+      const task = makeTask({ scheduleConfig: config })
+      const occ = makeOccurrence({ dueDate: localDate(2026, 4, 1) })
+      setupCatchUpMocks(task, occ)
+
+      await occurrenceService.execute(OCCURRENCE_ID, USER_ID)
+
+      const historyCalls = db.taskHistoryLog.create.mock.calls
+      expect(historyCalls.length).toBe(1)
+      expect(historyCalls[0][0].data).toMatchObject({
+        taskId: TASK_ID,
+        userId: USER_ID,
+        logType: 'catch_up',
+      })
+    })
+
+    it('does NOT log a catch_up event when no adjustment is needed', async () => {
+      vi.setSystemTime(localDate(2024, 1, 20))
+
+      const config: ScheduleConfig = {
+        type: 'fixed_interval',
+        interval: 1,
+        intervalUnit: 'week',
+        endCondition: { type: 'never' },
+      }
+      const task = makeTask({ scheduleConfig: config })
+      const occ = makeOccurrence({ dueDate: localDate(2024, 1, 15) })
+      setupCatchUpMocks(task, occ)
+
+      await occurrenceService.execute(OCCURRENCE_ID, USER_ID)
+
+      expect(db.taskHistoryLog.create).not.toHaveBeenCalled()
+    })
+
+    it('advances to next matching day for specific_days_of_week when overdue', async () => {
+      // Today = Thu April 23 2026. Task runs Mondays.
+      // Last occurrence was Mon April 6. Completing it would normally
+      // generate the next Monday (April 13, still overdue).
+      vi.setSystemTime(localDate(2026, 4, 23))
+
+      const config: ScheduleConfig = {
+        type: 'specific_days_of_week',
+        daysOfWeek: {
+          sunday: false, monday: true, tuesday: false, wednesday: false,
+          thursday: false, friday: false, saturday: false,
+        },
+        endCondition: { type: 'never' },
+      } as ScheduleConfig
+      const task = makeTask({ scheduleConfig: config })
+      const occ = makeOccurrence({ dueDate: localDate(2026, 4, 6) }) // Mon
+      setupCatchUpMocks(task, occ)
+
+      await occurrenceService.execute(OCCURRENCE_ID, USER_ID)
+
+      const createCalls = db.taskOccurrence.create.mock.calls
+      const nextDueDate: Date = createCalls[createCalls.length - 1][0].data.dueDate
+      // Next Monday from today (Thu April 23) is Mon April 27
+      expect(nextDueDate).toEqual(localDate(2026, 4, 27))
+    })
   })
 })
 
@@ -540,6 +685,8 @@ describe('Occurrence skip → next occurrence generation', () => {
   })
 
   it('passes DUE DATE for fixed schedule skip (not skippedAt)', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(localDate(2024, 1, 20))
     const config: ScheduleConfig = {
       type: 'specific_days_of_week',
       daysOfWeek: {
@@ -569,9 +716,12 @@ describe('Occurrence skip → next occurrence generation', () => {
     const createCalls = db.taskOccurrence.create.mock.calls
     const nextOccurrenceCreate = createCalls[createCalls.length - 1][0]
     expect(nextOccurrenceCreate.data.dueDate).toEqual(new Date(2024, 0, 22, 0, 0, 0, 0))
+    vi.useRealTimers()
   })
 
   it('passes skippedAt for variable_interval skip (not dueDate)', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(localDate(2024, 1, 20))
     const config: ScheduleConfig = {
       type: 'variable_interval',
       variableInterval: { interval: 14, unit: 'day' },
@@ -598,9 +748,12 @@ describe('Occurrence skip → next occurrence generation', () => {
     const nextOccurrenceCreate = createCalls[createCalls.length - 1][0]
     const nextDueDate = nextOccurrenceCreate.data.dueDate
     expect(nextDueDate).toEqual(new Date(2024, 1, 2, 0, 0, 0, 0)) // Feb 2
+    vi.useRealTimers()
   })
 
   it('passes DUE DATE for fixed_interval skip (not skippedAt)', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(localDate(2024, 1, 20))
     const config: ScheduleConfig = {
       type: 'fixed_interval',
       interval: 2,
@@ -628,6 +781,7 @@ describe('Occurrence skip → next occurrence generation', () => {
     const nextOccurrenceCreate = createCalls[createCalls.length - 1][0]
     const nextDueDate = nextOccurrenceCreate.data.dueDate
     expect(nextDueDate).toEqual(new Date(2024, 0, 29, 0, 0, 0, 0)) // Jan 29
+    vi.useRealTimers()
   })
 
   it('does NOT generate next occurrence for "once" task after skip', async () => {
