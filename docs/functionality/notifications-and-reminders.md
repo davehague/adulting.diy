@@ -101,6 +101,9 @@ New tasks are created with two default reminders: an **"on due date"** reminder 
   - **Before**: "Reminder: [Task] due in X days"
   - **On**: "Due Today: [Task]"
   - **After**: "Overdue: [Task] (X days overdue)"
+- Reminder emails include two action buttons:
+  - **Complete Occurrence** — links to the specific occurrence page for marking it done
+  - **View Task** — links to the task detail page, useful for viewing history, pausing, or running catch-up
 
 ## Actor Exclusion Rule
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-04-23
+
+### Email Reminder Improvements
+- Task reminder emails now include both a "Complete Occurrence" button (to the occurrence page) and a "View Task" button (to the task detail page)
+- Renamed the primary action from "Complete Task" to "Complete Occurrence" to match what the action actually does
+
+### Login Redirect Preservation
+- Clicking a protected link (e.g. an email button) while logged out now returns you to that destination after sign-in, instead of dropping you on the dashboard
+
+### Auto Catch-Up on Overdue Completion
+- Completing or skipping an overdue occurrence no longer produces another already-overdue occurrence when a task has been missed for multiple cycles; the system auto-advances the next occurrence to the next future slot
+- An explicit `catch_up` task history entry is written when auto-advance fires
+
 ## 2026-03-07
 
 ### Schedule Configuration UX Overhaul

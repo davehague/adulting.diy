@@ -172,6 +172,16 @@ When overdue occurrences accumulate, `TaskService.catchUp()` handles bulk resolu
 3. **Transaction**: Bulk-skip overdue occurrences, create/update future occurrence, log everything
 4. **Override**: User can optionally specify a custom next date
 
+### Automatic Catch-Up on Execute/Skip
+
+`OccurrenceService.generateNextOccurrence()` accepts an `options.autoCatchUp` flag. `execute()` and `skip()` pass `true`; batch generation paths do not.
+
+When the flag is set and the computed next due date falls before `startOfDay(today)`, the service invokes `calculateCatchUpDueDate()` using that computed date as the anchor, updates `nextDueDate` to the result, and proceeds with creation. A `taskHistoryLog` entry is written with `logType: "catch_up"` and details `{ trigger: "auto_on_execute_or_skip", originalNextDueDate, adjustedDueDate }`. The history log write is try/catch'd so an audit failure does not mask a successful occurrence creation.
+
+The collision-handling recursion inside `generateNextOccurrence` threads `options` through unchanged — the `< today` check is a no-op when the prior iteration already advanced to a future date, so propagation is safe.
+
+`endCondition.times` counts actual occurrences created; auto-catch-up does not consume phantom slots for skipped cycles.
+
 ## End Conditions
 
 Checked in `checkEndCondition()` before creating each occurrence:
