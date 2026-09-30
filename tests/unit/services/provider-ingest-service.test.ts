@@ -11,8 +11,10 @@ vi.mock('@/server/services/ProviderCategoryService', () => ({
     findOrCreateByName: vi.fn().mockResolvedValue({ id: 'c1' }),
   })),
 }))
+const listForHousehold = vi.hoisted(() => vi.fn())
 vi.mock('@/server/services/ProviderStatusService', () => ({
   ProviderStatusService: vi.fn().mockImplementation(() => ({
+    listForHousehold,
     findOrCreateByName: vi.fn().mockResolvedValue({ id: 's-lead' }),
   })),
 }))
@@ -35,6 +37,7 @@ describe('ProviderIngestService', () => {
   beforeEach(() => {
     service = new ProviderIngestService()
     vi.clearAllMocks()
+    listForHousehold.mockResolvedValue([])
     db.provider.create.mockResolvedValue({ id: 'p1' })
     db.providerEvidence.createMany.mockResolvedValue({ count: 1 })
   })
@@ -122,5 +125,20 @@ describe('ProviderIngestService', () => {
     const rows = db.providerEvidence.createMany.mock.calls[0][0].data
     expect(rows[0].sourceDate).toBeNull()
     expect(rows[1].sourceDate).toEqual(new Date('2026-01-15T00:00:00Z'))
+  })
+
+  it('seeds the default statuses before any provider is created', async () => {
+    db.provider.findFirst.mockResolvedValue(null)
+    await service.ingestBatch('h1', [item()])
+    expect(listForHousehold).toHaveBeenCalledWith('h1')
+    expect(listForHousehold.mock.invocationCallOrder[0]).toBeLessThan(
+      db.provider.create.mock.invocationCallOrder[0]
+    )
+  })
+
+  it('fails the whole batch when status seeding throws', async () => {
+    listForHousehold.mockRejectedValue(new Error('seed failed'))
+    await expect(service.ingestBatch('h1', [item()])).rejects.toThrow('seed failed')
+    expect(db.provider.create).not.toHaveBeenCalled()
   })
 })

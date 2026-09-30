@@ -23,6 +23,10 @@ export class ProviderIngestService {
   private statuses = new ProviderStatusService();
 
   async ingestBatch(householdId: string, rawItems: unknown[]): Promise<IngestResult> {
+    // Seed the default status set first so findOrCreateByName('Lead') below can never
+    // create a lone Lead that blocks seeding. Errors propagate: that is a server error.
+    await this.statuses.listForHousehold(householdId);
+
     const result: IngestResult = {
       created: 0, updated: 0, skippedDeleted: 0, evidenceAdded: 0, errors: [],
     };

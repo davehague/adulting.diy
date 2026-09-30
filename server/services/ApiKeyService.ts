@@ -33,7 +33,12 @@ export class ApiKeyService {
       where: { hashedKey: hashApiKey(key), revokedAt: null },
     });
     if (!record) return null;
-    await prisma.apiKey.update({ where: { id: record.id }, data: { lastUsedAt: new Date() } });
+    // Best-effort: a transient write failure must not reject a valid key.
+    try {
+      await prisma.apiKey.update({ where: { id: record.id }, data: { lastUsedAt: new Date() } });
+    } catch (error) {
+      console.error('[ApiKeyService] failed to update lastUsedAt', error);
+    }
     return { householdId: record.householdId, apiKeyId: record.id };
   }
 }

@@ -46,4 +46,11 @@ describe('ApiKeyService', () => {
     expect(args.select.hashedKey).toBeUndefined()
     expect(args.where).toEqual({ householdId: 'h1' })
   })
+
+  it('authenticate still succeeds when the lastUsedAt update fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    db.apiKey.findFirst.mockResolvedValue({ id: 'k1', householdId: 'h1' })
+    db.apiKey.update.mockRejectedValue(new Error('write failed'))
+    await expect(service.authenticate('adk_abc')).resolves.toEqual({ householdId: 'h1', apiKeyId: 'k1' })
+  })
 })
