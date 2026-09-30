@@ -141,6 +141,11 @@
         </div>
       </div>
     </div>
+
+      <div class="mt-6 pt-6 border-t border-stone-200">
+        <h3 class="text-lg font-medium mb-3 font-heading">Providers</h3>
+        <TaskProviderPicker :task-id="task.id" />
+      </div>
     </div>
   </div>
 </template>
@@ -149,6 +154,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import type { TaskDefinition, Category, User } from '@/types';
 import type { FormerHouseholdMember } from '@/types/user';
+import TaskProviderPicker from '@/components/providers/TaskProviderPicker.vue';
 import { EllipsisVertical, Eye, Pencil, CirclePlay, Pause as PauseIcon, Trash2 } from 'lucide-vue-next';
 
 interface Props {
