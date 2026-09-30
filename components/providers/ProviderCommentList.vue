@@ -48,14 +48,15 @@ import { ref } from 'vue';
 import { formatDistanceToNow } from 'date-fns';
 import { type ProviderCommentDto } from '@/types/provider';
 
-defineProps<{
+// onAdd/onUpdate resolve true on success so the text is only cleared/closed when the save worked.
+const props = defineProps<{
   comments: ProviderCommentDto[];
   currentUserId: string | null;
+  onAdd: (body: string) => Promise<boolean>;
+  onUpdate: (id: string, body: string) => Promise<boolean>;
 }>();
 
 const emit = defineEmits<{
-  (e: 'add', body: string): void;
-  (e: 'update', id: string, body: string): void;
   (e: 'remove', id: string): void;
 }>();
 
@@ -63,11 +64,10 @@ const newBody = ref('');
 const editingId = ref<string | null>(null);
 const editBody = ref('');
 
-const submitNew = (): void => {
+const submitNew = async (): Promise<void> => {
   const body = newBody.value.trim();
   if (!body) return;
-  emit('add', body);
-  newBody.value = '';
+  if (await props.onAdd(body)) newBody.value = '';
 };
 
 const startEdit = (id: string, body: string): void => {
@@ -75,10 +75,9 @@ const startEdit = (id: string, body: string): void => {
   editBody.value = body;
 };
 
-const saveEdit = (id: string): void => {
+const saveEdit = async (id: string): Promise<void> => {
   const body = editBody.value.trim();
   if (!body) return;
-  emit('update', id, body);
-  editingId.value = null;
+  if (await props.onUpdate(id, body)) editingId.value = null;
 };
 </script>

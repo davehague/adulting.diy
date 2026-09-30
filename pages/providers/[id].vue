@@ -178,7 +178,7 @@
         <section class="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-6">
           <h2 class="text-lg font-semibold text-stone-900 font-heading mb-3">Comments</h2>
           <ProviderCommentList :comments="provider.comments" :current-user-id="currentUserId"
-                               @add="onAddComment" @update="onUpdateComment" @remove="onRemoveComment" />
+                               :on-add="onAddComment" :on-update="onUpdateComment" @remove="onRemoveComment" />
         </section>
       </template>
     </div>
@@ -243,7 +243,11 @@ const kindLabel = (kind: EvidenceKind): string => {
   return 'Lead';
 };
 
-const formatDate = (value: string): string => format(new Date(value), 'MMM d, yyyy');
+// Date-only values are stored as UTC midnight; format their UTC calendar day so local timezones don't shift it.
+const formatDate = (value: string): string => {
+  const [y, m, d] = new Date(value).toISOString().slice(0, 10).split('-').map(Number);
+  return format(new Date(y, m - 1, d), 'MMM d, yyyy');
+};
 
 // Only http(s) URLs become links, so a stray javascript: value is shown as text.
 const safeWebsite = (value: string): string | null => {
