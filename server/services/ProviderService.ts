@@ -13,6 +13,19 @@ import {
 
 const statusService = new ProviderStatusService();
 
+const WRITABLE_FIELDS = [
+  'name', 'company', 'primaryContactName', 'phone', 'email', 'website', 'address',
+  'licenseNumber', 'googlePlaceId', 'rating', 'hiredAt', 'notes', 'categoryId', 'statusId',
+] as const;
+
+const pickWritable = (input: Partial<ProviderInput>): Partial<ProviderInput> => {
+  const picked: Record<string, unknown> = {};
+  for (const key of WRITABLE_FIELDS) {
+    if (input[key] !== undefined) picked[key] = input[key];
+  }
+  return picked as Partial<ProviderInput>;
+};
+
 export class ProviderService {
   async list(householdId: string, filters: ProviderListFilters): Promise<ProviderListItem[]> {
     const where: Prisma.ProviderWhereInput = { householdId, metaStatus: 'active' };
@@ -95,7 +108,9 @@ export class ProviderService {
 
     return prisma.provider.create({
       data: {
-        ...input,
+        ...pickWritable(input),
+        name: input.name,
+        categoryId: input.categoryId,
         statusId,
         householdId,
         nameKey: normalizeProviderName(input.name),
@@ -105,13 +120,20 @@ export class ProviderService {
 
   async update(householdId: string, id: string, input: Partial<ProviderInput>) {
     await this.requireOwned(householdId, id);
-    if (input.categoryId) await this.assertCategoryOwned(householdId, input.categoryId);
-    if (input.statusId) await this.assertStatusOwned(householdId, input.statusId);
+    const data = pickWritable(input);
+    if (data.categoryId !== undefined) {
+      if (!data.categoryId) throw new HttpError('Invalid category', 400);
+      await this.assertCategoryOwned(householdId, data.categoryId);
+    }
+    if (data.statusId !== undefined) {
+      if (!data.statusId) throw new HttpError('Invalid status', 400);
+      await this.assertStatusOwned(householdId, data.statusId);
+    }
     return prisma.provider.update({
       where: { id },
       data: {
-        ...input,
-        ...(input.name !== undefined ? { nameKey: normalizeProviderName(input.name) } : {}),
+        ...data,
+        ...(data.name !== undefined ? { nameKey: normalizeProviderName(data.name) } : {}),
       },
     });
   }

@@ -28,11 +28,13 @@ describe('ProviderCommentService', () => {
   it('only the author can edit', async () => {
     db.providerComment.findFirst.mockResolvedValue({ id: 'c1', authorId: 'someone-else' })
     await expect(service.update('h1', 'c1', 'u1', 'x')).rejects.toMatchObject({ statusCode: 403 })
+    expect(db.providerComment.findFirst.mock.calls[0][0].where.provider).toEqual({ householdId: 'h1' })
     expect(db.providerComment.update).not.toHaveBeenCalled()
   })
 
   it('only the author can delete', async () => {
     db.providerComment.findFirst.mockResolvedValue({ id: 'c1', authorId: 'someone-else' })
     await expect(service.remove('h1', 'c1', 'u1')).rejects.toMatchObject({ statusCode: 403 })
+    expect(db.providerComment.findFirst.mock.calls[0][0].where.provider).toEqual({ householdId: 'h1' })
   })
 })

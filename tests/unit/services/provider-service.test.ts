@@ -94,6 +94,27 @@ describe('ProviderService.create', () => {
   })
 })
 
+describe('ProviderService.update', () => {
+  let service: ProviderService
+  beforeEach(() => { service = new ProviderService(); vi.clearAllMocks() })
+
+  it('ignores non-writable keys in the input', async () => {
+    db.provider.findFirst.mockResolvedValue({ id: 'p1' })
+    db.provider.update.mockResolvedValue({ id: 'p1' })
+    await service.update('h1', 'p1', {
+      notes: 'hi', householdId: 'h2', metaStatus: 'deleted', nameKey: 'x', id: 'other',
+    } as never)
+    expect(db.provider.update.mock.calls[0][0].data).toEqual({ notes: 'hi' })
+  })
+
+  it('rejects a null categoryId with 400', async () => {
+    db.provider.findFirst.mockResolvedValue({ id: 'p1' })
+    await expect(service.update('h1', 'p1', { categoryId: null } as never))
+      .rejects.toMatchObject({ statusCode: 400 })
+    expect(db.provider.update).not.toHaveBeenCalled()
+  })
+})
+
 describe('ProviderService.softDelete', () => {
   it('404s for a provider in another household', async () => {
     const service = new ProviderService()
