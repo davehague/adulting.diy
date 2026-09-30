@@ -109,6 +109,7 @@ The API uses these authentication levels:
 | `POST` | `/api/api-keys` | Household Admin | Create key; plaintext key is returned once |
 | `DELETE` | `/api/api-keys/[id]` | Household Admin | Revoke key |
 | `POST` | `/api/ingest/providers` | Household API Key | Bulk upsert providers and evidence (max 500 per request) |
+| `GET` | `/api/ingest/categories` | Household API Key | List the household's provider category names, so machine callers file finds under existing categories |
 
 See [provider-ingest.md](provider-ingest.md) for the ingest contract.
 
