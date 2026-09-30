@@ -25,6 +25,7 @@
            class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
         <div class="px-6 py-4 bg-stone-50 border-b border-stone-200">
           <h2 class="text-lg font-semibold text-stone-900 font-heading">{{ section.title }}</h2>
+          <p class="mt-1 text-sm text-stone-600">{{ section.description }}</p>
         </div>
         <ul class="divide-y divide-stone-100">
           <li v-for="(item, index) in section.items" :key="item.id" class="p-4 flex flex-wrap items-center gap-2">
@@ -46,23 +47,31 @@
                       @click="editing = null">Cancel</button>
             </template>
             <template v-else>
-              <span class="flex-1 min-w-[8rem] text-stone-900 font-medium">{{ item.name }}
+              <span class="flex-1 min-w-[8rem] text-stone-900 font-medium">
+                <span v-if="section.kind === 'status'"
+                      class="inline-block text-xs font-medium px-2 py-0.5 rounded-full"
+                      :class="badgeClass((item as ProviderStatusDto).kind)">{{ item.name }}</span>
+                <template v-else>{{ item.name }}</template>
                 <span class="text-xs text-stone-400 font-normal ml-1">{{ usageCount(section, item.id) }} in use</span>
               </span>
               <template v-if="section.kind === 'status'">
-                <select :value="(item as ProviderStatusDto).kind"
-                        class="rounded-md border-stone-300 shadow-sm text-sm focus:border-amber-500 focus:ring-amber-500"
-                        :aria-label="`Kind for ${item.name}`"
-                        @change="updateStatus(item as ProviderStatusDto, { kind: ($event.target as HTMLSelectElement).value as ProviderStatusKind })">
-                  <option value="neutral">Neutral</option>
-                  <option value="positive">Positive</option>
-                  <option value="negative">Negative</option>
-                </select>
                 <label class="inline-flex items-center gap-1.5 text-sm text-stone-600">
+                  Badge color
+                  <select :value="(item as ProviderStatusDto).kind"
+                          class="rounded-md border-stone-300 shadow-sm text-sm focus:border-amber-500 focus:ring-amber-500"
+                          :aria-label="`Badge color for ${item.name}`"
+                          @change="updateStatus(item as ProviderStatusDto, { kind: ($event.target as HTMLSelectElement).value as ProviderStatusKind })">
+                    <option value="neutral">Gray (neutral)</option>
+                    <option value="positive">Green (good)</option>
+                    <option value="negative">Red (avoid)</option>
+                  </select>
+                </label>
+                <label class="inline-flex items-center gap-1.5 text-sm text-stone-600"
+                       title="When on, providers with this status are left out of the main Providers list. Use the 'Show hidden statuses' checkbox on that page, or pick this status in its filter, to see them.">
                   <input type="checkbox" :checked="(item as ProviderStatusDto).hiddenByDefault"
                          class="rounded border-stone-300 text-amber-600 focus:ring-amber-500"
                          @change="updateStatus(item as ProviderStatusDto, { hiddenByDefault: ($event.target as HTMLInputElement).checked })">
-                  Hide from list by default
+                  Keep out of the main list
                 </label>
               </template>
               <button class="text-amber-700 hover:text-amber-800 text-sm" @click="editing = { id: item.id, name: item.name }">Rename</button>
@@ -177,6 +186,7 @@ type NamedItem = ProviderCategoryDto | ProviderStatusDto;
 interface Section {
   kind: SectionKind;
   title: string;
+  description: string;
   path: string;
   items: NamedItem[];
 }
@@ -213,9 +223,28 @@ const copiedKey = ref(false);
 const moveDialog = ref<MoveDialog | null>(null);
 
 const sections = computed<Section[]>(() => [
-  { kind: 'category', title: 'Categories', path: '/api/provider-categories', items: categories.value },
-  { kind: 'status', title: 'Statuses', path: '/api/provider-statuses', items: statuses.value },
+  {
+    kind: 'category',
+    title: 'Categories',
+    description: 'Groups for your providers, like Roofing or Plumbing. Use them to filter the Providers list.',
+    path: '/api/provider-categories',
+    items: categories.value,
+  },
+  {
+    kind: 'status',
+    title: 'Statuses',
+    description: 'Where a provider stands with you. Badge color is the color of its label on the list (green for good, red for avoid). "Keep out of the main list" hides providers with that status unless you turn on "Show hidden statuses" on the Providers page.',
+    path: '/api/provider-statuses',
+    items: statuses.value,
+  },
 ]);
+
+const badgeClass = (kind: ProviderStatusKind): string =>
+  kind === 'positive'
+    ? 'bg-green-100 text-green-800'
+    : kind === 'negative'
+      ? 'bg-red-50 text-red-700'
+      : 'bg-stone-100 text-stone-700';
 
 const moveOptions = computed<NamedItem[]>(() =>
   moveDialog.value ? moveDialog.value.section.items.filter((i) => i.id !== moveDialog.value?.item.id) : []
