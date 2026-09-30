@@ -277,6 +277,14 @@
         </div>
       </div>
 
+      <!-- Provider Settings (admins only) -->
+      <NuxtLink v-if="householdInfo.isCurrentUserAdmin"
+                to="/household/providers-settings"
+                class="block bg-white rounded-xl shadow-sm border border-stone-200 px-6 py-4 hover:border-amber-400 transition-colors">
+        <h2 class="text-lg font-semibold text-stone-900 font-heading">Provider settings</h2>
+        <p class="text-sm text-stone-500 mt-1">Manage provider categories, statuses, and API keys</p>
+      </NuxtLink>
+
       <!-- Household Statistics -->
       <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
         <div class="px-6 py-4 bg-stone-50 border-b border-stone-200">
