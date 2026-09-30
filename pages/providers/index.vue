@@ -68,7 +68,8 @@
     <!-- Empty State -->
     <div v-else-if="providers.length === 0"
          class="bg-white rounded-xl shadow-sm border border-stone-200 p-8 text-center">
-      <p class="text-stone-600">No providers yet. Add one, or point the watcher at your ingest API.</p>
+      <p v-if="hasActiveFilter" class="text-stone-600">No providers match your filters.</p>
+      <p v-else class="text-stone-600">No providers yet. Add one, or point the watcher at your ingest API.</p>
     </div>
 
     <!-- List -->
@@ -111,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { Plus } from 'lucide-vue-next';
 import { ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
 import {
@@ -129,7 +130,10 @@ const providers = ref<ProviderListItem[]>([]);
 const categories = ref<ProviderCategoryDto[]>([]);
 const statuses = ref<ProviderStatusDto[]>([]);
 const loading = ref(true);
-const error = ref<string | null>(null);
+const providerError = ref<string | null>(null);
+const filterError = ref<string | null>(null);
+const error = computed(() => filterError.value ?? providerError.value);
+const hasActiveFilter = computed(() => !!(search.value.trim() || categoryId.value || statusId.value));
 
 const search = ref('');
 const categoryId = ref('');
@@ -143,21 +147,27 @@ const statusClass = (kind: ProviderStatusKind): string => {
   return 'bg-stone-100 text-stone-700';
 };
 
+let latestRequestId = 0;
+
 const loadProviders = async (): Promise<void> => {
+  const requestId = ++latestRequestId;
   loading.value = true;
   try {
-    providers.value = await listProviders({
+    const result = await listProviders({
       search: search.value.trim(),
       categoryId: categoryId.value,
       statusId: statusId.value,
       sort: sort.value,
       includeHidden: includeHidden.value,
     });
-    error.value = null;
+    if (requestId !== latestRequestId) return;
+    providers.value = result;
+    providerError.value = null;
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load providers';
+    if (requestId !== latestRequestId) return;
+    providerError.value = e instanceof Error ? e.message : 'Failed to load providers';
   } finally {
-    loading.value = false;
+    if (requestId === latestRequestId) loading.value = false;
   }
 };
 
@@ -176,7 +186,7 @@ onMounted(async () => {
   try {
     [categories.value, statuses.value] = await Promise.all([listCategories(), listStatuses()]);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load filters';
+    filterError.value = e instanceof Error ? e.message : 'Failed to load filters';
   }
   await loadProviders();
 });
