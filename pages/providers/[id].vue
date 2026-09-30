@@ -245,7 +245,9 @@ const kindLabel = (kind: EvidenceKind): string => {
 
 // Date-only values are stored as UTC midnight; format their UTC calendar day so local timezones don't shift it.
 const formatDate = (value: string): string => {
-  const [y, m, d] = new Date(value).toISOString().slice(0, 10).split('-').map(Number);
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  const [y, m, d] = parsed.toISOString().slice(0, 10).split('-').map(Number);
   return format(new Date(y, m - 1, d), 'MMM d, yyyy');
 };
 

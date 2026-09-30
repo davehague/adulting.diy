@@ -38,7 +38,9 @@ export class TaskProviderService {
   }
 
   private async requireTask(householdId: string, taskId: string) {
-    const task = await prisma.taskDefinition.findFirst({ where: { id: taskId, householdId } });
+    const task = await prisma.taskDefinition.findFirst({
+      where: { id: taskId, householdId, metaStatus: { not: 'soft-deleted' } },
+    });
     if (!task) throw new HttpError('Task not found', 404);
     return task;
   }

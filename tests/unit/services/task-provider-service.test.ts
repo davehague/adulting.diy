@@ -29,6 +29,14 @@ describe('TaskProviderService', () => {
     expect(db.taskProvider.upsert).not.toHaveBeenCalled()
   })
 
+  it('ignores soft-deleted tasks when checking ownership', async () => {
+    db.taskDefinition.findFirst.mockResolvedValue(null)
+    await expect(service.link('h1', 't1', 'p1')).rejects.toMatchObject({ statusCode: 404 })
+    expect(db.taskDefinition.findFirst).toHaveBeenCalledWith({
+      where: { id: 't1', householdId: 'h1', metaStatus: { not: 'soft-deleted' } },
+    })
+  })
+
   it('linking twice is idempotent (upsert on the unique pair)', async () => {
     db.taskDefinition.findFirst.mockResolvedValue({ id: 't1' })
     db.provider.findFirst.mockResolvedValue({ id: 'p1' })

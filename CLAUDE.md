@@ -79,7 +79,6 @@ Tasks support 6 recurrence patterns (once, fixed interval, specific days of week
 adulting.diy/
 ├── app.vue                 # Root application component
 ├── components/            # Vue components
-│   ├── AppHeader.vue
 │   ├── AppFooter.vue
 │   ├── DevUserSwitcher.vue       # Dev login bypass UI
 │   ├── DevUserSwitcherDebug.vue  # Dev login debug panel

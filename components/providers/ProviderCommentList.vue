@@ -13,7 +13,7 @@
                     class="block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-sm" />
           <div class="flex gap-2">
             <button type="button" class="px-3 py-1 text-sm rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
-                    :disabled="!editBody.trim()" @click="saveEdit(c.id)">
+                    :disabled="!editBody.trim() || submitting" @click="saveEdit(c.id)">
               Save
             </button>
             <button type="button" class="px-3 py-1 text-sm rounded-lg border border-stone-300 text-stone-700 hover:bg-stone-50"
@@ -36,7 +36,7 @@
       <textarea v-model="newBody" rows="3" placeholder="Add a comment" aria-label="New comment"
                 class="block w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-sm" />
       <button type="submit" class="px-3 py-1.5 text-sm font-medium rounded-lg bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
-              :disabled="!newBody.trim()">
+              :disabled="!newBody.trim() || submitting">
         Add comment
       </button>
     </form>
@@ -64,10 +64,18 @@ const newBody = ref('');
 const editingId = ref<string | null>(null);
 const editBody = ref('');
 
+// True while an add/save request is in flight, so a double click cannot post the comment twice.
+const submitting = ref(false);
+
 const submitNew = async (): Promise<void> => {
   const body = newBody.value.trim();
-  if (!body) return;
-  if (await props.onAdd(body)) newBody.value = '';
+  if (!body || submitting.value) return;
+  submitting.value = true;
+  try {
+    if (await props.onAdd(body)) newBody.value = '';
+  } finally {
+    submitting.value = false;
+  }
 };
 
 const startEdit = (id: string, body: string): void => {
@@ -77,7 +85,12 @@ const startEdit = (id: string, body: string): void => {
 
 const saveEdit = async (id: string): Promise<void> => {
   const body = editBody.value.trim();
-  if (!body) return;
-  if (await props.onUpdate(id, body)) editingId.value = null;
+  if (!body || submitting.value) return;
+  submitting.value = true;
+  try {
+    if (await props.onUpdate(id, body)) editingId.value = null;
+  } finally {
+    submitting.value = false;
+  }
 };
 </script>

@@ -11,6 +11,6 @@ export default defineHouseholdAdminEventHandler(async (event, _authUser, househo
     await new ProviderStatusService().reorder(householdId, parsed.data.orderedIds);
     return { success: true };
   } catch (error) {
-    return toHttpError(error, 'reordering provider statuss');
+    return toHttpError(error, 'reordering provider statuses');
   }
 });
