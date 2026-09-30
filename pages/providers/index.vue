@@ -6,10 +6,16 @@
         <h1 class="text-2xl font-bold text-stone-900 font-heading">Providers</h1>
         <p class="text-stone-600 mt-1">Contractors and service providers your neighbors recommend</p>
       </div>
-      <NuxtLink to="/providers/new"
-                class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors">
-        <Plus :size="16" />Add provider
-      </NuxtLink>
+      <div class="flex items-center gap-2">
+        <NuxtLink v-if="authStore.user?.isAdmin" to="/household/providers-settings"
+                  class="inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 hover:text-amber-800 px-3 py-1.5 rounded-lg border border-stone-300 bg-white hover:bg-stone-50 transition-colors">
+          Manage categories &amp; statuses
+        </NuxtLink>
+        <NuxtLink to="/providers/new"
+                  class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors">
+          <Plus :size="16" />Add provider
+        </NuxtLink>
+      </div>
     </div>
 
     <!-- Toolbar -->
@@ -123,6 +129,9 @@ import {
   type ProviderStatusKind,
 } from '@/types/provider';
 import { useProviders } from '@/composables/useProviders';
+import { useAuthStore } from '@/stores/auth';
+
+const authStore = useAuthStore();
 
 const { listProviders, listCategories, listStatuses } = useProviders();
 

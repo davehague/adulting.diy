@@ -15,6 +15,13 @@
           <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
         <p v-if="errors.categoryId" id="pf-category-err" class="mt-1 text-sm text-red-600">{{ errors.categoryId }}</p>
+        <p v-if="categories.length === 0" class="mt-1 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5">
+          No categories yet.
+          <template v-if="authStore.user?.isAdmin">
+            <NuxtLink to="/household/providers-settings" class="font-medium underline">Add categories in Provider settings</NuxtLink>, then come back.
+          </template>
+          <template v-else>Ask a household admin to add some in Provider settings.</template>
+        </p>
       </div>
       <div>
         <label for="pf-status" class="block text-sm font-medium text-stone-700">Status</label>
@@ -86,6 +93,7 @@
 </template>
 
 <script setup lang="ts">
+import { useAuthStore } from '@/stores/auth';
 import { reactive } from 'vue';
 import {
   type ProviderCategoryDto,
@@ -109,6 +117,8 @@ interface ProviderDraft {
   hiredAt: string;
   notes: string;
 }
+
+const authStore = useAuthStore();
 
 const props = defineProps<{
   modelValue: ProviderInput;
