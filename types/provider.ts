@@ -88,3 +88,61 @@ export interface IngestResult {
   evidenceAdded: number;
   errors: { index: number; name: string; message: string }[];
 }
+
+export interface ProviderContactDto {
+  id: string;
+  name: string;
+  role: string | null;
+  phone: string | null;
+  email: string | null;
+}
+
+export interface ProviderContactInput {
+  name: string;
+  role?: string | null;
+  phone?: string | null;
+  email?: string | null;
+}
+
+export interface ProviderEvidenceDto {
+  id: string;
+  sourceUrl: string;
+  sourceGroup: string | null;
+  sourceDate: string | null;
+  snippet: string | null;
+  kind: EvidenceKind;
+}
+
+export interface ProviderCommentDto {
+  id: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+  author: { id: string; name: string; picture: string | null };
+}
+
+export interface ProviderDetail {
+  id: string;
+  name: string;
+  company: string | null;
+  primaryContactName: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  address: string | null;
+  licenseNumber: string | null;
+  googlePlaceId: string | null;
+  rating: number | null;
+  hiredAt: string | null;
+  notes: string | null;
+  category: ProviderCategoryDto;
+  status: ProviderStatusDto;
+  contacts: ProviderContactDto[];
+  evidence: ProviderEvidenceDto[];
+  comments: ProviderCommentDto[];
+  tasks: { taskId: string; providerId: string; task: { id: string; name: string } }[];
+  mentionCount: number;
+  neighborCount: number;
+  lastSightingAt: string | null;
+}

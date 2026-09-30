@@ -1,16 +1,12 @@
 import {
   type ProviderCategoryDto,
+  type ProviderContactInput,
+  type ProviderDetail,
   type ProviderInput,
   type ProviderListFilters,
   type ProviderListItem,
   type ProviderStatusDto,
 } from '@/types/provider';
-
-export interface ProviderDetail {
-  id: string;
-  name: string;
-  [key: string]: unknown;
-}
 
 export const useProviders = () => {
   const api = useApi();
@@ -40,9 +36,9 @@ export const useProviders = () => {
   const deleteComment = (providerId: string, commentId: string) =>
     api.delete(`/api/providers/${providerId}/comments/${commentId}`);
 
-  const addContact = (providerId: string, contact: { name: string; role?: string; phone?: string; email?: string }) =>
+  const addContact = (providerId: string, contact: ProviderContactInput) =>
     api.post(`/api/providers/${providerId}/contacts`, contact);
-  const updateContact = (providerId: string, contactId: string, contact: Record<string, unknown>) =>
+  const updateContact = (providerId: string, contactId: string, contact: Partial<ProviderContactInput>) =>
     api.put(`/api/providers/${providerId}/contacts/${contactId}`, contact);
   const deleteContact = (providerId: string, contactId: string) =>
     api.delete(`/api/providers/${providerId}/contacts/${contactId}`);
