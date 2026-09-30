@@ -10,6 +10,9 @@ CREATE TABLE "provider_categories" (
     CONSTRAINT "provider_categories_pkey" PRIMARY KEY ("id")
 );
 
+-- CockroachDB locks new tables against schema changes by default; unlock so the indexes and foreign keys below can be added.
+ALTER TABLE "provider_categories" SET (schema_locked = false);
+
 -- CreateTable
 CREATE TABLE "provider_statuses" (
     "id" STRING NOT NULL,
@@ -23,6 +26,9 @@ CREATE TABLE "provider_statuses" (
 
     CONSTRAINT "provider_statuses_pkey" PRIMARY KEY ("id")
 );
+
+-- CockroachDB locks new tables against schema changes by default; unlock so the indexes and foreign keys below can be added.
+ALTER TABLE "provider_statuses" SET (schema_locked = false);
 
 -- CreateTable
 CREATE TABLE "providers" (
@@ -50,6 +56,9 @@ CREATE TABLE "providers" (
     CONSTRAINT "providers_pkey" PRIMARY KEY ("id")
 );
 
+-- CockroachDB locks new tables against schema changes by default; unlock so the indexes and foreign keys below can be added.
+ALTER TABLE "providers" SET (schema_locked = false);
+
 -- CreateTable
 CREATE TABLE "provider_contacts" (
     "id" STRING NOT NULL,
@@ -63,6 +72,9 @@ CREATE TABLE "provider_contacts" (
 
     CONSTRAINT "provider_contacts_pkey" PRIMARY KEY ("id")
 );
+
+-- CockroachDB locks new tables against schema changes by default; unlock so the indexes and foreign keys below can be added.
+ALTER TABLE "provider_contacts" SET (schema_locked = false);
 
 -- CreateTable
 CREATE TABLE "provider_evidence" (
@@ -78,6 +90,9 @@ CREATE TABLE "provider_evidence" (
     CONSTRAINT "provider_evidence_pkey" PRIMARY KEY ("id")
 );
 
+-- CockroachDB locks new tables against schema changes by default; unlock so the indexes and foreign keys below can be added.
+ALTER TABLE "provider_evidence" SET (schema_locked = false);
+
 -- CreateTable
 CREATE TABLE "provider_comments" (
     "id" STRING NOT NULL,
@@ -90,6 +105,9 @@ CREATE TABLE "provider_comments" (
     CONSTRAINT "provider_comments_pkey" PRIMARY KEY ("id")
 );
 
+-- CockroachDB locks new tables against schema changes by default; unlock so the indexes and foreign keys below can be added.
+ALTER TABLE "provider_comments" SET (schema_locked = false);
+
 -- CreateTable
 CREATE TABLE "task_providers" (
     "id" STRING NOT NULL,
@@ -99,6 +117,9 @@ CREATE TABLE "task_providers" (
 
     CONSTRAINT "task_providers_pkey" PRIMARY KEY ("id")
 );
+
+-- CockroachDB locks new tables against schema changes by default; unlock so the indexes and foreign keys below can be added.
+ALTER TABLE "task_providers" SET (schema_locked = false);
 
 -- CreateTable
 CREATE TABLE "api_keys" (
@@ -114,6 +135,9 @@ CREATE TABLE "api_keys" (
 
     CONSTRAINT "api_keys_pkey" PRIMARY KEY ("id")
 );
+
+-- CockroachDB locks new tables against schema changes by default; unlock so the indexes and foreign keys below can be added.
+ALTER TABLE "api_keys" SET (schema_locked = false);
 
 -- CreateIndex
 CREATE UNIQUE INDEX "provider_categories_householdId_name_key" ON "provider_categories"("householdId", "name");
