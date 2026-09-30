@@ -22,7 +22,7 @@ Give a household a shared place to store contractors and service providers (roof
 New Prisma models (all household-scoped):
 
 - `ProviderCategory`: name, sortOrder. Unique on (householdId, name).
-- `ProviderStatus`: name, kind (`neutral` | `positive` | `negative`), sortOrder. Unique on (householdId, name). Colors and filters key off `kind`. Default set per household: Lead, Recommended, Hired, Passed, Avoid.
+- `ProviderStatus`: name, kind (`neutral` | `positive` | `negative`), sortOrder, `hiddenByDefault` (boolean; the list page hides providers in such statuses unless toggled; Lead defaults to true). Unique on (householdId, name). Colors and filters key off `kind`. Default set per household: Lead, Recommended, Hired, Passed, Avoid.
 - `Provider`: name, company, primaryContactName, phone, email, website, address, licenseNumber, googlePlaceId (optional, unique per household when set), categoryId, statusId, rating (private), hiredAt, notes (private), metaStatus (soft delete), createdAt, updatedAt.
 - `ProviderContact`: providerId, name, role, phone, email.
 - `ProviderEvidence`: providerId, sourceUrl (dedupe key), sourceGroup, sourceDate, snippet, kind (`third_party` | `self_promo` | `lead`).

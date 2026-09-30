@@ -26,6 +26,7 @@ model User {
   createdTasks           TaskDefinition[]
   historyLogs            OccurrenceHistoryLog[]
   taskHistoryLogs        TaskHistoryLog[]
+  providerComments       ProviderComment[]
 
   @@map("users")
 }
@@ -39,6 +40,10 @@ model Household {
   users      User[]
   categories Category[]
   tasks      TaskDefinition[]
+  providerCategories ProviderCategory[]
+  providerStatuses   ProviderStatus[]
+  providers          Provider[]
+  apiKeys            ApiKey[]
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
@@ -90,6 +95,7 @@ model TaskDefinition {
   defaultAssigneeIds String[]         @default([])
   occurrences       TaskOccurrence[]
   historyLogs       TaskHistoryLog[]
+  providers         TaskProvider[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
@@ -146,4 +152,146 @@ model TaskHistoryLog {
   createdAt DateTime       @default(now())
 
   @@map("task_history_logs")
+}
+
+// Provider category (household-managed, e.g. "Roofing, Siding & Gutters")
+model ProviderCategory {
+  id          String     @id @default(uuid())
+  household   Household  @relation(fields: [householdId], references: [id])
+  householdId String
+  name        String
+  sortOrder   Int        @default(0)
+  providers   Provider[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([householdId, name])
+  @@map("provider_categories")
+}
+
+// Provider status (household-managed, e.g. Lead / Recommended / Hired)
+model ProviderStatus {
+  id              String     @id @default(uuid())
+  household       Household  @relation(fields: [householdId], references: [id])
+  householdId     String
+  name            String
+  kind            String     @default("neutral") // neutral, positive, negative
+  hiddenByDefault Boolean    @default(false)     // list page hides these unless toggled
+  sortOrder       Int        @default(0)
+  providers       Provider[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@unique([householdId, name])
+  @@map("provider_statuses")
+}
+
+// Provider: a contractor or service provider owned by a household
+model Provider {
+  id                 String           @id @default(uuid())
+  household          Household        @relation(fields: [householdId], references: [id])
+  householdId        String
+  category           ProviderCategory @relation(fields: [categoryId], references: [id])
+  categoryId         String
+  status             ProviderStatus   @relation(fields: [statusId], references: [id])
+  statusId           String
+  name               String
+  nameKey            String           // normalized name, used to match watcher input
+  company            String?
+  primaryContactName String?
+  phone              String?
+  email              String?
+  website            String?
+  address            String?
+  licenseNumber      String?
+  googlePlaceId      String?
+  rating             Int?             // private, 1-5
+  hiredAt            DateTime?
+  notes              String?          // private
+  metaStatus         String           @default("active") // active, deleted
+  contacts           ProviderContact[]
+  evidence           ProviderEvidence[]
+  comments           ProviderComment[]
+  tasks              TaskProvider[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@unique([householdId, googlePlaceId])
+  @@index([householdId, metaStatus])
+  @@index([householdId, categoryId, nameKey])
+  @@map("providers")
+}
+
+model ProviderContact {
+  id         String   @id @default(uuid())
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId String
+  name       String
+  role       String?
+  phone      String?
+  email      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([providerId])
+  @@map("provider_contacts")
+}
+
+// One row per neighbor sighting from the watcher
+model ProviderEvidence {
+  id          String    @id @default(uuid())
+  provider    Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId  String
+  sourceUrl   String
+  sourceGroup String?
+  sourceDate  DateTime?
+  snippet     String?
+  kind        String    // third_party, self_promo, lead
+  createdAt   DateTime  @default(now())
+
+  @@unique([providerId, sourceUrl])
+  @@map("provider_evidence")
+}
+
+model ProviderComment {
+  id         String   @id @default(uuid())
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId String
+  author     User     @relation(fields: [authorId], references: [id])
+  authorId   String
+  body       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([providerId, createdAt])
+  @@map("provider_comments")
+}
+
+model TaskProvider {
+  id         String         @id @default(uuid())
+  task       TaskDefinition @relation(fields: [taskId], references: [id])
+  taskId     String
+  provider   Provider       @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId String
+  createdAt  DateTime       @default(now())
+
+  @@unique([taskId, providerId])
+  @@map("task_providers")
+}
+
+// Per-household API key for machine ingest (only the hash is stored)
+model ApiKey {
+  id              String    @id @default(uuid())
+  household       Household @relation(fields: [householdId], references: [id])
+  householdId     String
+  name            String
+  prefix          String    // first characters, shown in the UI to identify the key
+  hashedKey       String    @unique
+  createdByUserId String
+  lastUsedAt      DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([householdId])
+  @@map("api_keys")
 }
