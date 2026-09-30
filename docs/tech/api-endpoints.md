@@ -4,10 +4,12 @@ This document provides an overview of all API endpoints in the Adulting.DIY appl
 
 ## Authentication
 
-The API uses three authentication levels:
+The API uses these authentication levels:
 - **Public**: No authentication required
 - **Protected**: Requires valid bearer token
 - **Household**: Requires valid bearer token + household membership
+- **Household Admin**: Household membership plus the admin role
+- **Household API Key**: Bearer token of the form `adk_...`, a per-household key created by an admin (see [provider-ingest.md](provider-ingest.md))
 
 ## Categories
 
@@ -64,6 +66,51 @@ The API uses three authentication levels:
 | `POST` | `/api/occurrences/[id]/comments` | Household | Add comment to occurrence |
 | `PUT` | `/api/occurrences/[id]/comments/[commentId]` | Household | Edit own comment (author only) |
 | `GET` | `/api/occurrences/[id]/history` | Household | Get occurrence history/timeline |
+
+## Providers
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/providers` | Household | List providers (query: `search`, `categoryId`, `statusId`, `includeHidden`, `sort` = name, mentions, lastSighting, rating) |
+| `POST` | `/api/providers` | Household | Create provider |
+| `GET` | `/api/providers/[id]` | Household | Get provider with contacts, evidence, comments, linked tasks |
+| `PUT` | `/api/providers/[id]` | Household | Update provider |
+| `DELETE` | `/api/providers/[id]` | Household | Soft delete provider |
+| `POST` | `/api/providers/[id]/comments` | Household | Add comment |
+| `PUT` | `/api/providers/[id]/comments/[commentId]` | Household | Edit own comment (author only) |
+| `DELETE` | `/api/providers/[id]/comments/[commentId]` | Household | Delete own comment (author only) |
+| `POST` | `/api/providers/[id]/contacts` | Household | Add contact |
+| `PUT` | `/api/providers/[id]/contacts/[contactId]` | Household | Update contact |
+| `DELETE` | `/api/providers/[id]/contacts/[contactId]` | Household | Delete contact |
+| `GET` | `/api/tasks/[id]/providers` | Household | List providers linked to a task |
+| `POST` | `/api/tasks/[id]/providers` | Household | Link a provider to a task (`{ providerId }`) |
+| `DELETE` | `/api/tasks/[id]/providers/[providerId]` | Household | Unlink a provider from a task |
+
+## Provider Categories and Statuses
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/provider-categories` | Household | List provider categories |
+| `POST` | `/api/provider-categories` | Household Admin | Create category |
+| `PUT` | `/api/provider-categories/[id]` | Household Admin | Rename category |
+| `DELETE` | `/api/provider-categories/[id]` | Household Admin | Delete category; 409 if in use unless `moveToId` is given |
+| `PUT` | `/api/provider-categories/reorder` | Household Admin | Reorder categories (`{ orderedIds }`) |
+| `GET` | `/api/provider-statuses` | Household | List statuses (seeds defaults on first call) |
+| `POST` | `/api/provider-statuses` | Household Admin | Create status (name, kind, hiddenByDefault) |
+| `PUT` | `/api/provider-statuses/[id]` | Household Admin | Update status |
+| `DELETE` | `/api/provider-statuses/[id]` | Household Admin | Delete status; 409 if in use unless `moveToId` is given |
+| `PUT` | `/api/provider-statuses/reorder` | Household Admin | Reorder statuses (`{ orderedIds }`) |
+
+## API Keys and Provider Ingest
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/api-keys` | Household Admin | List keys (prefix, created, last used, revoked) |
+| `POST` | `/api/api-keys` | Household Admin | Create key; plaintext key is returned once |
+| `DELETE` | `/api/api-keys/[id]` | Household Admin | Revoke key |
+| `POST` | `/api/ingest/providers` | Household API Key | Bulk upsert providers and evidence (max 500 per request) |
+
+See [provider-ingest.md](provider-ingest.md) for the ingest contract.
 
 ## User Management
 
@@ -124,6 +171,7 @@ Key data models handled by the API:
 - **TaskOccurrence**: Specific instances of tasks to be completed
 - **OccurrenceHistoryLog**: Audit trail for occurrence changes
 - **FormerHouseholdMember**: Snapshot of departed users for historical display
+- **Provider**, **ProviderCategory**, **ProviderStatus**, **ProviderContact**, **ProviderEvidence**, **ProviderComment**, **TaskProvider**, **ApiKey**: Provider directory and machine ingest (see [provider-ingest.md](provider-ingest.md))
 
 ## Rate Limiting
 

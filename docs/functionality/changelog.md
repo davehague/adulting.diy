@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-30
+
+### Providers
+- New Providers page: a household directory of contractors and service providers with search, category and status filters, and sorting
+- Provider detail page with contact info, extra contacts, private rating, hired date and notes, and comments from either household member
+- Admin-managed provider categories and statuses in Household > Provider settings (defaults: Lead, Recommended, Hired, Passed, Avoid)
+- Neighbor evidence with source links and a "recommended by N neighbors" badge
+- Providers can be linked to tasks from the task detail page
+- Per-household API keys (created by admins, shown once, revocable) and a bulk ingest API for loading neighbor recommendations
+
 ## 2026-04-23
 
 ### Email Reminder Improvements

@@ -48,4 +48,4 @@ E2E tests are excluded from the default run via `vitest.config.ts` configuration
 3. **E2E tests** for task lifecycle workflows (exist but excluded from default run)
 4. **Type tests** for TypeScript type validation
 
-The test suite includes 416 tests across 20 test files, covering task scheduling, notification systems, occurrence management, filter logic, and edge cases.
+The test suite includes 530 tests across 34 test files, covering task scheduling, notification systems, occurrence management, filter logic, and edge cases.

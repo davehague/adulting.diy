@@ -60,6 +60,7 @@ After completing feature work, use the `update-docs` skill to update relevant do
 5. **Category**: Organization system for tasks (predefined + custom)
 6. **OccurrenceHistoryLog**: Audit trail for task occurrences
 7. **FormerHouseholdMember**: Name snapshots of users who left a household
+8. **Provider**: Contractors/service providers, with **ProviderCategory**, **ProviderStatus**, **ProviderContact**, **ProviderEvidence** (neighbor sightings), **ProviderComment**, and **TaskProvider** (task link); **ApiKey** is the per-household key for machine ingest. See [docs/functionality/providers.md](docs/functionality/providers.md) and [docs/tech/provider-ingest.md](docs/tech/provider-ingest.md)
 
 ### Task Scheduling System
 
@@ -84,6 +85,7 @@ adulting.diy/
 │   ├── DevUserSwitcherDebug.vue  # Dev login debug panel
 │   ├── NotificationPreferences.vue
 │   ├── TaskDetails.vue
+│   ├── providers/        # Provider form, comment list, task provider picker
 │   ├── occurrences/      # Occurrence-related components
 │   │   ├── OccurrenceEditForm.vue
 │   │   └── OccurrenceTimeline.vue
@@ -120,7 +122,8 @@ adulting.diy/
 │   ├── home.vue
 │   ├── login.vue
 │   ├── setup-household.vue
-│   ├── household/        # Household management
+│   ├── household/        # Household management (incl. providers-settings.vue)
+│   ├── providers/        # Provider list and detail pages
 │   ├── profile/          # User profile
 │   ├── tasks/            # Task management pages
 │   └── occurrences/      # Occurrence management pages
@@ -141,6 +144,9 @@ adulting.diy/
 │   │   ├── HouseholdService.ts
 │   │   ├── NotificationService.ts
 │   │   ├── OccurrenceService.ts
+│   │   ├── Provider*Service.ts   # Provider, Category, Status, Comment, Contact, Ingest
+│   │   ├── ApiKeyService.ts
+│   │   ├── TaskProviderService.ts
 │   │   ├── TaskService.ts
 │   │   └── UserService.ts
 │   └── utils/          # Server utilities
