@@ -2,6 +2,8 @@ import { H3Event, createError, getHeader, getCookie } from "h3";
 import { OAuth2Client } from "google-auth-library";
 import { UserService } from "@/server/services/UserService";
 import { devAuthService } from "@/server/utils/dev-auth";
+import { assertHouseholdAdmin } from "@/server/utils/admin";
+import { toHttpError } from "@/server/utils/api-errors";
 
 const client = new OAuth2Client(process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID);
 
@@ -172,5 +174,23 @@ export function defineSchedulerProtectedEventHandler(
     }
 
     return handler(event);
+  });
+}
+
+// Wrapper for household routes that only admins may call
+export function defineHouseholdAdminEventHandler(
+  handler: (
+    event: H3Event,
+    authenticatedUser: AuthenticatedUser,
+    householdId: string
+  ) => Promise<any>
+) {
+  return defineHouseholdProtectedEventHandler(async (event, authUser, householdId) => {
+    try {
+      await assertHouseholdAdmin(authUser.userId, householdId);
+    } catch (error) {
+      toHttpError(error, 'admin check');
+    }
+    return handler(event, authUser, householdId);
   });
 }
