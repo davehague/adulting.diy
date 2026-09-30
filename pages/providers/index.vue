@@ -133,7 +133,7 @@ const loading = ref(true);
 const providerError = ref<string | null>(null);
 const filterError = ref<string | null>(null);
 const error = computed(() => filterError.value ?? providerError.value);
-const hasActiveFilter = computed(() => !!(search.value.trim() || categoryId.value || statusId.value));
+const hasActiveFilter = computed(() => !!(search.value.trim() || categoryId.value || statusId.value || includeHidden.value));
 
 const search = ref('');
 const categoryId = ref('');
