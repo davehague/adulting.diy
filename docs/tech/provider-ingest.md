@@ -114,8 +114,8 @@ Re-running the same payload is safe.
 
 ## Loader and Watcher
 
-- The Python loader lives in the separate `scripts-and-agents` repo: `scripts/providers_ingest.py` (branch `feat/adulting-providers-ingest`).
-- The `worthington-watcher` skill (`~/.claude/skills/worthington-watcher`) still writes its markdown contractor ledger and has not been switched to call this API yet. Until then the loader is how ledger data gets into the app.
+- The Python loader lives in the separate `scripts-and-agents` repo: `scripts/providers_ingest.py` (on `main`). It parses the frozen markdown contractor ledger and posts it in batches of 100. It was used once to load the original Worthington ledger and is safe to re-run.
+- The `worthington-watcher` skill (`~/.claude/skills/worthington-watcher`) now posts each run's contractor finds to this API (`https://www.adulting.diy`) instead of editing the markdown ledger, which is a frozen archive. It reads the category vocabulary from `GET /api/ingest/categories`, uses the key in `scripts-and-agents/.env` (`ADULTING_API_KEY`), and queues finds in `logs/worthington-socials/pending-ingest.jsonl` for retry when the site is unreachable. An item the server rejects 5 times moves to `rejected-ingest.jsonl`. See the skill's `SKILL.md` for the details.
 
 ## Related
 
