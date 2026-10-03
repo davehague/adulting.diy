@@ -119,7 +119,7 @@ const onPick = async (event: Event): Promise<void> => {
   notice.value = null;
   const room = Math.max(0, roomLeft.value);
   if (files.length > room) {
-    notice.value = `Only ${room} more photo${room === 1 ? '' : 's'} can be added (limit ${MAX_PROJECT_PHOTOS}).`;
+    notice.value = `Only ${room} more photo${room === 1 ? '' : 's'} can be added (this project can have ${MAX_PROJECT_PHOTOS}).`;
   }
   for (const file of files.slice(0, room)) {
     items.value.push({ key: nextKey++, file, previewUrl: URL.createObjectURL(file), state: 'waiting', error: null });
