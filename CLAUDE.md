@@ -20,6 +20,7 @@ Adulting.DIY is a household task management system designed to help families and
 - **Email Service**: Mailjet (for notifications)
 - **Validation**: Zod (schema validation)
 - **Dates**: date-fns (date manipulation)
+- **Storage**: Vercel Blob (private store, project photos)
 
 ### Development & Deployment
 - **Hosting**: Vercel
@@ -61,6 +62,7 @@ After completing feature work, use the `update-docs` skill to update relevant do
 6. **OccurrenceHistoryLog**: Audit trail for task occurrences
 7. **FormerHouseholdMember**: Name snapshots of users who left a household
 8. **Provider**: Contractors/service providers, with **ProviderCategory**, **ProviderStatus**, **ProviderContact**, **ProviderEvidence** (neighbor sightings), **ProviderComment**, and **TaskProvider** (task link); **ApiKey** is the per-household key for machine ingest. See [docs/functionality/providers.md](docs/functionality/providers.md) and [docs/tech/provider-ingest.md](docs/tech/provider-ingest.md)
+9. **Project**: Household home-project tracking (title, location, status, path, notes), with **ProjectPhoto** (private photos in Vercel Blob). See [docs/functionality/projects.md](docs/functionality/projects.md)
 
 ### Task Scheduling System
 
@@ -85,6 +87,7 @@ adulting.diy/
 │   ├── NotificationPreferences.vue
 │   ├── TaskDetails.vue
 │   ├── providers/        # Provider form, comment list, task provider picker
+│   ├── projects/         # Photo uploader and authenticated image components
 │   ├── occurrences/      # Occurrence-related components
 │   │   ├── OccurrenceEditForm.vue
 │   │   └── OccurrenceTimeline.vue
@@ -123,6 +126,7 @@ adulting.diy/
 │   ├── setup-household.vue
 │   ├── household/        # Household management (incl. providers-settings.vue)
 │   ├── providers/        # Provider list and detail pages
+│   ├── projects/         # Project list, new-project, and project detail pages
 │   ├── profile/          # User profile
 │   ├── tasks/            # Task management pages
 │   └── occurrences/      # Occurrence management pages
@@ -146,12 +150,14 @@ adulting.diy/
 │   │   ├── Provider*Service.ts   # Provider, Category, Status, Comment, Contact, Ingest
 │   │   ├── ApiKeyService.ts
 │   │   ├── TaskProviderService.ts
+│   │   ├── Project*Service.ts    # Project, ProjectPhoto
 │   │   ├── TaskService.ts
 │   │   └── UserService.ts
 │   └── utils/          # Server utilities
 │       ├── auth.ts
 │       ├── dev-auth.ts
 │       ├── prisma/client.ts
+│       ├── blob-storage.ts  # Thin wrapper over Vercel Blob (private store)
 │       └── schedule.ts
 ├── stores/              # Pinia stores
 │   ├── auth.ts
@@ -226,6 +232,8 @@ See `docs/functionality/` for detailed feature documentation:
 4. Seed initial data: `npm run db:seed`
 5. Generate local SSL certificates (if needed)
 6. Start development server: `npm run dev`
+
+`BLOB_READ_WRITE_TOKEN` in `.env` authenticates `server/utils/blob-storage.ts` against the project's private Vercel Blob store (project photos). Local dev and production share the one store, so a local upload is a real upload.
 
 ### Development Login Bypass
 

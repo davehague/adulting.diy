@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-03
+
+### Home Projects (slice 1)
+- Added on the `feat/projects` branch; not yet merged, and pending the database migration and the Vercel Blob store setup
+- New Projects page: a household list of things to fix, improve or build, with a title, optional location, status (Planning, Active, Future, Done) and path (DIY, Hire, Not sure)
+- Capture from a phone or desktop with a title only, or with location and photos; photos are shrunk in the browser before upload, with per-photo retry if an upload fails
+- Project page with photos shown full size, every field editable in place, and photo and project deletion
+- Photos are private: only a signed-in member of the owning household can load one; up to 10 photos per project
+- A **Projects** link was added to the main navigation beside Providers
+
 ## 2026-09-30
 
 ### Providers
