@@ -27,6 +27,8 @@ model User {
   historyLogs            OccurrenceHistoryLog[]
   taskHistoryLogs        TaskHistoryLog[]
   providerComments       ProviderComment[]
+  createdProjects        Project[]               @relation("ProjectCreatedBy")
+  projectPhotos          ProjectPhoto[]          @relation("ProjectPhotoUploadedBy")
 
   @@map("users")
 }
@@ -44,6 +46,7 @@ model Household {
   providerStatuses   ProviderStatus[]
   providers          Provider[]
   apiKeys            ApiKey[]
+  projects           Project[]
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
@@ -294,4 +297,42 @@ model ApiKey {
 
   @@index([householdId])
   @@map("api_keys")
+}
+
+model Project {
+  id          String         @id @default(uuid())
+  household   Household      @relation(fields: [householdId], references: [id])
+  householdId String
+  title       String
+  location    String?        // free text, e.g. "Master bathroom"
+  status      String         @default("planning") // planning, active, future, done
+  path        String?        // diy, hire, unsure; null means not yet decided
+  notes       String?
+  completedAt DateTime?      // set when status becomes done, cleared when it leaves done
+  metaStatus  String         @default("active") // active, deleted
+  createdBy   User           @relation("ProjectCreatedBy", fields: [createdById], references: [id])
+  createdById String
+  photos      ProjectPhoto[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([householdId, metaStatus, status])
+  @@map("projects")
+}
+
+model ProjectPhoto {
+  id           String   @id @default(uuid())
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    String
+  fullPath     String   // Blob pathname of the full-size JPEG
+  thumbPath    String   // Blob pathname of the thumbnail JPEG
+  width        Int      // pixel size of the full-size image
+  height       Int
+  position     Int      // display order; lowest is the cover
+  uploadedBy   User     @relation("ProjectPhotoUploadedBy", fields: [uploadedById], references: [id])
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  @@index([projectId, position])
+  @@map("project_photos")
 }

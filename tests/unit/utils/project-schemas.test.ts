@@ -1,0 +1,107 @@
+import { describe, it, expect } from 'vitest'
+import {
+  projectCreateSchema,
+  projectUpdateSchema,
+  photoDimensionsSchema,
+  parseStatusFilter,
+  parsePathFilter,
+} from '@/server/utils/project-schemas'
+
+// Returns the statusCode of the error a function throws, or undefined if it does not throw.
+const thrownStatus = (fn: () => unknown): number | undefined => {
+  try {
+    fn()
+  } catch (error) {
+    return (error as { statusCode?: number }).statusCode
+  }
+  return undefined
+}
+
+describe('projectCreateSchema', () => {
+  it('trims the title and accepts a title alone', () => {
+    const parsed = projectCreateSchema.parse({ title: '  Paint ceiling spots  ' })
+    expect(parsed.title).toBe('Paint ceiling spots')
+  })
+
+  it('rejects a title of only spaces', () => {
+    const result = projectCreateSchema.safeParse({ title: '   ' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error.issues[0].message).toBe('Title is required')
+  })
+
+  it('rejects a title over 200 characters', () => {
+    expect(projectCreateSchema.safeParse({ title: 'x'.repeat(201) }).success).toBe(false)
+  })
+
+  it('stores a location of only spaces as null', () => {
+    expect(projectCreateSchema.parse({ title: 'A', location: '   ' }).location).toBeNull()
+  })
+
+  it('rejects a location over 100 characters', () => {
+    expect(projectCreateSchema.safeParse({ title: 'A', location: 'x'.repeat(101) }).success).toBe(false)
+  })
+})
+
+describe('projectUpdateSchema', () => {
+  it('accepts a partial update', () => {
+    expect(projectUpdateSchema.parse({ status: 'active' })).toEqual({ status: 'active' })
+  })
+
+  it('accepts clearing the path with null', () => {
+    expect(projectUpdateSchema.parse({ path: null })).toEqual({ path: null })
+  })
+
+  it('rejects an unknown status', () => {
+    expect(projectUpdateSchema.safeParse({ status: 'someday' }).success).toBe(false)
+  })
+
+  it('rejects an unknown path', () => {
+    expect(projectUpdateSchema.safeParse({ path: 'contractor' }).success).toBe(false)
+  })
+
+  it('stores empty notes as null', () => {
+    expect(projectUpdateSchema.parse({ notes: '  ' }).notes).toBeNull()
+  })
+})
+
+describe('photoDimensionsSchema', () => {
+  it('coerces numeric strings from multipart fields', () => {
+    expect(photoDimensionsSchema.parse({ width: '2000', height: '1500' })).toEqual({ width: 2000, height: 1500 })
+  })
+
+  it('rejects missing or zero dimensions', () => {
+    expect(photoDimensionsSchema.safeParse({ width: undefined, height: '10' }).success).toBe(false)
+    expect(photoDimensionsSchema.safeParse({ width: '0', height: '10' }).success).toBe(false)
+  })
+})
+
+describe('parseStatusFilter', () => {
+  it('defaults to planning and active', () => {
+    expect(parseStatusFilter(undefined)).toEqual(['planning', 'active'])
+    expect(parseStatusFilter('')).toEqual(['planning', 'active'])
+  })
+
+  it('parses a comma-separated list', () => {
+    expect(parseStatusFilter('active,done')).toEqual(['active', 'done'])
+  })
+
+  it('rejects an unknown status with a 400', () => {
+    expect(thrownStatus(() => parseStatusFilter('active,someday'))).toBe(400)
+  })
+})
+
+describe('parsePathFilter', () => {
+  it('returns undefined when absent', () => {
+    expect(parsePathFilter(undefined)).toBeUndefined()
+    expect(parsePathFilter('')).toBeUndefined()
+  })
+
+  it('accepts the three paths and none', () => {
+    expect(parsePathFilter('diy')).toBe('diy')
+    expect(parsePathFilter('none')).toBe('none')
+  })
+
+  it('rejects an unknown path with a 400', () => {
+    expect(thrownStatus(() => parsePathFilter('contractor'))).toBe(400)
+  })
+})
