@@ -62,8 +62,8 @@
                          :photo-id="project.coverPhotoId"
                          variant="thumb"
                          :alt="project.title" />
-            <div v-else class="w-full h-full flex items-center justify-center text-stone-400">
-              <ImageOff :size="28" aria-hidden="true" />
+            <div v-else class="w-full h-full flex items-center justify-center">
+              <img src="/android-chrome-192x192.png" alt="" class="w-20 h-20 opacity-40">
             </div>
           </div>
           <div class="p-4">
@@ -90,7 +90,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
-import { Plus, ImageOff } from 'lucide-vue-next';
+import { Plus } from 'lucide-vue-next';
 import {
   PROJECT_STATUSES,
   type ProjectListItem,
