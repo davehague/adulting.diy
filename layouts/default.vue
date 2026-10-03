@@ -50,6 +50,14 @@
               </NuxtLink>
 
               <NuxtLink
+                to="/projects"
+                class="inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors duration-150"
+                :class="route.path.startsWith('/projects') ? 'border-amber-500 text-stone-900' : 'border-transparent text-stone-600 hover:text-stone-900 hover:border-stone-300'"
+              >
+                Projects
+              </NuxtLink>
+
+              <NuxtLink
                 v-if="authStore.user?.isAdmin"
                 to="/household"
                 class="inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors duration-150"
@@ -155,6 +163,14 @@
           @click="showMobileMenu = false"
         >
           Providers
+        </NuxtLink>
+        <NuxtLink
+          to="/projects"
+          class="block px-3 py-2 rounded-md text-base font-medium transition-colors duration-150"
+          :class="route.path.startsWith('/projects') ? 'bg-amber-50 text-amber-700' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'"
+          @click="showMobileMenu = false"
+        >
+          Projects
         </NuxtLink>
         <NuxtLink
           v-if="authStore.user?.isAdmin"
