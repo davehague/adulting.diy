@@ -107,6 +107,29 @@ export const useApi = () => {
   const del = <T>(endpoint: string, options: FetchOptions = {}) =>
     apiFetch<T>(endpoint, { ...options, method: "DELETE" });
 
+  // Multipart upload. The browser must set the Content-Type itself so it can add the boundary.
+  const upload = async <T>(endpoint: string, form: FormData): Promise<T> => {
+    const headers = new Headers();
+    if (authStore.accessToken) {
+      headers.set("Authorization", `Bearer ${authStore.accessToken}`);
+    }
+    const response = await fetch(new URL(endpoint, window.location.origin).toString(), {
+      method: "POST",
+      body: form,
+      headers,
+    });
+    if (response.status === 401) {
+      authStore.logout();
+      window.location.href = "/login";
+      throw new Error("Authentication required");
+    }
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { message?: string } | null;
+      throw new Error(body?.message || `Upload failed (${response.status})`);
+    }
+    return response.json() as Promise<T>;
+  };
+
   return {
     fetch: apiFetch,
     get,
@@ -114,5 +137,6 @@ export const useApi = () => {
     put, // Add put method
     patch,
     delete: del,
+    upload,
   };
 };
