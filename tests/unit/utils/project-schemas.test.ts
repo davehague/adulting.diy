@@ -40,6 +40,11 @@ describe('projectCreateSchema', () => {
   it('rejects a location over 100 characters', () => {
     expect(projectCreateSchema.safeParse({ title: 'A', location: 'x'.repeat(101) }).success).toBe(false)
   })
+
+  it('accepts multi-line notes and stores empty notes as null', () => {
+    expect(projectCreateSchema.parse({ title: 'A', notes: 'line one\nline two' }).notes).toBe('line one\nline two')
+    expect(projectCreateSchema.parse({ title: 'A', notes: '  ' }).notes).toBeNull()
+  })
 })
 
 describe('projectUpdateSchema', () => {

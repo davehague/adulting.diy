@@ -80,8 +80,14 @@ describe('ProjectService', () => {
       const result = await service.create('h1', 'u1', { title: 'Patch hole', location: 'Kitchen' })
       expect(result).toEqual({ id: 'new-id' })
       expect(db.project.create.mock.calls[0][0].data).toEqual({
-        householdId: 'h1', createdById: 'u1', title: 'Patch hole', location: 'Kitchen',
+        householdId: 'h1', createdById: 'u1', title: 'Patch hole', location: 'Kitchen', notes: null,
       })
+    })
+
+    it('stores notes given at capture', async () => {
+      db.project.create.mockResolvedValue({ id: 'new-id' })
+      await service.create('h1', 'u1', { title: 'Patch hole', notes: 'Behind the picture.\nAbout 3 inches wide.' })
+      expect(db.project.create.mock.calls[0][0].data.notes).toBe('Behind the picture.\nAbout 3 inches wide.')
     })
 
     it('stores a missing location as null', async () => {

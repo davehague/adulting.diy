@@ -46,6 +46,7 @@ export interface ProjectDetail {
 export interface ProjectCreateInput {
   title: string;
   location?: string | null;
+  notes?: string | null;
 }
 
 export interface ProjectUpdateInput {

@@ -16,7 +16,7 @@ Path says whether the household plans to do a project themselves or hire it out:
 
 ## Capturing a Project
 
-**New project** (`/projects/new`) only requires a title. Location is optional, and so are photos, so a thought captured away from home still saves.
+**New project** (`/projects/new`) only requires a title. Location, multi-line notes and photos are all optional, so a thought captured away from home still saves.
 
 Photos are added from a phone's camera or photo library (or a desktop file picker). Each photo is shrunk in the browser before it is uploaded, so cellular uploads stay small and fast; a full-size copy and a thumbnail are both kept. Saving creates the project first, then uploads any chosen photos one at a time while the form stays on screen. Each photo shows its own state (ready, uploading, uploaded, failed). If a photo fails, the project is still saved; a **Retry** button appears on that photo, and a link lets you move on to the project page without it. Leaving or reloading the new-project page drops any photo that has not finished uploading; it can be added again from the project page.
 

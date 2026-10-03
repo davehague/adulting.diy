@@ -64,7 +64,13 @@ export class ProjectService {
 
   async create(householdId: string, userId: string, input: ProjectCreateInput): Promise<{ id: string }> {
     const project = await prisma.project.create({
-      data: { householdId, createdById: userId, title: input.title, location: input.location ?? null },
+      data: {
+        householdId,
+        createdById: userId,
+        title: input.title,
+        location: input.location ?? null,
+        notes: input.notes ?? null,
+      },
     });
     return { id: project.id };
   }

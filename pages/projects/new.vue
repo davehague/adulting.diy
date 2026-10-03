@@ -31,6 +31,17 @@
       </div>
 
       <div>
+        <label for="project-notes" class="block text-sm font-medium text-stone-700">Notes <span class="font-normal text-stone-500">(optional)</span></label>
+        <textarea id="project-notes"
+                  v-model="notes"
+                  rows="4"
+                  maxlength="5000"
+                  :disabled="!!createdId"
+                  placeholder="What's wrong, what you want, anything worth remembering"
+                  class="mt-1 w-full rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-sm disabled:bg-stone-50 disabled:text-stone-500" />
+      </div>
+
+      <div>
         <p class="block text-sm font-medium text-stone-700 mb-2">Photos <span class="font-normal text-stone-500">(optional)</span></p>
         <PhotoUploader ref="uploader" :remaining="MAX_PROJECT_PHOTOS" />
       </div>
@@ -65,6 +76,7 @@ const { createProject, listLocations } = useProjects();
 
 const title = ref('');
 const location = ref('');
+const notes = ref('');
 const locations = ref<string[]>([]);
 const saving = ref(false);
 const error = ref<string | null>(null);
@@ -82,7 +94,11 @@ const save = async (): Promise<void> => {
   saving.value = true;
   try {
     if (!createdId.value) {
-      const created = await createProject({ title: title.value.trim(), location: location.value.trim() || null });
+      const created = await createProject({
+        title: title.value.trim(),
+        location: location.value.trim() || null,
+        notes: notes.value.trim() || null,
+      });
       createdId.value = created.id;
     }
     const allUploaded = uploader.value ? await uploader.value.uploadAll(createdId.value) : true;

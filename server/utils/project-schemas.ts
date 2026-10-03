@@ -32,7 +32,7 @@ const notes = z
   .nullable()
   .optional();
 
-export const projectCreateSchema = z.object({ title, location });
+export const projectCreateSchema = z.object({ title, location, notes });
 
 export const projectUpdateSchema = z.object({
   title: title.optional(),
