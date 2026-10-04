@@ -213,8 +213,9 @@ describe('checkAndSendTaskReminders', () => {
   it('sends overdue reminder for occurrence with dueDate in the past', async () => {
     const service = new NotificationService()
     const threeDaysAgo = new Date()
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
-    threeDaysAgo.setHours(0, 0, 0, 0)
+    // Noon UTC, like production due dates (parseDateOnly), so the calendar day is the same in every timezone.
+    threeDaysAgo.setUTCDate(threeDaysAgo.getUTCDate() - 3)
+    threeDaysAgo.setUTCHours(12, 0, 0, 0)
 
     const task = {
       id: 'task-1',
@@ -263,8 +264,8 @@ describe('checkAndSendTaskReminders', () => {
   it('sends before reminder for upcoming occurrence', async () => {
     const service = new NotificationService()
     const threeDaysFromNow = new Date()
-    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3)
-    threeDaysFromNow.setHours(0, 0, 0, 0)
+    threeDaysFromNow.setUTCDate(threeDaysFromNow.getUTCDate() + 3)
+    threeDaysFromNow.setUTCHours(12, 0, 0, 0)
 
     const task = {
       id: 'task-1',
@@ -313,8 +314,8 @@ describe('checkAndSendTaskReminders', () => {
 
     // Due in 3 days - should match the "3 days before" reminder
     const threeDaysFromNow = new Date()
-    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3)
-    threeDaysFromNow.setHours(0, 0, 0, 0)
+    threeDaysFromNow.setUTCDate(threeDaysFromNow.getUTCDate() + 3)
+    threeDaysFromNow.setUTCHours(12, 0, 0, 0)
 
     const task = {
       id: 'task-1',
@@ -679,8 +680,8 @@ describe('duplicate reminder prevention', () => {
     today.setHours(0, 0, 0, 0)
 
     const dueDate = new Date()
-    dueDate.setDate(dueDate.getDate() + 3)
-    dueDate.setHours(0, 0, 0, 0)
+    dueDate.setUTCDate(dueDate.getUTCDate() + 3)
+    dueDate.setUTCHours(12, 0, 0, 0)
 
     const task = {
       id: 'task-1',
@@ -728,8 +729,8 @@ describe('duplicate reminder prevention', () => {
     today.setHours(0, 0, 0, 0)
 
     const dueDate = new Date()
-    dueDate.setDate(dueDate.getDate() + 3)
-    dueDate.setHours(0, 0, 0, 0)
+    dueDate.setUTCDate(dueDate.getUTCDate() + 3)
+    dueDate.setUTCHours(12, 0, 0, 0)
 
     const task = {
       id: 'task-1',
@@ -779,8 +780,8 @@ describe('duplicate reminder prevention', () => {
     today.setHours(0, 0, 0, 0)
 
     const dueDate = new Date()
-    dueDate.setDate(dueDate.getDate() + 3)
-    dueDate.setHours(0, 0, 0, 0)
+    dueDate.setUTCDate(dueDate.getUTCDate() + 3)
+    dueDate.setUTCHours(12, 0, 0, 0)
 
     const task = {
       id: 'task-1',
