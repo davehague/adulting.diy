@@ -28,7 +28,7 @@ Leaving or reloading the new-project page after a photo was picked but before Sa
 
 The list shows Active and Planning projects by default. A "Show future and done" toggle adds the other two statuses. A path filter narrows the list to DIY, Hire, Not sure, or Needs details (no path set).
 
-Each card shows the cover thumbnail (the first photo added, or a placeholder if there are none yet), title, location, a status badge, a path badge or the "Needs details" marker, and a photo count when there is more than one photo.
+Each card shows the cover thumbnail (the first photo added, or a placeholder if there are none yet), title, location, a status badge, a path badge or the "Needs details" marker, and a photo count when there is more than one photo. A card with more than one photo is swipeable: swiping left and right over the photo moves between them, with small dots over the bottom of the photo showing which one is in view; tapping anywhere on the card still opens the project.
 
 The empty state shows a short line and the New project button.
 
@@ -37,6 +37,8 @@ A **Projects** link sits beside Providers in the main navigation, in both the de
 ## The Project Page
 
 The project page (`/projects/:id`) shows every photo in order; tapping one opens it full size. Title, location, status, path and notes are all editable in place, saving as soon as a field is changed. Photos can be added here the same way as on the new-project form, up to the 10-photo cap, and removed one at a time with a confirmation.
+
+The full-size viewer opens on the photo that was tapped and shows the whole photo, scaled to fit the screen rather than cropped. When a project has more than one photo, swiping (or, on desktop, the previous/next arrow buttons or the Left/Right arrow keys) moves between them, and a counter such as "2 / 5" shows the position. Close it with the close button, the Escape key, or by tapping the dark area outside the photo; tapping the photo itself, or swiping, never closes it.
 
 ## Photo Limits and Privacy
 

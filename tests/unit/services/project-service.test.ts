@@ -72,6 +72,13 @@ describe('ProjectService', () => {
       expect(without.photoCount).toBe(0)
       expect(without.coverPhotoId).toBeNull()
     })
+
+    it('reports ordered photo ids for a project with photos, and an empty array for one without', async () => {
+      db.project.findMany.mockResolvedValue([row({ photos: [{ id: 'ph1' }, { id: 'ph2' }] }), row({ id: 'p2' })])
+      const [withPhotos, without] = await service.list('h1', {})
+      expect(withPhotos.photoIds).toEqual(['ph1', 'ph2'])
+      expect(without.photoIds).toEqual([])
+    })
   })
 
   describe('create', () => {

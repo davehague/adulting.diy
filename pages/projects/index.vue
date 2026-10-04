@@ -56,14 +56,30 @@
       <li v-for="project in projects" :key="project.id">
         <NuxtLink :to="`/projects/${project.id}`"
                   class="block bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden hover:border-amber-400 transition-colors">
-          <div class="aspect-[4/3] bg-stone-100">
-            <AuthedImage v-if="project.coverPhotoId"
+          <div class="aspect-[4/3] bg-stone-100 relative">
+            <PhotoCarousel v-if="project.photoCount > 1"
+                           :project-id="project.id"
+                           :photo-ids="project.photoIds"
+                           variant="thumb"
+                           :alt="project.title"
+                           @update:current-index="(index) => setCardPhotoIndex(project.id, index)" />
+            <AuthedImage v-else-if="project.coverPhotoId"
                          :project-id="project.id"
                          :photo-id="project.coverPhotoId"
                          variant="thumb"
                          :alt="project.title" />
             <div v-else class="w-full h-full flex items-center justify-center">
               <img src="/android-chrome-192x192.png" alt="" class="w-20 h-20 opacity-40">
+            </div>
+
+            <!-- Indicator dots: display only, never tappable, so a swipe or tap over them still
+                 behaves like a swipe or tap on the card. -->
+            <div v-if="project.photoCount > 1"
+                 class="absolute inset-x-0 bottom-0 flex justify-center gap-1.5 py-2 bg-gradient-to-t from-black/40 to-transparent pointer-events-none">
+              <span v-for="(photoId, index) in project.photoIds"
+                    :key="photoId"
+                    class="w-1.5 h-1.5 rounded-full"
+                    :class="(cardPhotoIndex[project.id] ?? 0) === index ? 'bg-white' : 'bg-white/50'" />
             </div>
           </div>
           <div class="p-4">
@@ -89,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { Plus } from 'lucide-vue-next';
 import {
   PROJECT_STATUSES,
@@ -100,6 +116,7 @@ import {
 import { useProjects } from '@/composables/useProjects';
 import { PATH_LABELS, STATUS_LABELS, statusBadgeClass } from '@/utils/project-labels';
 import AuthedImage from '@/components/projects/AuthedImage.vue';
+import PhotoCarousel from '@/components/projects/PhotoCarousel.vue';
 
 const { listProjects } = useProjects();
 
@@ -110,6 +127,12 @@ const error = ref<string | null>(null);
 const path = ref<ProjectPathFilter | ''>('');
 const showAll = ref(false);
 const hasActiveFilter = computed(() => path.value !== '' || showAll.value);
+
+// Which slide is in view for each multi-photo card's carousel, keyed by project id, for the dots.
+const cardPhotoIndex = reactive<Record<string, number>>({});
+const setCardPhotoIndex = (projectId: string, index: number): void => {
+  cardPhotoIndex[projectId] = index;
+};
 
 // Ignore a slow response that arrives after a newer filter change.
 let latestRequestId = 0;

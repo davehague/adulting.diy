@@ -111,18 +111,51 @@
     <div v-if="project && viewing"
          class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
          role="dialog"
+         aria-modal="true"
          aria-label="Photo"
-         @click="viewing = null">
-      <div class="max-w-full max-h-full">
-        <AuthedImage :project-id="project.id" :photo-id="viewing" variant="full" :alt="project.title"
-                     contain class="max-h-[90vh] max-w-full" />
-      </div>
+         @click="closeViewer">
+      <PhotoCarousel ref="viewerCarousel"
+                     :project-id="project.id"
+                     :photo-ids="photoIds"
+                     variant="full"
+                     contain
+                     :start-index="viewingStartIndex"
+                     :alt="project.title"
+                     @update:current-index="onViewerIndexChange" />
+
+      <button type="button"
+              class="absolute top-2 right-2 sm:top-4 sm:right-4 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70"
+              aria-label="Close"
+              @click.stop="closeViewer">
+        <X :size="24" />
+      </button>
+
+      <button v-if="photoIds.length > 1 && viewerIndex > 0"
+              type="button"
+              class="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white items-center justify-center hover:bg-black/70"
+              aria-label="Previous photo"
+              @click.stop="viewerCarousel?.prev()">
+        <ChevronLeft :size="24" />
+      </button>
+      <button v-if="photoIds.length > 1 && viewerIndex < photoIds.length - 1"
+              type="button"
+              class="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 text-white items-center justify-center hover:bg-black/70"
+              aria-label="Next photo"
+              @click.stop="viewerCarousel?.next()">
+        <ChevronRight :size="24" />
+      </button>
+
+      <p v-if="photoIds.length > 1"
+         class="absolute bottom-2 left-0 right-0 text-center text-sm text-white/90 pointer-events-none">
+        {{ viewerIndex + 1 }} / {{ photoIds.length }}
+      </p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ChevronLeft, ChevronRight, X } from 'lucide-vue-next';
 import {
   MAX_PROJECT_PHOTOS,
   PROJECT_PATHS,
@@ -137,6 +170,7 @@ import { useProjects } from '@/composables/useProjects';
 import { PATH_LABELS, STATUS_LABELS } from '@/utils/project-labels';
 import AuthedImage from '@/components/projects/AuthedImage.vue';
 import PhotoUploader from '@/components/projects/PhotoUploader.vue';
+import PhotoCarousel from '@/components/projects/PhotoCarousel.vue';
 
 const route = useRoute();
 const id = computed(() => String(route.params.id));
@@ -150,7 +184,18 @@ const saveError = ref<string | null>(null);
 const photoError = ref<string | null>(null);
 const saving = ref(false);
 const savedAt = ref<number | null>(null);
+// The id of the photo that was tapped; the viewer opens the carousel on that one. null = closed.
 const viewing = ref<string | null>(null);
+const viewerCarousel = ref<InstanceType<typeof PhotoCarousel> | null>(null);
+const viewerIndex = ref(0);
+
+// Always read from the current photo list, so removing a photo while the viewer is closed, then
+// reopening it on another, never refers to a photo that no longer exists.
+const photoIds = computed(() => project.value?.photos.map((photo) => photo.id) ?? []);
+const viewingStartIndex = computed(() => {
+  const index = viewing.value ? photoIds.value.indexOf(viewing.value) : -1;
+  return index === -1 ? 0 : index;
+});
 
 const form = reactive<{ title: string; location: string; status: ProjectStatus; path: ProjectPath | ''; notes: string }>({
   title: '', location: '', status: 'planning', path: '', notes: '',
@@ -194,6 +239,35 @@ const saveTitle = async (): Promise<void> => {
 const onUploaded = (photo: ProjectPhotoDto): void => {
   if (project.value) project.value.photos = [...project.value.photos, photo];
 };
+
+const closeViewer = (): void => {
+  viewing.value = null;
+};
+
+const onViewerIndexChange = (index: number): void => {
+  viewerIndex.value = index;
+};
+
+const onViewerKeydown = (event: KeyboardEvent): void => {
+  if (event.key === 'Escape') closeViewer();
+  else if (event.key === 'ArrowLeft') viewerCarousel.value?.prev();
+  else if (event.key === 'ArrowRight') viewerCarousel.value?.next();
+};
+
+// Keys only matter while the viewer is open, so the listener is added when it opens and removed
+// when it closes (and, as a safety net, when the page itself unmounts).
+watch(viewing, (value) => {
+  if (value) {
+    viewerIndex.value = viewingStartIndex.value;
+    window.addEventListener('keydown', onViewerKeydown);
+  } else {
+    window.removeEventListener('keydown', onViewerKeydown);
+  }
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onViewerKeydown);
+});
 
 const removePhoto = async (photoId: string): Promise<void> => {
   if (!project.value) return;

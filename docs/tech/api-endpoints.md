@@ -90,7 +90,7 @@ The API uses these authentication levels:
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| `GET` | `/api/projects` | Household | List projects (query: `status` comma-separated, defaults to `planning,active`; `path` = `diy`, `hire`, `unsure`, or `none` for not set). Returns each project with its photo count and cover photo id, sorted Active first then Planning, Future, Done, newest first within each |
+| `GET` | `/api/projects` | Household | List projects (query: `status` comma-separated, defaults to `planning,active`; `path` = `diy`, `hire`, `unsure`, or `none` for not set). Returns each project with its photo count, cover photo id, and ordered photo ids, sorted Active first then Planning, Future, Done, newest first within each |
 | `POST` | `/api/projects` | Household | Create project (`title` required, `location` and `notes` optional); status starts as `planning`, path as null |
 | `GET` | `/api/projects/locations` | Household | Distinct locations already used by the household's non-deleted projects, for suggestions |
 | `GET` | `/api/projects/[id]` | Household | Get one project with its photos in order |

@@ -59,6 +59,7 @@ export class ProjectService {
         path: project.path as ProjectPath | null,
         photoCount: project.photos.length,
         coverPhotoId: project.photos[0]?.id ?? null,
+        photoIds: project.photos.map((photo) => photo.id),
       }));
   }
 

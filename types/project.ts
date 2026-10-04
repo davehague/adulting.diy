@@ -31,6 +31,7 @@ export interface ProjectListItem {
   path: ProjectPath | null;
   photoCount: number;
   coverPhotoId: string | null;
+  photoIds: string[];
 }
 
 export interface ProjectDetail {
