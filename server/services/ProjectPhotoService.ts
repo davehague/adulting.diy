@@ -55,15 +55,26 @@ export class ProjectPhotoService {
       throw new HttpError('Photo storage is unavailable. Try again.', 502);
     }
 
+    let photo;
     try {
-      const photo = await prisma.projectPhoto.create({
+      photo = await prisma.projectPhoto.create({
         data: { id, projectId, fullPath, thumbPath, width: upload.width, height: upload.height, position, uploadedById: userId },
       });
-      return { id: photo.id, width: photo.width, height: photo.height, position: photo.position };
     } catch (error) {
       await this.cleanUp([fullPath, thumbPath]);
       throw error;
     }
+
+    // Two uploads can both pass the pre-check above before either's row exists; re-count now that
+    // this row is committed and undo it if that let the project go over the cap.
+    const count = await prisma.projectPhoto.count({ where: { projectId } });
+    if (count > MAX_PROJECT_PHOTOS) {
+      await prisma.projectPhoto.delete({ where: { id: photo.id } });
+      await this.cleanUp([fullPath, thumbPath]);
+      throw new HttpError(`This project already has ${MAX_PROJECT_PHOTOS} photos`, 409);
+    }
+
+    return { id: photo.id, width: photo.width, height: photo.height, position: photo.position };
   }
 
   async read(

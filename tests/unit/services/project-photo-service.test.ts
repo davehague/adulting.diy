@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('@/server/utils/prisma/client', () => ({
   default: {
     project: { findFirst: vi.fn() },
-    projectPhoto: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), delete: vi.fn() },
+    projectPhoto: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), delete: vi.fn(), count: vi.fn() },
   },
 }))
 
@@ -38,6 +38,7 @@ describe('ProjectPhotoService', () => {
     vi.clearAllMocks()
     blob.put.mockResolvedValue(undefined)
     blob.remove.mockResolvedValue(undefined)
+    db.projectPhoto.count.mockResolvedValue(1)
   })
 
   describe('add', () => {
@@ -107,6 +108,33 @@ describe('ProjectPhotoService', () => {
       db.projectPhoto.findMany.mockResolvedValue([])
       db.projectPhoto.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => data)
       expect((await service.add('h1', 'p1', 'u1', upload())).position).toBe(0)
+    })
+
+    it('deletes the row and both blobs when the post-create count exceeds the cap', async () => {
+      db.project.findFirst.mockResolvedValue({ id: 'p1' })
+      db.projectPhoto.findMany.mockResolvedValue([])
+      db.projectPhoto.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => data)
+      db.projectPhoto.count.mockResolvedValue(11)
+      const result = service.add('h1', 'p1', 'u1', upload())
+      await expect(result).rejects.toMatchObject({
+        statusCode: 409, message: 'This project already has 10 photos',
+      })
+      const createdId = db.projectPhoto.create.mock.calls[0][0].data.id
+      expect(db.projectPhoto.delete).toHaveBeenCalledWith({ where: { id: createdId } })
+      const removed = blob.remove.mock.calls[0][0] as string[]
+      expect(removed).toHaveLength(2)
+      expect(removed[0]).toMatch(/-full\.jpg$/)
+      expect(removed[1]).toMatch(/-thumb\.jpg$/)
+    })
+
+    it('resolves and deletes nothing when the post-create count is at or under the cap', async () => {
+      db.project.findFirst.mockResolvedValue({ id: 'p1' })
+      db.projectPhoto.findMany.mockResolvedValue([])
+      db.projectPhoto.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => data)
+      db.projectPhoto.count.mockResolvedValue(10)
+      await expect(service.add('h1', 'p1', 'u1', upload())).resolves.toBeTruthy()
+      expect(db.projectPhoto.delete).not.toHaveBeenCalled()
+      expect(blob.remove).not.toHaveBeenCalled()
     })
 
     it('removes both blobs when the row cannot be created', async () => {
