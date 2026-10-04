@@ -168,5 +168,67 @@ describe('OccurrenceService - Occurrence Generation', () => {
 
       expect(result).toBeNull()
     })
+
+    describe('"after N times" end condition yields exactly N occurrences', () => {
+      const timesTask = (times: number) =>
+        mockTask({
+          scheduleConfig: {
+            type: 'fixed_interval',
+            interval: 1,
+            intervalUnit: 'week',
+            endCondition: { type: 'times', times },
+          },
+        })
+
+      beforeEach(() => {
+        vi.mocked(prisma.taskOccurrence.findFirst).mockResolvedValue(null) // no duplicate
+        vi.mocked(prisma.taskOccurrence.create).mockImplementation(async (args: any) => ({
+          id: 'occ-next',
+          ...args.data,
+        }) as any)
+        vi.mocked(prisma.occurrenceHistoryLog.create).mockResolvedValue({} as any)
+      })
+
+      it('creates the Nth occurrence when N-1 already exist', async () => {
+        // times=3, two occurrences exist (one just completed) → the 3rd must be created
+        vi.mocked(prisma.taskOccurrence.count).mockResolvedValue(2)
+
+        const result = await service.generateNextOccurrence(timesTask(3) as any, new Date(2026, 1, 18), 'user-1')
+
+        expect(result).not.toBeNull()
+        expect(vi.mocked(prisma.taskOccurrence.create)).toHaveBeenCalledTimes(1)
+      })
+
+      it('does not create an occurrence beyond N', async () => {
+        vi.mocked(prisma.taskOccurrence.count).mockResolvedValue(3)
+
+        const result = await service.generateNextOccurrence(timesTask(3) as any, new Date(2026, 1, 18), 'user-1')
+
+        expect(result).toBeNull()
+        expect(vi.mocked(prisma.taskOccurrence.create)).not.toHaveBeenCalled()
+      })
+
+      it('times=1 and times=2 produce 1 and 2 occurrences in total', async () => {
+        // times=1: initial occurrence exists, completing it must not create another
+        vi.mocked(prisma.taskOccurrence.count).mockResolvedValue(1)
+        expect(await service.generateNextOccurrence(timesTask(1) as any, new Date(2026, 1, 18), 'user-1')).toBeNull()
+
+        // times=2: after the first completes, a second is created; after the second, none
+        vi.mocked(prisma.taskOccurrence.count).mockResolvedValue(1)
+        expect(await service.generateNextOccurrence(timesTask(2) as any, new Date(2026, 1, 18), 'user-1')).not.toBeNull()
+        vi.mocked(prisma.taskOccurrence.count).mockResolvedValue(2)
+        expect(await service.generateNextOccurrence(timesTask(2) as any, new Date(2026, 1, 25), 'user-1')).toBeNull()
+      })
+
+      it('does not count deleted occurrences (pause/schedule-edit leftovers) toward the limit', async () => {
+        vi.mocked(prisma.taskOccurrence.count).mockResolvedValue(1)
+
+        await service.generateNextOccurrence(timesTask(3) as any, new Date(2026, 1, 18), 'user-1')
+
+        expect(vi.mocked(prisma.taskOccurrence.count)).toHaveBeenCalledWith({
+          where: { taskId: 'task-1', status: { not: 'deleted' } },
+        })
+      })
+    })
   })
 })

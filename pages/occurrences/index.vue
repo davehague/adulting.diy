@@ -476,6 +476,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useApi } from '@/utils/api';
+import { isVariableSchedule } from '@/utils/schedule-type';
 import { useAuthStore } from '@/stores/auth';
 import SkipModal from '@/components/occurrences/SkipModal.vue';
 import CompleteModal from '@/components/occurrences/CompleteModal.vue';
@@ -842,7 +843,7 @@ const skipOccurrence = (occurrenceId: string, occurrence: TaskOccurrence) => {
   closeDropdown();
   skipTargetId.value = occurrenceId;
   const scheduleType = (occurrence.task?.scheduleConfig as any)?.type;
-  skipTargetIsVariableInterval.value = scheduleType === 'variable_interval';
+  skipTargetIsVariableInterval.value = isVariableSchedule({ type: scheduleType });
   skipTargetIsRecurring.value = scheduleType !== 'once';
   showSkipModal.value = true;
 };

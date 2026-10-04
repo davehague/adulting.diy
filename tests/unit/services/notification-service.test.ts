@@ -361,6 +361,103 @@ describe('checkAndSendTaskReminders', () => {
   })
 })
 
+describe('checkAndSendTaskReminders: lookback window at the real cron time', () => {
+  // The reminders cron runs at 13:00 UTC. Due dates are stored at the start of a day
+  // (00:00Z from the scheduler on Vercel, 12:00Z from parseDateOnly), i.e. always
+  // before 13:00Z, so the query's lower bound must not be "now minus N days".
+  const CRON_TIME = '2026-10-04T13:00:00.000Z'
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(CRON_TIME))
+  })
+
+  afterEach(async () => {
+    vi.useRealTimers()
+    // Drop any queued once-mocks a case left unconsumed so they cannot leak into later tests
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+    vi.mocked(prisma.taskOccurrence.findMany).mockReset()
+    vi.mocked(prisma.occurrenceHistoryLog.findFirst).mockReset()
+    vi.mocked(prisma.occurrenceHistoryLog.create).mockReset()
+  })
+
+  // Run the check against a findMany that honours the dueDate lower bound, like the DB does.
+  const runCheck = async (
+    reminder: { days: number; timing: 'before' | 'on' | 'after' },
+    dueDate: Date,
+    timezone: string
+  ) => {
+    const service = new NotificationService()
+    const task = {
+      id: 'task-1',
+      householdId: 'household-1',
+      createdByUserId: 'user-1',
+      metaStatus: 'active',
+      reminderConfig: { reminders: [reminder] },
+      household: { timezone, name: 'Home' },
+    }
+    const occurrence = {
+      id: 'occ-1',
+      taskId: 'task-1',
+      dueDate,
+      status: 'assigned',
+      assigneeIds: ['user-1'],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+    vi.mocked(prisma.taskOccurrence.findMany).mockImplementationOnce((async (args: any) => {
+      const gte: Date | undefined = args?.where?.dueDate?.gte
+      return !gte || occurrence.dueDate >= gte ? [occurrence] : []
+    }) as any)
+    vi.mocked(prisma.occurrenceHistoryLog.findFirst).mockResolvedValueOnce(null)
+    vi.mocked(prisma.occurrenceHistoryLog.create).mockResolvedValueOnce({} as any)
+    const sendSpy = vi.spyOn(service, 'sendNotification').mockResolvedValue(true)
+
+    const count = await service.checkAndSendTaskReminders(task as any)
+    sendSpy.mockRestore()
+    return count
+  }
+
+  // [label, timezone, due date instant]. "3 days ago" / "today" in the household's calendar.
+  const afterCases: Array<[string, string, string]> = [
+    ['UTC, stored 00:00Z (scheduler on Vercel)', 'UTC', '2026-10-01T00:00:00.000Z'],
+    ['UTC, stored 12:00Z (parseDateOnly)', 'UTC', '2026-10-01T12:00:00.000Z'],
+    ['west of UTC (New York), stored 12:00Z', 'America/New_York', '2026-10-01T12:00:00.000Z'],
+    ['east of UTC (Auckland), stored 12:00Z', 'Pacific/Auckland', '2026-10-01T12:00:00.000Z'],
+  ]
+
+  it.each(afterCases)('sends the longest "3 days after" reminder: %s', async (_label, tz, due) => {
+    expect(await runCheck({ days: 3, timing: 'after' }, new Date(due), tz)).toBe(1)
+  })
+
+  const onCases: Array<[string, string, string]> = [
+    ['UTC, stored 00:00Z', 'UTC', '2026-10-04T00:00:00.000Z'],
+    ['UTC, stored 12:00Z', 'UTC', '2026-10-04T12:00:00.000Z'],
+    ['west of UTC (New York), stored 12:00Z', 'America/New_York', '2026-10-04T12:00:00.000Z'],
+    ['east of UTC (Auckland), stored 12:00Z', 'Pacific/Auckland', '2026-10-04T12:00:00.000Z'],
+  ]
+
+  it.each(onCases)('sends the "on the due date" reminder when no "after" reminder is set: %s', async (_label, tz, due) => {
+    expect(await runCheck({ days: 0, timing: 'on' }, new Date(due), tz)).toBe(1)
+  })
+
+  it('still sends "before" reminders for upcoming occurrences', async () => {
+    expect(await runCheck({ days: 3, timing: 'before' }, new Date('2026-10-07T00:00:00.000Z'), 'UTC')).toBe(1)
+  })
+
+  it('does not look back further than the longest "after" reminder (+1 day margin)', async () => {
+    const { default: prisma } = await import('@/server/utils/prisma/client')
+    vi.mocked(prisma.taskOccurrence.findMany).mockClear()
+    await runCheck({ days: 3, timing: 'after' }, new Date('2026-10-01T00:00:00.000Z'), 'UTC')
+
+    const gte: Date = vi.mocked(prisma.taskOccurrence.findMany).mock.calls[0][0]!.where!.dueDate!.gte as Date
+    // Includes everything due on or after the start of Sep 30 (UTC), but nothing older
+    expect(gte.toISOString()).toBe('2026-09-30T00:00:00.000Z')
+  })
+})
+
 describe('renderEmailTemplate', () => {
   const provider = new EmailProvider()
 

@@ -4,6 +4,7 @@ import { OccurrenceService } from "@/server/services/OccurrenceService";
 import { TaskDefinition as PrismaTaskDefinition } from "@prisma/client";
 import type { Category } from "@/types";
 import { addMonths } from "date-fns";
+import { isVariableSchedule } from "@/utils/schedule-type";
 
 // TODO: Move mapPrismaTaskToDefinition to a shared utility or ensure it's exported from TaskService
 // Temporary duplication for demonstration if not exported:
@@ -110,8 +111,8 @@ export default defineSchedulerProtectedEventHandler(async (event) => {
       //    their next occurrence created even when it's beyond the 3-month window.
       if (lastOccurrence && task.scheduleConfig.type !== "once") {
         // For fixed schedules, base date is the due date (preserves cadence).
-        // For variable intervals, base date is the completion/skip date.
-        const baseDate = task.scheduleConfig.type === "variable_interval"
+        // For variable schedules, base date is the completion/skip date.
+        const baseDate = isVariableSchedule(task.scheduleConfig)
           ? (lastOccurrence.completedAt || lastOccurrence.skippedAt || lastOccurrence.dueDate)
           : lastOccurrence.dueDate;
 

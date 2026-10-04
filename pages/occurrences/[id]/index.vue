@@ -233,6 +233,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/utils/api';
+import { isVariableSchedule } from '@/utils/schedule-type';
 import type { TaskOccurrence, User, Category, TaskDefinition } from '@/types';
 import type { FormerHouseholdMember } from '@/types/user';
 import OccurrenceTimeline from '@/components/occurrences/OccurrenceTimeline.vue';
@@ -348,7 +349,7 @@ const isActionDisabled = computed(() => {
 
 // Determine if the task uses variable interval scheduling
 const isVariableInterval = computed(() => {
-    return (fullTask.value?.scheduleConfig as any)?.type === 'variable_interval';
+    return isVariableSchedule(fullTask.value?.scheduleConfig);
 });
 
 // Determine if the task is recurring (not a one-time task)

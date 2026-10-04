@@ -1,4 +1,5 @@
 import type { ScheduleConfig, OnceScheduleConfig, FixedIntervalScheduleConfig, SpecificDaysScheduleConfig, SpecificDayOfMonthScheduleConfig, SpecificWeekdayOfMonthScheduleConfig, VariableIntervalScheduleConfig, AnnualFixedScheduleConfig, AnnualVariableScheduleConfig } from "@/types";
+import { isVariableSchedule } from "@/utils/schedule-type";
 import { addDays, addWeeks, addMonths, addYears, startOfDay, getDay, getDaysInMonth, setDate, getDate, startOfMonth, format, isAfter, isBefore, isSameDay } from "date-fns"; // Using date-fns for date manipulation
 
 /**
@@ -295,7 +296,7 @@ export function calculateCatchUpDueDate(
 
   const today = startOfDay(new Date());
 
-  if (config.type === "variable_interval" || config.type === "annual_variable") {
+  if (isVariableSchedule(config)) {
     // Variable interval / annual variable: next due date is today + interval
     return calculateNextDueDate(config, today);
   }
@@ -336,7 +337,7 @@ export function calculateCatchUpDueDate(
 /**
  * Checks if a task's end conditions have been met
  * @param config The schedule configuration
- * @param occurrenceCount Total number of occurrences generated so far
+ * @param occurrenceCount Number of occurrences already generated, NOT counting the one about to be created
  * @param nextDueDate The calculated next due date to check against end date
  * @returns true if the task should end, false if it should continue
  */
@@ -420,12 +421,13 @@ export function generateFutureOccurrences(
       break;
     }
     
-    // Check end conditions
-    currentOccurrenceCount++;
+    // Check end conditions against the occurrences that already exist,
+    // before counting the one we are about to add
     if (checkEndCondition(config, currentOccurrenceCount, nextDate)) {
       break;
     }
-    
+
+    currentOccurrenceCount++;
     occurrences.push(nextDate);
     lastDate = nextDate; // Update for next iteration
     

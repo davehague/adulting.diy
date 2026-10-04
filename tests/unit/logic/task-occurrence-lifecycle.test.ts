@@ -282,6 +282,83 @@ describe('Task unpause → occurrence generation', () => {
     expect(db.taskOccurrence.create).toHaveBeenCalled()
   })
 
+  it('uses last completed/skipped occurrence as base date for annual_variable', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(localDate(2024, 2, 1))
+    const task = makeTask({
+      metaStatus: 'active',
+      scheduleConfig: {
+        type: 'annual_variable',
+        month: 1,
+        dayOfMonth: 15,
+        endCondition: { type: 'never' },
+      },
+    })
+    db.taskDefinition.update.mockResolvedValue(task)
+    db.taskOccurrence.findFirst
+      .mockResolvedValueOnce(
+        makeOccurrence({
+          id: 'occ-prev',
+          status: 'completed',
+          dueDate: localDate(2024, 1, 15),
+          completedAt: localDate(2024, 1, 19), // completed 4 days late
+        })
+      )
+      .mockResolvedValueOnce(null) // no duplicate exists
+    db.taskOccurrence.count.mockResolvedValue(1)
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-new' }))
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+
+    await taskService.unpause(TASK_ID)
+
+    // One year after the completion date, not the anchor date in the config
+    expect(db.taskOccurrence.create.mock.calls[0][0].data.dueDate).toEqual(new Date(2025, 0, 19, 0, 0, 0, 0))
+    vi.useRealTimers()
+  })
+
+  it('falls back to the anchor date for annual_variable with no completion history on unpause', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(localDate(2024, 2, 1))
+    const task = makeTask({
+      metaStatus: 'active',
+      scheduleConfig: {
+        type: 'annual_variable',
+        month: 6,
+        dayOfMonth: 1,
+        endCondition: { type: 'never' },
+      },
+    })
+    db.taskDefinition.update.mockResolvedValue(task)
+    db.taskOccurrence.findFirst.mockResolvedValue(null) // never completed or skipped
+    db.taskOccurrence.count.mockResolvedValue(0)
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-new' }))
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+
+    await taskService.unpause(TASK_ID)
+
+    expect(db.taskOccurrence.create.mock.calls[0][0].data.dueDate).toEqual(new Date(2024, 5, 1, 0, 0, 0, 0))
+    vi.useRealTimers()
+  })
+
+  it('does NOT generate occurrence on unpause when the "after N times" limit is already reached', async () => {
+    const task = makeTask({
+      metaStatus: 'active',
+      scheduleConfig: {
+        type: 'fixed_interval',
+        interval: 1,
+        intervalUnit: 'week',
+        endCondition: { type: 'times', times: 3 },
+      },
+    })
+    db.taskDefinition.update.mockResolvedValue(task)
+    db.taskOccurrence.count.mockResolvedValue(3) // 3 completed/skipped, pending ones were deleted by pause
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+
+    await taskService.unpause(TASK_ID)
+
+    expect(db.taskOccurrence.create).not.toHaveBeenCalled()
+  })
+
   it('does NOT generate occurrence for "once" type task on unpause', async () => {
     const task = makeTask({
       metaStatus: 'active',
@@ -481,6 +558,68 @@ describe('Occurrence execute → next occurrence generation', () => {
     const nextOccurrenceCreate = createCalls[createCalls.length - 1][0]
     const nextDueDate = nextOccurrenceCreate.data.dueDate
     expect(nextDueDate).toEqual(new Date(2024, 1, 2, 0, 0, 0, 0)) // Feb 2
+    vi.useRealTimers()
+  })
+
+  it('passes completedAt for annual_variable (not due date)', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(localDate(2024, 1, 20))
+    const config: ScheduleConfig = {
+      type: 'annual_variable',
+      month: 1,
+      dayOfMonth: 15,
+      endCondition: { type: 'never' },
+    }
+    const dueDate = localDate(2024, 1, 15)
+    const completedAt = localDate(2024, 1, 19) // 4 days late
+    const task = makeTask({ scheduleConfig: config })
+    const occ = makeOccurrence({ dueDate })
+    const occWithTask = { ...occ, task, completedAt, dueDate }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(occWithTask)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+    db.taskOccurrence.count.mockResolvedValue(1)
+    db.taskOccurrence.findFirst.mockResolvedValue(null)
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-2' }))
+
+    await occurrenceService.execute(OCCURRENCE_ID, USER_ID)
+
+    // Next occurrence is one year after completion (Jan 19 2025),
+    // NOT one year after the due date (Jan 15 2025)
+    const createCalls = db.taskOccurrence.create.mock.calls
+    const nextDueDate = createCalls[createCalls.length - 1][0].data.dueDate
+    expect(nextDueDate).toEqual(new Date(2025, 0, 19, 0, 0, 0, 0))
+    vi.useRealTimers()
+  })
+
+  it('passes DUE DATE for annual_fixed (not completedAt)', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(localDate(2024, 1, 20))
+    const config: ScheduleConfig = {
+      type: 'annual_fixed',
+      month: 1,
+      dayOfMonth: 15,
+      endCondition: { type: 'never' },
+    }
+    const dueDate = localDate(2024, 1, 15)
+    const completedAt = localDate(2024, 1, 19)
+    const task = makeTask({ scheduleConfig: config })
+    const occ = makeOccurrence({ dueDate })
+    const occWithTask = { ...occ, task, completedAt, dueDate }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(occWithTask)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+    db.taskOccurrence.count.mockResolvedValue(1)
+    db.taskOccurrence.findFirst.mockResolvedValue(null)
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-2' }))
+
+    await occurrenceService.execute(OCCURRENCE_ID, USER_ID)
+
+    const createCalls = db.taskOccurrence.create.mock.calls
+    const nextDueDate = createCalls[createCalls.length - 1][0].data.dueDate
+    expect(nextDueDate).toEqual(new Date(2025, 0, 15, 0, 0, 0, 0))
     vi.useRealTimers()
   })
 
@@ -751,6 +890,68 @@ describe('Occurrence skip → next occurrence generation', () => {
     vi.useRealTimers()
   })
 
+  it('passes skippedAt for annual_variable skip (not dueDate)', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(localDate(2024, 1, 20))
+    const config: ScheduleConfig = {
+      type: 'annual_variable',
+      month: 1,
+      dayOfMonth: 15,
+      endCondition: { type: 'never' },
+    }
+    const dueDate = localDate(2024, 1, 15)
+    const skippedAt = localDate(2024, 1, 19) // Skipped 4 days late
+    const task = makeTask({ scheduleConfig: config })
+    const occ = makeOccurrence({ dueDate })
+    const skippedOcc = { ...occ, task, skippedAt, dueDate }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(skippedOcc)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+    db.taskOccurrence.count.mockResolvedValue(1)
+    db.taskOccurrence.findFirst.mockResolvedValue(null)
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-2' }))
+
+    await occurrenceService.skip(OCCURRENCE_ID, USER_ID, 'Too busy')
+
+    // Next occurrence is one year after the skip date (Jan 19 2025),
+    // NOT one year after the due date (Jan 15 2025)
+    const createCalls = db.taskOccurrence.create.mock.calls
+    const nextDueDate = createCalls[createCalls.length - 1][0].data.dueDate
+    expect(nextDueDate).toEqual(new Date(2025, 0, 19, 0, 0, 0, 0))
+    vi.useRealTimers()
+  })
+
+  it('passes DUE DATE for annual_fixed skip (not skippedAt)', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(localDate(2024, 1, 20))
+    const config: ScheduleConfig = {
+      type: 'annual_fixed',
+      month: 1,
+      dayOfMonth: 15,
+      endCondition: { type: 'never' },
+    }
+    const dueDate = localDate(2024, 1, 15)
+    const skippedAt = localDate(2024, 1, 19)
+    const task = makeTask({ scheduleConfig: config })
+    const occ = makeOccurrence({ dueDate })
+    const skippedOcc = { ...occ, task, skippedAt, dueDate }
+
+    db.taskOccurrence.findUnique.mockResolvedValue(occ)
+    db.taskOccurrence.update.mockResolvedValue(skippedOcc)
+    db.occurrenceHistoryLog.create.mockResolvedValue({})
+    db.taskOccurrence.count.mockResolvedValue(1)
+    db.taskOccurrence.findFirst.mockResolvedValue(null)
+    db.taskOccurrence.create.mockResolvedValue(makeOccurrence({ id: 'occ-2' }))
+
+    await occurrenceService.skip(OCCURRENCE_ID, USER_ID, 'Too busy')
+
+    const createCalls = db.taskOccurrence.create.mock.calls
+    const nextDueDate = createCalls[createCalls.length - 1][0].data.dueDate
+    expect(nextDueDate).toEqual(new Date(2025, 0, 15, 0, 0, 0, 0))
+    vi.useRealTimers()
+  })
+
   it('passes DUE DATE for fixed_interval skip (not skippedAt)', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(localDate(2024, 1, 20))
@@ -858,12 +1059,12 @@ describe('Occurrence skip → next occurrence generation', () => {
     db.taskOccurrence.findUnique.mockResolvedValue(occ)
     db.taskOccurrence.update.mockResolvedValue(skippedOcc)
     db.occurrenceHistoryLog.create.mockResolvedValue({})
-    // Already at 5 occurrences — next would be 6, exceeding the limit
+    // Already at 5 occurrences — the limit is reached
     db.taskOccurrence.count.mockResolvedValue(5)
 
     await occurrenceService.skip(OCCURRENCE_ID, USER_ID, 'End condition')
 
-    // generateNextOccurrence checks count+1 >= times → 6 >= 5 → stop
+    // generateNextOccurrence checks count >= times → 5 >= 5 → stop
     const createCalls = db.taskOccurrence.create.mock.calls
     expect(createCalls.length).toBe(0)
   })
@@ -958,12 +1159,12 @@ describe('End conditions prevent next occurrence', () => {
     db.taskOccurrence.findUnique.mockResolvedValue(occ)
     db.taskOccurrence.update.mockResolvedValue(occWithTask)
     db.occurrenceHistoryLog.create.mockResolvedValue({})
-    // Already at 5 occurrences — next would be 6, exceeding the limit
+    // Already at 5 occurrences — the limit is reached
     db.taskOccurrence.count.mockResolvedValue(5)
 
     await occurrenceService.execute(OCCURRENCE_ID, USER_ID)
 
-    // generateNextOccurrence checks count+1 >= times → 6 >= 5 → stop
+    // generateNextOccurrence checks count >= times → 5 >= 5 → stop
     // No new occurrence created after the history log
     const createCalls = db.taskOccurrence.create.mock.calls
     // Only the transaction update happened, no new occurrence create

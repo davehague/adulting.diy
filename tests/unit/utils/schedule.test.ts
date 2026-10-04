@@ -947,13 +947,37 @@ describe('generateFutureOccurrences', () => {
     })
   })
 
+  describe('end conditions in generation loop: "after N times" means N in total', () => {
+    const weekly = (times: number): FixedIntervalScheduleConfig => ({
+      type: 'fixed_interval',
+      interval: 1,
+      intervalUnit: 'week',
+      endCondition: { type: 'times', times },
+    })
+    const horizon = localDate(2024, 12, 31)
+
+    it('times 3 with no existing occurrences generates 3', () => {
+      expect(generateFutureOccurrences(weekly(3), horizon, 0, localDate(2024, 1, 1))).toHaveLength(3)
+    })
+
+    it('times 5 with 3 existing occurrences generates the remaining 2', () => {
+      expect(generateFutureOccurrences(weekly(5), horizon, 3, localDate(2024, 1, 1))).toHaveLength(2)
+    })
+
+    it('generates nothing once N occurrences already exist', () => {
+      expect(generateFutureOccurrences(weekly(3), horizon, 3, localDate(2024, 1, 1))).toHaveLength(0)
+    })
+  })
+
   describe('end conditions in generation loop', () => {
-    // Note: generateFutureOccurrences increments count THEN checks endCondition
-    // BEFORE pushing. So with times=3 and existingCount=0:
-    // iter 1: count=1, check(1>=3)→false, push
-    // iter 2: count=2, check(2>=3)→false, push
-    // iter 3: count=3, check(3>=3)→true, BREAK
-    // Result: 2 items (the 3rd triggers the stop before being added)
+    // Note: generateFutureOccurrences checks endCondition against the count of
+    // occurrences that already exist BEFORE adding the next one. So with times=3
+    // and existingCount=0:
+    // iter 1: count=0, check(0>=3)→false, push
+    // iter 2: count=1, check(1>=3)→false, push
+    // iter 3: count=2, check(2>=3)→false, push
+    // iter 4: count=3, check(3>=3)→true, BREAK
+    // Result: 3 items ("after 3 times" means 3 occurrences in total)
 
     it('stops at times limit', () => {
       const config: FixedIntervalScheduleConfig = {
@@ -966,8 +990,7 @@ describe('generateFutureOccurrences', () => {
       const horizon = localDate(2024, 12, 31)
       const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
 
-      // count hits 3 before pushing 3rd item → only 2 generated
-      expect(result).toHaveLength(2)
+      expect(result).toHaveLength(3)
     })
 
     it('accounts for existing occurrence count in times limit', () => {
@@ -980,11 +1003,12 @@ describe('generateFutureOccurrences', () => {
       const lastCompleted = localDate(2024, 1, 1)
       const horizon = localDate(2024, 12, 31)
       // Already have 3 → count starts at 3
-      // iter 1: count=4, check(4>=5)→false, push
-      // iter 2: count=5, check(5>=5)→true, BREAK → 1 item
+      // iter 1: count=3, check(3>=5)→false, push
+      // iter 2: count=4, check(4>=5)→false, push
+      // iter 3: count=5, check(5>=5)→true, BREAK → 2 items
       const result = generateFutureOccurrences(config, horizon, 3, lastCompleted)
 
-      expect(result).toHaveLength(1)
+      expect(result).toHaveLength(2)
     })
 
     it('stops at date end condition', () => {
@@ -1161,8 +1185,8 @@ describe('generateFutureOccurrences', () => {
       const horizon = localDate(2024, 12, 31)
       const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
 
-      // Mon Jan 1, Fri Jan 5 — count=3 on next iteration triggers stop
-      expect(result).toHaveLength(2)
+      // Mon Jan 1, Fri Jan 5, Mon Jan 8 — count=3 on next iteration triggers stop
+      expect(result).toHaveLength(3)
     })
 
     it('stops at times limit for single-day specific_days_of_week (Sunday)', () => {
@@ -1175,11 +1199,12 @@ describe('generateFutureOccurrences', () => {
       const horizon = localDate(2024, 12, 31)
       const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
 
-      // Sun Jan 7, Sun Jan 14, Sun Jan 21 — count=4 on next iteration triggers stop
-      expect(result).toHaveLength(3)
+      // Sun Jan 7, 14, 21, 28 — count=4 on next iteration triggers stop
+      expect(result).toHaveLength(4)
       expect(result[0]).toEqual(startOfDay(localDate(2024, 1, 7)))
       expect(result[1]).toEqual(startOfDay(localDate(2024, 1, 14)))
       expect(result[2]).toEqual(startOfDay(localDate(2024, 1, 21)))
+      expect(result[3]).toEqual(startOfDay(localDate(2024, 1, 28)))
     })
 
     it('stops at date end condition for single-day specific_days_of_week (Monday)', () => {
@@ -1207,14 +1232,16 @@ describe('generateFutureOccurrences', () => {
       const lastCompleted = localDate(2024, 1, 1) // Mon
       const horizon = localDate(2024, 12, 31)
       // Already have 2 existing → count starts at 2
-      // iter 1: Tue Jan 2, count=3, check(3>=5)→false, push
-      // iter 2: Sat Jan 6, count=4, check(4>=5)→false, push
-      // iter 3: Tue Jan 9, count=5, check(5>=5)→true, BREAK
+      // iter 1: Tue Jan 2, count=2, check(2>=5)→false, push
+      // iter 2: Sat Jan 6, count=3, check(3>=5)→false, push
+      // iter 3: Tue Jan 9, count=4, check(4>=5)→false, push
+      // iter 4: Sat Jan 13, count=5, check(5>=5)→true, BREAK
       const result = generateFutureOccurrences(config, horizon, 2, lastCompleted)
 
-      expect(result).toHaveLength(2)
+      expect(result).toHaveLength(3)
       expect(result[0]).toEqual(startOfDay(localDate(2024, 1, 2)))
       expect(result[1]).toEqual(startOfDay(localDate(2024, 1, 6)))
+      expect(result[2]).toEqual(startOfDay(localDate(2024, 1, 9)))
     })
 
     it('stops at times limit for specific_day_of_month', () => {
@@ -1227,8 +1254,8 @@ describe('generateFutureOccurrences', () => {
       const horizon = localDate(2024, 12, 31)
       const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
 
-      // Feb 15, Mar 15, Apr 15 — count=4 on next triggers stop
-      expect(result).toHaveLength(3)
+      // Feb 15, Mar 15, Apr 15, May 15 — count=4 on next triggers stop
+      expect(result).toHaveLength(4)
     })
 
     it('stops at times limit for annual_fixed', () => {
@@ -1242,8 +1269,8 @@ describe('generateFutureOccurrences', () => {
       const horizon = localDate(2030, 12, 31)
       const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
 
-      // Jul 4 2024, Jul 4 2025 — count=3 on next triggers stop
-      expect(result).toHaveLength(2)
+      // Jul 4 2024, 2025, 2026 — count=3 on next triggers stop
+      expect(result).toHaveLength(3)
     })
   })
 
@@ -1382,13 +1409,14 @@ describe('generateFutureOccurrences', () => {
       }
       const lastCompleted = localDate(2025, 1, 1)
       const horizon = localDate(2025, 12, 31)
-      // Feb 28 (count=1), Mar 31 (count=2), Apr 30 (count=3), May 31 count=4→stop
+      // Feb 28, Mar 31, Apr 30, May 31, then Jun 30 hits count=4→stop
       const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
 
-      expect(result).toHaveLength(3)
+      expect(result).toHaveLength(4)
       expect(result[0]).toEqual(startOfDay(localDate(2025, 2, 28)))
       expect(result[1]).toEqual(startOfDay(localDate(2025, 3, 31)))
       expect(result[2]).toEqual(startOfDay(localDate(2025, 4, 30)))
+      expect(result[3]).toEqual(startOfDay(localDate(2025, 5, 31)))
     })
 
     it('day 30 with times end condition skipping February', () => {
@@ -1399,13 +1427,14 @@ describe('generateFutureOccurrences', () => {
       }
       const lastCompleted = localDate(2025, 1, 1)
       const horizon = localDate(2025, 12, 31)
-      // Feb skipped. Mar 30 (count=1), Apr 30 (count=2), May 30 (count=3), Jun 30 count=4→stop
+      // Feb skipped. Mar 30, Apr 30, May 30, Jun 30, then Jul 30 hits count=4→stop
       const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
 
-      expect(result).toHaveLength(3)
+      expect(result).toHaveLength(4)
       expect(result[0]).toEqual(startOfDay(localDate(2025, 3, 30)))
       expect(result[1]).toEqual(startOfDay(localDate(2025, 4, 30)))
       expect(result[2]).toEqual(startOfDay(localDate(2025, 5, 30)))
+      expect(result[3]).toEqual(startOfDay(localDate(2025, 6, 30)))
     })
   })
 
@@ -1487,13 +1516,14 @@ describe('generateFutureOccurrences', () => {
       }
       const lastCompleted = localDate(2024, 1, 15)
       const horizon = localDate(2024, 12, 31)
-      // Feb 10 (count=1), Mar 9 (count=2), Apr 13 (count=3), May 11 count=4→stop
+      // Feb 10, Mar 9, Apr 13, May 11, then Jun 8 hits count=4→stop
       const result = generateFutureOccurrences(config, horizon, 0, lastCompleted)
 
-      expect(result).toHaveLength(3)
+      expect(result).toHaveLength(4)
       expect(result[0]).toEqual(startOfDay(localDate(2024, 2, 10)))
       expect(result[1]).toEqual(startOfDay(localDate(2024, 3, 9)))
       expect(result[2]).toEqual(startOfDay(localDate(2024, 4, 13)))
+      expect(result[3]).toEqual(startOfDay(localDate(2024, 5, 11)))
     })
 
     it('stops at times limit for last Sunday with existing count', () => {
@@ -1505,11 +1535,12 @@ describe('generateFutureOccurrences', () => {
       const lastCompleted = localDate(2024, 1, 15)
       const horizon = localDate(2024, 12, 31)
       // Already have 3 existing → count starts at 3
-      // Feb 25 (count=4), Mar 31 count=5→stop
+      // Feb 25 (count=3), Mar 31 (count=4), Apr 28 count=5→stop
       const result = generateFutureOccurrences(config, horizon, 3, lastCompleted)
 
-      expect(result).toHaveLength(1)
+      expect(result).toHaveLength(2)
       expect(result[0]).toEqual(startOfDay(localDate(2024, 2, 25)))
+      expect(result[1]).toEqual(startOfDay(localDate(2024, 3, 31)))
     })
 
     it('stops at date end condition for fourth Thursday', () => {
@@ -1594,11 +1625,12 @@ describe('generateFutureOccurrences', () => {
       const lastCompleted = localDate(2024, 1, 1)
       const horizon = localDate(2030, 12, 31)
       // Already have 3 existing → count starts at 3
-      // Jul 4 2024 (count=4), Jul 4 2025 count=5→stop
+      // Jul 4 2024 (count=3), Jul 4 2025 (count=4), Jul 4 2026 count=5→stop
       const result = generateFutureOccurrences(config, horizon, 3, lastCompleted)
 
-      expect(result).toHaveLength(1)
+      expect(result).toHaveLength(2)
       expect(result[0]).toEqual(startOfDay(localDate(2024, 7, 4)))
+      expect(result[1]).toEqual(startOfDay(localDate(2025, 7, 4)))
     })
 
     it('date end condition for Jan 1', () => {

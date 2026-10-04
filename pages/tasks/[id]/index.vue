@@ -397,6 +397,7 @@
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/utils/api'; // Keep for categories/occurrences for now
+import { isVariableSchedule } from '@/utils/schedule-type';
 import { useTaskStore } from '@/stores/tasks';
 import type { TaskDefinition, TaskOccurrence, Category, User } from '@/types';
 import type { FormerHouseholdMember } from '@/types/user';
@@ -471,7 +472,7 @@ const editError = ref<string | null>(null);
 
 // Determine if the task uses variable interval scheduling
 const isVariableInterval = computed(() => {
-  return (task.value?.scheduleConfig as any)?.type === 'variable_interval';
+  return isVariableSchedule(task.value?.scheduleConfig);
 });
 
 // Load data

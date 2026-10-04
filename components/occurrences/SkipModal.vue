@@ -9,7 +9,7 @@
           <h3 class="text-lg font-medium leading-6 text-stone-900 font-heading" id="skip-modal-title">Skip Occurrence</h3>
           <div class="mt-4">
             <p v-if="isVariableInterval" class="text-sm text-amber-700 bg-amber-50 p-3 rounded mb-4">
-              This is a variable-interval task. The next occurrence will be scheduled based on today's date rather than the original due date.
+              This task repeats relative to when it is done, not its due date. The next occurrence will be scheduled based on today's date rather than the original due date.
             </p>
             <p v-else-if="isRecurring" class="text-sm text-stone-600 bg-stone-50 p-3 rounded mb-4">
               The next occurrence will stay on its regular schedule.

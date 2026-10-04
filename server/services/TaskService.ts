@@ -8,6 +8,7 @@ import type {
 } from "@/types";
 import { TaskDefinition as PrismaTaskDefinition, Prisma } from "@prisma/client"; // Import Prisma namespace
 import { calculateCatchUpDueDate } from "@/server/utils/schedule";
+import { isVariableSchedule } from "@/utils/schedule-type";
 import { OccurrenceService } from "./OccurrenceService"; // Import OccurrenceService
 import { NotificationService } from "./NotificationService"; // Import NotificationService
 // Helper function to map Prisma Task object (with included category) to our TaskDefinition type
@@ -494,8 +495,8 @@ export class TaskService {
         try {
           const occurrenceService = new OccurrenceService();
 
-          // For variable_interval, find last completed/skipped as base date
-          if (taskDefinition.scheduleConfig.type === "variable_interval") {
+          // For variable schedules, find last completed/skipped as base date
+          if (isVariableSchedule(taskDefinition.scheduleConfig)) {
             const lastOccurrence = await prisma.taskOccurrence.findFirst({
               where: {
                 taskId: id,
@@ -513,6 +514,13 @@ export class TaskService {
               await occurrenceService.generateNextOccurrence(
                 taskDefinition,
                 lastCompletedDate,
+                taskDefinition.createdByUserId
+              );
+            } else if (taskDefinition.scheduleConfig.type === "annual_variable") {
+              // Never completed or skipped: fall back to the configured anchor date.
+              // (variable_interval has no anchor, so it has nothing to generate yet.)
+              await occurrenceService.createInitialOccurrence(
+                taskDefinition,
                 taskDefinition.createdByUserId
               );
             }

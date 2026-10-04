@@ -220,7 +220,13 @@ export class NotificationService {
         .filter(r => r.timing === 'after')
         .map(r => r.days)
     );
-    const earliestDate = addDays(new Date(), -maxAfterDays);
+    // Due dates are calendar days stored at an arbitrary hour (00:00Z-12:00Z), and the cron
+    // runs at 13:00Z, so "now - N days" would drop an occurrence due exactly N days ago (and
+    // one due today when N = 0). Start from the UTC midnight a day before the Nth day back:
+    // that covers every household timezone, and the per-occurrence date check below decides.
+    const startOfTodayUtc = new Date();
+    startOfTodayUtc.setUTCHours(0, 0, 0, 0);
+    const earliestDate = addDays(startOfTodayUtc, -(maxAfterDays + 1));
 
     const upcomingOccurrences = await prisma.taskOccurrence.findMany({
       where: {

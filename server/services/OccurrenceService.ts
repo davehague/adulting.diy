@@ -6,6 +6,7 @@ import type {
   OccurrenceStatus, // Import OccurrenceStatus
 } from "@/types";
 import { calculateNextDueDate, generateFutureOccurrences, checkEndCondition, calculateCatchUpDueDate } from "@/server/utils/schedule"; // Import the correct schedule utility
+import { isVariableSchedule } from "@/utils/schedule-type";
 import { startOfDay } from "date-fns";
 import { Prisma } from "@prisma/client"; // Import Prisma namespace for types
 import { NotificationService } from "./NotificationService"; // Import NotificationService
@@ -219,6 +220,18 @@ export class OccurrenceService {
           `[OccurrenceService] Could not calculate initial due date for task ${task.id}. No occurrence created.`
         );
         return null;
+      }
+
+      // Also used after unpause and schedule edits, when earlier occurrences may
+      // already have used up an "after N times" limit. Deleted ones never happened.
+      if (task.scheduleConfig.type !== "once") {
+        const existingCount = await prisma.taskOccurrence.count({
+          where: { taskId: task.id, status: { not: "deleted" } },
+        });
+        if (checkEndCondition(task.scheduleConfig, existingCount)) {
+          console.log(`[OccurrenceService] Task ${task.id} has reached its end condition, no initial occurrence created`);
+          return null;
+        }
       }
 
       const initialAssignees = task.defaultAssigneeIds || [];
@@ -447,11 +460,12 @@ export class OccurrenceService {
         // Only generate next occurrence for recurring tasks (not "once" type)
         if (task.scheduleConfig.type !== "once" && task.metaStatus === "active") {
           try {
-            // For variable_interval, the next occurrence is based on when the
-            // task was actually completed (execution date).
+            // For variable schedules (variable_interval, annual_variable), the
+            // next occurrence is based on when the task was actually completed
+            // (execution date).
             // For all fixed schedules, the next occurrence is based on the
             // original due date so the pattern stays anchored.
-            const baseDate = task.scheduleConfig.type === "variable_interval"
+            const baseDate = isVariableSchedule(task.scheduleConfig)
               ? updatedOccurrence.completedAt!
               : updatedOccurrence.dueDate;
             await this.generateNextOccurrence(
@@ -586,11 +600,11 @@ export class OccurrenceService {
         // Only generate next occurrence for recurring tasks (not "once" type)
         if (task.scheduleConfig.type !== "once" && task.metaStatus === "active") {
           try {
-            // For variable_interval, the next occurrence is based on when the
-            // task was actually skipped.
+            // For variable schedules (variable_interval, annual_variable), the
+            // next occurrence is based on when the task was actually skipped.
             // For all fixed schedules, the next occurrence is based on the
             // original due date so the pattern stays anchored.
-            const baseDate = task.scheduleConfig.type === "variable_interval"
+            const baseDate = isVariableSchedule(task.scheduleConfig)
               ? skippedOccurrence.skippedAt!
               : skippedOccurrence.dueDate;
             await this.generateNextOccurrence(
@@ -950,13 +964,14 @@ export class OccurrenceService {
     options: { autoCatchUp?: boolean } = {}
   ): Promise<TaskOccurrence | null> {
     try {
-      // Get current occurrence count
+      // Get current occurrence count. Deleted occurrences (cancelled by pause or a
+      // schedule edit) never happened, so they don't count toward "after N times".
       const existingCount = await prisma.taskOccurrence.count({
-        where: { taskId: task.id }
+        where: { taskId: task.id, status: { not: "deleted" } }
       });
 
       // Check if task has reached its end condition
-      if (checkEndCondition(task.scheduleConfig, existingCount + 1)) {
+      if (checkEndCondition(task.scheduleConfig, existingCount)) {
         console.log(`[OccurrenceService] Task ${task.id} has reached its end condition, no more occurrences will be generated`);
         return null;
       }
@@ -984,7 +999,7 @@ export class OccurrenceService {
       }
 
       // Check if this would exceed the end date condition
-      if (checkEndCondition(task.scheduleConfig, existingCount + 1, nextDueDate)) {
+      if (checkEndCondition(task.scheduleConfig, existingCount, nextDueDate)) {
         console.log(`[OccurrenceService] Next occurrence date ${nextDueDate.toISOString()} would exceed end condition for task ${task.id}`);
         return null;
       }
