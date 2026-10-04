@@ -3,7 +3,6 @@
 ## 2026-10-04
 
 ### Home Projects (slice 2): steps and next steps
-- Added on the `feat/project-steps` branch; not yet merged, and pending the database migration
 - Each project can have a checklist of steps: a line of text, a done checkbox and an optional time estimate in minutes; steps stay in the order they were added
 - The dashboard has a new **Project next steps** section showing the next undone step of every Active project, which can be checked off there
 - Checking off a project's last step asks whether to mark the project Done
@@ -12,7 +11,6 @@
 ## 2026-10-03
 
 ### Home Projects (slice 1)
-- Added on the `feat/projects` branch; not yet merged, and pending the database migration and the Vercel Blob store setup
 - New Projects page: a household list of things to fix, improve or build, with a title, optional location, status (Planning, Active, Future, Done) and path (DIY, Hire, Not sure)
 - Capture from a phone or desktop with a title only, or with location and photos; photos are shrunk in the browser before upload, with per-photo retry if an upload fails
 - Project page with photos shown full size, every field editable in place, and photo and project deletion
