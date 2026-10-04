@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { HttpError } from '@/server/utils/api-errors';
 import {
   DEFAULT_LIST_STATUSES,
+  MAX_STEP_ESTIMATE_MINUTES,
+  MAX_STEP_TEXT_LENGTH,
   PROJECT_PATHS,
   PROJECT_STATUSES,
   type ProjectPathFilter,
@@ -40,6 +42,30 @@ export const projectUpdateSchema = z.object({
   status: z.enum(PROJECT_STATUSES, { message: 'Unknown status' }).optional(),
   path: z.enum(PROJECT_PATHS, { message: 'Unknown path' }).nullable().optional(),
   notes,
+});
+
+const ESTIMATE_MESSAGE = `Estimate must be a whole number of minutes from 1 to ${MAX_STEP_ESTIMATE_MINUTES}`;
+
+const stepText = z
+  .string({ required_error: 'Step text is required', invalid_type_error: 'Step text is required' })
+  .trim()
+  .min(1, 'Step text is required')
+  .max(MAX_STEP_TEXT_LENGTH, `Step text must be ${MAX_STEP_TEXT_LENGTH} characters or fewer`);
+
+const estimateMinutes = z
+  .number({ invalid_type_error: ESTIMATE_MESSAGE })
+  .int(ESTIMATE_MESSAGE)
+  .min(1, ESTIMATE_MESSAGE)
+  .max(MAX_STEP_ESTIMATE_MINUTES, ESTIMATE_MESSAGE)
+  .nullable()
+  .optional();
+
+export const stepCreateSchema = z.object({ text: stepText, estimateMinutes });
+
+export const stepUpdateSchema = z.object({
+  text: stepText.optional(),
+  estimateMinutes,
+  done: z.boolean({ invalid_type_error: 'Done must be true or false' }).optional(),
 });
 
 const dimension = z.coerce.number().int().min(1).max(20000);

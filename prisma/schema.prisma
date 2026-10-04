@@ -29,6 +29,7 @@ model User {
   providerComments       ProviderComment[]
   createdProjects        Project[]               @relation("ProjectCreatedBy")
   projectPhotos          ProjectPhoto[]          @relation("ProjectPhotoUploadedBy")
+  projectSteps           ProjectStep[]           @relation("ProjectStepCreatedBy")
 
   @@map("users")
 }
@@ -313,6 +314,7 @@ model Project {
   createdBy   User           @relation("ProjectCreatedBy", fields: [createdById], references: [id])
   createdById String
   photos      ProjectPhoto[]
+  steps       ProjectStep[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -335,4 +337,21 @@ model ProjectPhoto {
 
   @@index([projectId, position])
   @@map("project_photos")
+}
+
+model ProjectStep {
+  id              String    @id @default(uuid())
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId       String
+  text            String
+  position        Int       // order within the project; lowest first
+  doneAt          DateTime? // set when checked off, cleared when unchecked
+  estimateMinutes Int?      // optional, typed by hand
+  createdBy       User      @relation("ProjectStepCreatedBy", fields: [createdById], references: [id])
+  createdById     String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([projectId, position])
+  @@map("project_steps")
 }

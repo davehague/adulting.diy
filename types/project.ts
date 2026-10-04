@@ -14,6 +14,10 @@ export const MAX_PROJECT_PHOTOS = 10;
 export const MAX_FULL_PHOTO_BYTES = 3 * 1024 * 1024;
 export const MAX_THUMB_PHOTO_BYTES = 200 * 1024;
 
+export const MAX_PROJECT_STEPS = 100;
+export const MAX_STEP_TEXT_LENGTH = 200;
+export const MAX_STEP_ESTIMATE_MINUTES = 9999;
+
 export type PhotoVariant = 'full' | 'thumb';
 
 export interface ProjectPhotoDto {
@@ -21,6 +25,48 @@ export interface ProjectPhotoDto {
   width: number;
   height: number;
   position: number;
+}
+
+export interface ProjectStepDto {
+  id: string;
+  text: string;
+  position: number;
+  // set when the step is checked off; null means not done
+  doneAt: Date | string | null;
+  estimateMinutes: number | null;
+}
+
+export interface ProjectStepCreateInput {
+  text: string;
+  estimateMinutes?: number | null;
+}
+
+export interface ProjectStepUpdateInput {
+  text?: string;
+  estimateMinutes?: number | null;
+  done?: boolean;
+}
+
+export type NextStepKind = 'step' | 'noSteps' | 'allDone';
+
+export interface NextStepSummary {
+  id: string;
+  text: string;
+  estimateMinutes: number | null;
+}
+
+export interface NextStepItem {
+  projectId: string;
+  projectTitle: string;
+  kind: NextStepKind;
+  // set only when kind is 'step'
+  step: NextStepSummary | null;
+}
+
+export interface NextStepsResponse {
+  // the household has at least one non-deleted project, in any status
+  hasProjects: boolean;
+  items: NextStepItem[];
 }
 
 export interface ProjectListItem {
@@ -44,6 +90,7 @@ export interface ProjectDetail {
   completedAt: Date | string | null;
   createdAt: Date | string;
   photos: ProjectPhotoDto[];
+  steps: ProjectStepDto[];
 }
 
 export interface ProjectCreateInput {

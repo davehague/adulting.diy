@@ -3,6 +3,8 @@ import {
   projectCreateSchema,
   projectUpdateSchema,
   photoDimensionsSchema,
+  stepCreateSchema,
+  stepUpdateSchema,
   parseStatusFilter,
   parsePathFilter,
 } from '@/server/utils/project-schemas'
@@ -108,5 +110,71 @@ describe('parsePathFilter', () => {
 
   it('rejects an unknown path with a 400', () => {
     expect(thrownStatus(() => parsePathFilter('contractor'))).toBe(400)
+  })
+})
+
+const ESTIMATE_MESSAGE = 'Estimate must be a whole number of minutes from 1 to 9999'
+
+describe('stepCreateSchema', () => {
+  it('trims the text and accepts text alone', () => {
+    const parsed = stepCreateSchema.parse({ text: '  Buy primer  ' })
+    expect(parsed.text).toBe('Buy primer')
+    expect(parsed.estimateMinutes).toBeUndefined()
+  })
+
+  it('rejects missing text and text of only spaces', () => {
+    for (const body of [{}, { text: '   ' }]) {
+      const result = stepCreateSchema.safeParse(body)
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error.issues[0].message).toBe('Step text is required')
+    }
+  })
+
+  it('accepts 200 characters and rejects 201', () => {
+    expect(stepCreateSchema.safeParse({ text: 'a'.repeat(200) }).success).toBe(true)
+    const result = stepCreateSchema.safeParse({ text: 'a'.repeat(201) })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error.issues[0].message).toBe('Step text must be 200 characters or fewer')
+  })
+
+  it('accepts an estimate from 1 to 9999 and null', () => {
+    expect(stepCreateSchema.parse({ text: 'x', estimateMinutes: 1 }).estimateMinutes).toBe(1)
+    expect(stepCreateSchema.parse({ text: 'x', estimateMinutes: 9999 }).estimateMinutes).toBe(9999)
+    expect(stepCreateSchema.parse({ text: 'x', estimateMinutes: null }).estimateMinutes).toBeNull()
+  })
+
+  it('rejects an estimate that is not a whole number from 1 to 9999', () => {
+    for (const estimateMinutes of [0, -5, 1.5, 10000, '30', 'abc']) {
+      const result = stepCreateSchema.safeParse({ text: 'x', estimateMinutes })
+      expect(result.success).toBe(false)
+      if (!result.success) expect(result.error.issues[0].message).toBe(ESTIMATE_MESSAGE)
+    }
+  })
+})
+
+describe('stepUpdateSchema', () => {
+  it('accepts an empty body and each field alone', () => {
+    expect(stepUpdateSchema.parse({})).toEqual({})
+    expect(stepUpdateSchema.parse({ done: true })).toEqual({ done: true })
+    expect(stepUpdateSchema.parse({ text: ' Sand the patch ' })).toEqual({ text: 'Sand the patch' })
+    expect(stepUpdateSchema.parse({ estimateMinutes: null })).toEqual({ estimateMinutes: null })
+  })
+
+  it('rejects text of only spaces', () => {
+    const result = stepUpdateSchema.safeParse({ text: '  ' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error.issues[0].message).toBe('Step text is required')
+  })
+
+  it('rejects a done value that is not a boolean', () => {
+    const result = stepUpdateSchema.safeParse({ done: 'yes' })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error.issues[0].message).toBe('Done must be true or false')
+  })
+
+  it('rejects a bad estimate', () => {
+    const result = stepUpdateSchema.safeParse({ estimateMinutes: 1.5 })
+    expect(result.success).toBe(false)
+    if (!result.success) expect(result.error.issues[0].message).toBe(ESTIMATE_MESSAGE)
   })
 })
