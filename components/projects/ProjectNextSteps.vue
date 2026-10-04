@@ -1,5 +1,5 @@
 <template>
-  <!-- Rendered only once we know the household has projects, or to report that loading failed. -->
+  <!-- Shown when the household has projects, and also (as the error card) whenever loading failed, even for a household with no projects. -->
   <div v-if="loadError || data?.hasProjects" class="bg-white rounded-xl shadow-sm border border-stone-100 mb-8">
     <div class="px-6 py-4 border-b border-stone-100">
       <h2 class="font-heading font-semibold text-stone-900">Project next steps</h2>
@@ -114,6 +114,8 @@ const onCheck = async (item: NextStepItem, event: Event): Promise<void> => {
     await updateStep(item.projectId, item.step.id, { done: true });
   } catch (e) {
     actionError.value = e instanceof Error ? e.message : 'Could not save the step';
+    // The row may be out of date (the step was removed or checked elsewhere); show what the server has now.
+    await load();
     checkingProjectId.value = null;
     return;
   }

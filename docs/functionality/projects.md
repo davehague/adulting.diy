@@ -64,7 +64,7 @@ Deleting a project hides it everywhere but keeps the record and its photos; noth
 
 ## Not Yet
 
-These are designed for later slices and are not part of this one:
+These are designed for later and are not built yet:
 - Reordering steps.
 - A step count on project cards and a total of the time remaining.
 - Assignees, due dates or reminders on steps.

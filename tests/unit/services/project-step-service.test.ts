@@ -73,6 +73,7 @@ describe('ProjectStepService', () => {
   describe('update', () => {
     it('returns 404 and writes nothing for a project in another household', async () => {
       db.project.findFirst.mockResolvedValue(null)
+      db.projectStep.findFirst.mockResolvedValue({ id: 's1', doneAt: null })
       await expect(service.update('h1', 'p1', 's1', { done: true })).rejects.toMatchObject({ statusCode: 404, message: 'Project not found' })
       expect(db.projectStep.update).not.toHaveBeenCalled()
     })
@@ -120,7 +121,8 @@ describe('ProjectStepService', () => {
   describe('remove', () => {
     it('returns 404 and deletes nothing for a project in another household', async () => {
       db.project.findFirst.mockResolvedValue(null)
-      await expect(service.remove('h1', 'p1', 's1')).rejects.toMatchObject({ statusCode: 404 })
+      db.projectStep.findFirst.mockResolvedValue({ id: 's1', doneAt: null })
+      await expect(service.remove('h1', 'p1', 's1')).rejects.toMatchObject({ statusCode: 404, message: 'Project not found' })
       expect(db.projectStep.delete).not.toHaveBeenCalled()
     })
 

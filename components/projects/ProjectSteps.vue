@@ -182,13 +182,21 @@ const saveEstimate = async (step: ProjectStepDto, event: Event): Promise<void> =
   const input = event.target as HTMLInputElement;
   const saved = step.estimateMinutes === null ? '' : String(step.estimateMinutes);
   const raw = input.value.trim();
+  const estimateMessage = `Estimate must be a whole number of minutes from 1 to ${MAX_STEP_ESTIMATE_MINUTES}`;
   error.value = null;
+
+  // A number field holding invalid text reports an empty value; without this check that would clear a saved estimate.
+  if (input.validity.badInput) {
+    error.value = estimateMessage;
+    input.value = saved;
+    return;
+  }
 
   let estimateMinutes: number | null = null;
   if (raw !== '') {
     const parsed = Number(raw);
     if (!Number.isInteger(parsed) || parsed < 1 || parsed > MAX_STEP_ESTIMATE_MINUTES) {
-      error.value = `Estimate must be a whole number of minutes from 1 to ${MAX_STEP_ESTIMATE_MINUTES}`;
+      error.value = estimateMessage;
       input.value = saved;
       return;
     }

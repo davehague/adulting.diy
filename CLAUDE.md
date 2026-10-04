@@ -87,7 +87,7 @@ adulting.diy/
 │   ├── NotificationPreferences.vue
 │   ├── TaskDetails.vue
 │   ├── providers/        # Provider form, comment list, task provider picker
-│   ├── projects/         # Photo uploader, authenticated image, steps, dashboard next steps and mark-Done dialog components
+│   ├── projects/         # Photo uploader, photo carousel, authenticated image, steps, dashboard next steps and mark-Done dialog components
 │   ├── occurrences/      # Occurrence-related components
 │   │   ├── OccurrenceEditForm.vue
 │   │   └── OccurrenceTimeline.vue
