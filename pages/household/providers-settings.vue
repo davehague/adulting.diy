@@ -172,6 +172,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useApi } from '@/utils/api';
+import { hasApiStatus } from '@/utils/api-error';
 import { X, Copy, Plus, ChevronUp, ChevronDown } from 'lucide-vue-next';
 import type {
   ProviderCategoryDto,
@@ -366,7 +367,7 @@ const requestDelete = async (section: Section, item: NamedItem) => {
     await removeItem(section, item);
   } catch (err) {
     // Usage data can be stale; the API answers 409 when providers still use it.
-    if (err instanceof Error && err.message.includes('409')) openMoveDialog(section, item);
+    if (hasApiStatus(err, 409)) openMoveDialog(section, item);
     else error.value = errorMessage(err, `Failed to delete ${section.kind}`);
   }
 };

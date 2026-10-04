@@ -1,6 +1,7 @@
 // utils/api.ts
 import { useAuthStore } from "@/stores/auth";
 import { useRuntimeConfig } from "#app";
+import { buildApiError } from "@/utils/api-error";
 
 interface FetchOptions extends RequestInit {
   params?: Record<string, string>;
@@ -51,7 +52,9 @@ export const useApi = () => {
       }
 
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+        // Prefer the server's own message (h3 errors carry one); fall back to the status line.
+        const body: unknown = await response.json().catch(() => null);
+        throw buildApiError(response.status, response.statusText, body);
       }
 
       // Only try to parse JSON if we have a content-type header indicating JSON

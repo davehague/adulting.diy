@@ -26,6 +26,7 @@ import { GoogleSignInButton, type CredentialResponse } from "vue3-google-signin"
 import { useAuthStore } from '@/stores/auth';
 import { useRoute, useRouter } from 'vue-router';
 import { useApi } from '@/utils/api';
+import { hasApiStatus } from '@/utils/api-error';
 import type { User } from "~/types";
 
 const authStore = useAuthStore();
@@ -74,7 +75,7 @@ const handleLoginSuccess = async (response: CredentialResponse) => {
                 router.push('/setup-household');
             }
         } catch (error) {
-            if (error instanceof Error && error.message.includes('404')) {
+            if (hasApiStatus(error, 404)) {
                 // Create new user
                 const userData = await api.post<User>('/api/user/register', {
                     email: payload.email,
