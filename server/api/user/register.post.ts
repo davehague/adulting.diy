@@ -1,29 +1,30 @@
 import { defineEventHandler, readBody, createError } from "h3";
 import { UserService } from "@/server/services/UserService";
+import { verifyIdentity } from "@/server/utils/auth";
 import type { UserRegistrationData } from "@/types"; // Import correct type
 
 export default defineEventHandler(async (event) => {
   try {
+    // The email always comes from the verified token, never from the body.
+    const identity = await verifyIdentity(event);
     const body = await readBody(event);
 
-    // Validate required fields
-    if (!body.email || !body.name) {
+    const name = identity.name || body.name;
+    if (!name) {
       throw createError({
         statusCode: 400,
-        message: "Email and name are required",
+        message: "Name is required",
       });
     }
 
-    // Construct GoogleUser object from request body
     const googleUser: UserRegistrationData = {
-      // Use internal camelCase type
-      email: body.email,
-      emailVerified: body.emailVerified || false, // Use camelCase key
-      name: body.name,
-      picture: body.picture,
-      givenName: body.givenName || "", // Use camelCase key
-      familyName: body.familyName || "", // Use camelCase key
-      locale: body.locale || "en",
+      email: identity.email,
+      emailVerified: true, // verifyIdentity only accepts verified emails
+      name,
+      picture: identity.picture || body.picture,
+      givenName: identity.givenName || body.givenName || "",
+      familyName: identity.familyName || body.familyName || "",
+      locale: identity.locale || body.locale || "en",
     };
 
     const userService = new UserService();

@@ -1,21 +1,24 @@
 import { defineEventHandler, getQuery, createError } from 'h3';
 import { UserService } from '@/server/services/UserService';
+import { verifyIdentity } from '@/server/utils/auth';
 
 export default defineEventHandler(async (event) => {
   try {
-    const query = getQuery(event);
-    const { email } = query;
+    // Who is asking comes from the verified token; the email param is not trusted.
+    const { email } = await verifyIdentity(event);
 
-    if (!email || typeof email !== 'string') {
+    const { email: requestedEmail } = getQuery(event);
+    if (typeof requestedEmail === 'string' && requestedEmail.toLowerCase() !== email.toLowerCase()) {
       throw createError({
-        statusCode: 400,
-        message: 'Email parameter is required',
+        statusCode: 403,
+        message: 'Forbidden: Unauthorized access',
       });
     }
 
     const userService = new UserService();
-    const user = await userService.findByEmail(email as string);
+    const user = await userService.findByEmail(email);
 
+    // The login page relies on this 404 to start registration.
     if (!user) {
       throw createError({
         statusCode: 404,
