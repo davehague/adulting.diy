@@ -82,8 +82,10 @@ const notes = ref('');
 const locations = ref<string[]>([]);
 const saving = ref(false);
 const error = ref<string | null>(null);
-// Set by save() when uploads finished with at least one failure, so the amber notice below shows.
-const showUploadIssue = ref(false);
+// Set by save() when uploads finished with at least one failure. The notice itself (below) also
+// requires the uploader to still have a failed photo right now, so it clears as soon as a per-photo
+// Retry fixes the last failure, without needing another Save tap.
+const attemptedSaveFailed = ref(false);
 // Set once the project exists, whether that happened via a photo pick or via Save.
 const createdId = ref<string | null>(null);
 // Counts photos this uploader has finished, so the cap counts uploaded photos too even though they
@@ -92,6 +94,9 @@ const uploadedCount = ref(0);
 const uploader = ref<InstanceType<typeof PhotoUploader> | null>(null);
 
 const remainingPhotoSlots = computed(() => MAX_PROJECT_PHOTOS - uploadedCount.value);
+// Reactive to the uploader's items (hasFailedPhotos reads them), so this clears itself the moment a
+// per-photo Retry fixes the last failure, with no need to tap Save again.
+const showUploadIssue = computed(() => attemptedSaveFailed.value && !!uploader.value?.hasFailedPhotos());
 
 const onPhotoUploaded = (_photo: ProjectPhotoDto): void => {
   uploadedCount.value += 1;
@@ -124,20 +129,27 @@ const ensureProject = (): Promise<string> => {
 const save = async (): Promise<void> => {
   if (saving.value) return;
   error.value = null;
-  const trimmedTitle = title.value.trim();
-  if (!trimmedTitle) {
+  // Tap-time check, so an empty title never even starts a create.
+  if (!title.value.trim()) {
     error.value = 'Title is required';
     return;
   }
   saving.value = true;
-  showUploadIssue.value = false;
+  attemptedSaveFailed.value = false;
   try {
     const id = await ensureProject();
-    // Always send the current fields, even if the project already existed: it may have been created
-    // by a photo pick (possibly with "Untitled project") before the user finished typing, and a pick
-    // racing this Save can only have used the fields as they were at pick time.
+    // Read title, location and notes fresh here, after the await: ensureProject() may have taken a
+    // moment (or been a shared in-flight create), and the user could have kept typing any of the
+    // three fields during that window. Reading all three at the same point, together, is what keeps
+    // a photo-pick/Save race from saving some fields as typed and others as stale.
+    const freshTitle = title.value.trim();
+    if (!freshTitle) {
+      // The user cleared the title while the create was in flight; do not save or navigate.
+      error.value = 'Title is required';
+      return;
+    }
     await updateProject(id, {
-      title: trimmedTitle,
+      title: freshTitle,
       location: location.value.trim() || null,
       notes: notes.value.trim() || null,
     });
@@ -145,7 +157,7 @@ const save = async (): Promise<void> => {
     if (allUploaded) {
       await navigateTo(`/projects/${id}`);
     } else {
-      showUploadIssue.value = true;
+      attemptedSaveFailed.value = true;
     }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Could not save the project';

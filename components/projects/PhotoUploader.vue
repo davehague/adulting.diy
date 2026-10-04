@@ -86,6 +86,9 @@ const roomLeft = computed(() => props.remaining - unsent.value.length);
 const hasPending = computed(() => unsent.value.length > 0);
 // Whether a Retry button can do anything: either we already know the project, or we have a way to create it.
 const canRetry = computed(() => !!(targetProjectId.value || props.projectId || props.ensureProjectId));
+// Exposed as a plain function (not a computed/ref) so a parent can call it fresh on every check,
+// without depending on how defineExpose happens to (un)wrap a returned ref.
+const hasFailedPhotos = (): boolean => items.value.some((item) => item.state === 'failed');
 
 // Every operation that touches the upload queue (auto-upload on pick, a per-photo retry, and the
 // parent's own uploadAll on Save) runs through this chain, one at a time, so two of them can never
@@ -201,5 +204,5 @@ onBeforeUnmount(() => {
   for (const item of items.value) URL.revokeObjectURL(item.previewUrl);
 });
 
-defineExpose({ uploadAll, hasPending });
+defineExpose({ uploadAll, hasPending, hasFailedPhotos });
 </script>
