@@ -6,7 +6,8 @@ This document provides an overview of all API endpoints in the Adulting.DIY appl
 
 The API uses these authentication levels:
 - **Public**: No authentication required
-- **Protected**: Requires valid bearer token
+- **Identity**: Requires a valid Google ID token, but no user row yet (used during sign-in)
+- **Protected**: Requires valid bearer token and a registered user
 - **Household**: Requires valid bearer token + household membership
 - **Household Admin**: Household membership plus the admin role
 - **Household API Key**: Bearer token of the form `adk_...`, a per-household key created by an admin (see [provider-ingest.md](provider-ingest.md))
@@ -137,8 +138,8 @@ See [provider-ingest.md](provider-ingest.md) for the ingest contract.
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| `GET` | `/api/user/profile` | Public | Get user profile by email query |
-| `POST` | `/api/user/register` | Public | Register new user from Google OAuth |
+| `GET` | `/api/user/profile` | Identity | Get the caller's own user row (404 if they have not registered yet). An `email` query that differs from the token's email is rejected with 403 |
+| `POST` | `/api/user/register` | Identity | Create (or touch) the user row for the token's email. An email in the body is ignored |
 | `GET` | `/api/user/notifications` | Household | Get user notification preferences |
 | `PUT` | `/api/user/notifications` | Household | Update notification preferences |
 

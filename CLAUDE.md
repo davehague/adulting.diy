@@ -38,17 +38,29 @@ The application follows a typical full-stack architecture with:
 
 ## Documentation
 
-Detailed documentation lives in `docs/` and is organized by audience:
+This file is a signpost. The detail lives in `docs/`; read the relevant doc before working in an area, and link to it rather than re-explaining it here.
 
-- **`docs/functionality/`** - Feature docs from a product perspective (what it does, how users interact)
-- **`docs/tech/`** - Technical docs for developers (architecture, algorithms, how to extend)
-- **`docs/adrs/`** - Architectural Decision Records
-- **`docs/specs/`** - Original project specs (idea, functional spec, blueprint)
-- **`docs/brand.md`** - Brand guide (colors, typography, component patterns)
-- **`docs/next-up.md`** - Roadmap and future enhancements
-- **`docs/plans/`** - Implementation plans (`completed/` subfolder for archived plans)
+| Doc | Audience | What it covers |
+|-----|----------|----------------|
+| [docs/functionality/task-management.md](docs/functionality/task-management.md) | Product | Tasks, scheduling patterns, occurrences, lifecycle, catch-up, list filters, the dashboard |
+| [docs/functionality/notifications-and-reminders.md](docs/functionality/notifications-and-reminders.md) | Product | Notification events, preferences, channels, reminder rules |
+| [docs/functionality/household-management.md](docs/functionality/household-management.md) | Product | Households, roles, invite codes, former members, task categories |
+| [docs/functionality/providers.md](docs/functionality/providers.md) | Product | Contractor directory, neighbor evidence, task links |
+| [docs/functionality/projects.md](docs/functionality/projects.md) | Product | Home projects, photos, steps, dashboard next steps |
+| [docs/functionality/changelog.md](docs/functionality/changelog.md) | Product | What changed, from the user's point of view |
+| [docs/tech/architecture.md](docs/tech/architecture.md) | Developers | System map: directory map, request flow, auth wrappers, data model, pages, integrations, cron |
+| [docs/tech/api-endpoints.md](docs/tech/api-endpoints.md) | Developers | Full API reference |
+| [docs/tech/task-scheduling.md](docs/tech/task-scheduling.md) | Developers | Recurrence algorithms, occurrence generation, catch-up |
+| [docs/tech/notification-system.md](docs/tech/notification-system.md) | Developers | Channel provider pattern, reminder flow, preference logic |
+| [docs/tech/provider-ingest.md](docs/tech/provider-ingest.md) | Developers | Provider data model, API keys, machine ingest |
+| [docs/tech/testing.md](docs/tech/testing.md) | Developers | Test framework, structure, commands |
+| [docs/tech/dev-login-bypass.md](docs/tech/dev-login-bypass.md) | Developers | Development login bypass |
+| [docs/adrs/](docs/adrs/) | Developers | Architectural Decision Records |
+| [docs/brand.md](docs/brand.md) | Everyone | Colors, typography, component patterns |
+| [docs/next-up.md](docs/next-up.md) | Everyone | Roadmap and deferred work |
+| `docs/specs/`, `docs/plans/`, `docs/superpowers/` | Reference | Original specs, implementation plans (`docs/plans/completed/` for archived ones), design specs |
 
-After completing feature work, use the `update-docs` skill to update relevant documentation.
+`docs/functionality/` is written at capability level with no code; `docs/tech/` is the 30,000-foot technical view. Two skills keep this loop going: run `feature-impact-analysis` against the functionality docs before building a feature, and `update-docs` after completing feature work.
 
 ## Key Concepts
 
@@ -66,7 +78,7 @@ After completing feature work, use the `update-docs` skill to update relevant do
 
 ### Task Scheduling System
 
-Tasks support 6 recurrence patterns (once, fixed interval, specific days of week, specific day of month, specific weekday of month, variable interval). See [docs/tech/task-scheduling.md](docs/tech/task-scheduling.md) for details.
+Tasks support 8 recurrence patterns (once, fixed interval, specific days of week, specific day of month, specific weekday of month, variable interval, annual fixed, annual variable). See [docs/tech/task-scheduling.md](docs/tech/task-scheduling.md) for details.
 
 ### Authentication Flow
 
@@ -77,103 +89,7 @@ Tasks support 6 recurrence patterns (once, fixed interval, specific days of week
 
 ## Project Structure
 
-```
-adulting.diy/
-├── app.vue                 # Root application component
-├── components/            # Vue components
-│   ├── AppFooter.vue
-│   ├── DevUserSwitcher.vue       # Dev login bypass UI
-│   ├── DevUserSwitcherDebug.vue  # Dev login debug panel
-│   ├── NotificationPreferences.vue
-│   ├── TaskDetails.vue
-│   ├── providers/        # Provider form, comment list, task provider picker
-│   ├── projects/         # Photo uploader, photo carousel, authenticated image, steps, dashboard next steps and mark-Done dialog components
-│   ├── occurrences/      # Occurrence-related components
-│   │   ├── OccurrenceEditForm.vue
-│   │   └── OccurrenceTimeline.vue
-│   └── tasks/            # Task-related components
-│       ├── TaskCreateForm.vue
-│       └── TaskEditForm.vue
-├── composables/          # Vue composables
-│   └── onClickOutside.ts
-├── docs/                 # Project documentation
-│   ├── adrs/             # Architectural Decision Records
-│   ├── brand.md          # Brand guide (colors, typography, components)
-│   ├── functionality/    # Feature docs (product perspective)
-│   │   ├── changelog.md
-│   │   ├── household-management.md
-│   │   ├── notifications-and-reminders.md
-│   │   └── task-management.md
-│   ├── next-up.md        # Roadmap and future enhancements
-│   ├── plans/            # Implementation plans
-│   │   └── completed/    # Archived completed plans
-│   ├── specs/            # Project specs (idea, functional spec, blueprint)
-│   └── tech/             # Technical docs (developer perspective)
-│       ├── api-endpoints.md
-│       ├── dev-login-bypass.md
-│       ├── notification-system.md
-│       ├── task-scheduling.md
-│       └── testing.md
-├── layouts/              # Nuxt layouts
-│   ├── default.vue
-│   └── landing.vue
-├── middleware/           # Route middleware
-│   └── auth.global.ts   # Global authentication middleware
-├── pages/                # Nuxt pages (file-based routing)
-│   ├── index.vue         # Root landing page
-│   ├── home.vue
-│   ├── login.vue
-│   ├── setup-household.vue
-│   ├── household/        # Household management (incl. providers-settings.vue)
-│   ├── providers/        # Provider list and detail pages
-│   ├── projects/         # Project list, new-project, and project detail pages
-│   ├── profile/          # User profile
-│   ├── tasks/            # Task management pages
-│   └── occurrences/      # Occurrence management pages
-├── plugins/              # Nuxt plugins
-│   ├── auth-ready.client.ts
-│   └── dev-auth.client.ts  # Dev login bypass plugin
-├── prisma/              # Database schema and migrations
-├── public/              # Static assets
-├── scripts/             # Utility scripts
-│   ├── seed.js
-│   ├── setup-database.js
-│   ├── clear-db.js
-│   └── reset-completed-occurrences.js
-├── server/              # Backend code
-│   ├── api/            # API endpoints
-│   ├── services/       # Business logic services
-│   │   ├── CategoryService.ts
-│   │   ├── HouseholdService.ts
-│   │   ├── NotificationService.ts
-│   │   ├── OccurrenceService.ts
-│   │   ├── Provider*Service.ts   # Provider, Category, Status, Comment, Contact, Ingest
-│   │   ├── ApiKeyService.ts
-│   │   ├── TaskProviderService.ts
-│   │   ├── Project*Service.ts    # Project, ProjectPhoto, ProjectStep
-│   │   ├── TaskService.ts
-│   │   └── UserService.ts
-│   └── utils/          # Server utilities
-│       ├── auth.ts
-│       ├── dev-auth.ts
-│       ├── prisma/client.ts
-│       ├── blob-storage.ts  # Thin wrapper over Vercel Blob (private store)
-│       └── schedule.ts
-├── stores/              # Pinia stores
-│   ├── auth.ts
-│   ├── dev-auth.ts       # Dev login bypass store
-│   └── tasks.ts
-├── types/               # TypeScript type definitions
-│   ├── index.ts
-│   ├── category.ts
-│   ├── heroicons.d.ts
-│   ├── household.ts
-│   ├── notification.ts
-│   ├── task.ts
-│   └── user.ts
-└── utils/               # Shared utilities
-    └── api.ts
-```
+Standard Nuxt 3 layout: `pages/`, `components/`, `layouts/`, `composables/`, `stores/`, `middleware/`, `plugins/`, `utils/` and `types/` on the client; `server/api/` (routes), `server/services/` (business logic) and `server/utils/` (auth wrappers, schemas, scheduling) on the server; `prisma/` for the schema and migrations. See the Directory Map in [docs/tech/architecture.md](docs/tech/architecture.md).
 
 ## Development Guidelines
 
@@ -209,13 +125,6 @@ const tasks = await taskService.findForHousehold(householdId, filters);
 - Include appropriate HTTP status codes
 - Log errors with context for debugging
 - Handle both expected and unexpected errors
-
-## Key Features
-
-See `docs/functionality/` for detailed feature documentation:
-- [Task Management](docs/functionality/task-management.md) - Tasks, scheduling, occurrences, lifecycle
-- [Notifications and Reminders](docs/functionality/notifications-and-reminders.md) - Events, channels, flexible reminders
-- [Household Management](docs/functionality/household-management.md) - Households, roles, categories
 
 ## Database Schema Highlights
 
@@ -292,10 +201,6 @@ npm run test:coverage     # Coverage report
 - Minimal data fetching (use includes wisely)
 - Client-side state caching with Pinia
 - Optimistic UI updates where appropriate
-
-## API Endpoints
-
-See [docs/tech/api-endpoints.md](docs/tech/api-endpoints.md) for the full API reference.
 
 ## Architectural Decision Records (ADRs)
 

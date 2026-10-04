@@ -1,146 +1,139 @@
 # Task Management
 
-## Overview
+> Set up the household's recurring and one-time tasks, then complete, skip, reassign and discuss each one as it comes due.
 
-Tasks are the core unit of work in Adulting.DIY. A **task definition** is the template that describes what needs to be done and how often, while **task occurrences** are the specific instances that get completed.
+## What You Can Do
 
-## Task Definitions
+- Create a task with a name, optional description and instructions, a category, default assignees, a schedule and reminder rules
+- Choose from 8 recurrence patterns, on either a fixed or a variable schedule
+- Have a task stop on its own after a number of times or after a date
+- Complete or skip each occurrence, reassign it, move its due date, and comment on it
+- Pause a task and resume it later, or delete it
+- Catch up a task whose overdue occurrences have piled up
+- Search, filter and sort the task list and the occurrence list
+- See what is overdue, due today and coming up on the dashboard
 
-A task definition includes:
+## How It Works
+
+### Tasks and Occurrences
+
+A **task** is the template: what needs doing, who normally does it, and how often. An **occurrence** is one specific instance of that task with its own due date, status, assignees, comments and history. A task includes:
+
 - **Name** and optional **description** and **instructions**
 - **Category** for organization
-- **Default assignees** (household members who normally handle this task)
-- **Schedule configuration** (how and when it recurs)
-- **Reminder configuration** (when to send reminders -- see [Notifications and Reminders](./notifications-and-reminders.md))
+- **Default assignees** (the household members who normally handle it)
+- **Schedule** (how and when it recurs)
+- **Reminder rules** (see [Notifications and Reminders](./notifications-and-reminders.md))
 
-## Scheduling Patterns
+### Scheduling Patterns
 
-Tasks support 8 recurrence patterns:
+| Pattern | Example | What you set |
+|---------|---------|--------------|
+| **Once** | "Set up the new router" | A single due date, no recurrence |
+| **Fixed Interval** | "Every 2 weeks" | An interval and unit (day/week/month/year) |
+| **Specific Days of Week** | "Every Monday and Friday" | Any combination of weekdays |
+| **Specific Day of Month** | "15th of each month" | A day number (1-31), or "last day of month" |
+| **Specific Weekday of Month** | "First Monday of each month" | A weekday and which one (first/second/third/fourth/last) |
+| **Variable Interval** | "30 days after last completion" | An interval and unit, counted from the actual completion date |
+| **Annual Fixed** | "Replace smoke detector batteries every Jan 1" | A month and day; recurs on the same calendar date each year regardless of completion |
+| **Annual Variable** | "Annual furnace inspection" | A month and day as the starting point, then shifts based on the actual completion date |
 
-| Pattern | Example | Configuration |
-|---------|---------|---------------|
-| **Once** | "Set up the new router" | Single due date, no recurrence |
-| **Fixed Interval** | "Every 2 weeks" | Interval + unit (day/week/month/year) |
-| **Specific Days of Week** | "Every Monday and Friday" | Boolean flags per weekday |
-| **Specific Day of Month** | "15th of each month" | Day number (1-31), or "last day of month" option |
-| **Specific Weekday of Month** | "First Monday of each month" | Weekday + occurrence (first/second/third/fourth/last) |
-| **Variable Interval** | "30 days after last completion" | Interval + unit, anchored to actual completion date |
-| **Annual Fixed** | "Replace smoke detector batteries every Jan 1" | Month + day of month, recurs on the same calendar date each year regardless of completion |
-| **Annual Variable** | "Annual furnace inspection" | Month + day of month as anchor, but shifts based on actual completion date (like variable interval, but yearly) |
+When creating a task, you first choose a scheduling mode, then a pattern:
 
-### Fixed vs Variable Scheduling
+- **One time**: a single due date.
+- **Fixed schedule**: the next occurrence is calculated from the original due date, preserving the cadence regardless of when the task was actually done. Offers the interval, days-of-week, day-of-month, weekday-of-month and annual patterns.
+- **Variable schedule**: the next occurrence is calculated from the actual completion or skip date, so the schedule "floats" with when the work was done. Offers only the interval and annual patterns, since calendar-anchored patterns are inherently fixed.
 
-When creating a task, users first choose a scheduling mode, then a pattern:
+For "Specific Day of Month", the "Last day of the month" option resolves to the real last day of each month (28/29/30/31), so no month is skipped. Choosing a day number of 29 or higher shows a warning that some months will be skipped.
 
-- **Fixed schedule**: Next occurrence calculated from the original due date, preserving the cadence regardless of when the task was actually completed. All patterns are available.
-- **Variable schedule**: Next occurrence calculated from the actual completion/skip date, allowing the schedule to "float" based on when work was done. Only interval-based and annual patterns are available (calendar-anchored patterns like specific days of week or day of month are inherently fixed).
-
-### Last Day of Month
-
-For the "Specific Day of Month" pattern, a "Last day of the month" option is available. When enabled, the scheduler resolves to the actual last day of each month (28/29/30/31), so no months are ever skipped. When using a specific day number of 29 or higher, a warning notes that some months will be skipped.
-
-## End Conditions
-
-Tasks can be configured to stop generating occurrences:
+### End Conditions
 
 | Condition | Behavior |
 |-----------|----------|
 | **Never** (default) | Recurs indefinitely |
-| **After N times** | Stops after the specified number of completions |
-| **Until date** | Stops when the next due date would exceed the cutoff |
+| **After N times** | Stops once the task has had the specified number of occurrences |
+| **Until date** | Stops when the next due date would land on or after the cutoff |
 
-## Task Occurrences
+The "After N times" count tracks occurrences actually created, not calendar slots, so weeks that were caught up over do not use up the count. Occurrences removed by pausing or by a schedule change do not count either.
 
-Each occurrence represents a specific instance of a task with:
-- **Due date**
-- **Status**: Created, Assigned, Completed, Skipped, or Deleted
-- **Assignees** (inherited from task defaults, can be changed per occurrence)
-- **Comments** thread for coordination
-- **History log** (audit trail of all changes)
+### Occurrences
 
-### Occurrence Actions
+Each occurrence has a due date, a status (Created, Assigned, Completed, Skipped or Deleted; Created and Assigned together are "pending"), assignees inherited from the task's defaults, a comment thread, and a history of every change.
 
 | Action | What happens |
 |--------|-------------|
-| **Complete** | Marks done, records completion timestamp, auto-generates next occurrence |
-| **Skip** | Marks skipped with optional reason, auto-generates next occurrence |
-| **Reassign** | Changes assignees for this specific occurrence |
-| **Change due date** | Reschedules this specific occurrence |
-| **Comment** | Adds a comment visible to household members |
-| **Edit comment** | Authors can edit their own comments after posting |
+| **Complete** | Marks it done, records when (now, or a date and time you choose), and generates the next occurrence |
+| **Skip** | Marks it skipped with an optional reason, and generates the next occurrence |
+| **Reassign** | Changes the assignees for this occurrence only |
+| **Change due date** | Reschedules this occurrence only |
+| **Comment** | Adds a comment visible to the household |
+| **Edit comment** | Authors can edit their own comments |
 
-Completing or skipping an occurrence automatically triggers generation of the next occurrence (for recurring tasks).
+For recurring tasks, completing or skipping an occurrence generates the next one straight away. A daily background check also makes sure every active recurring task has a pending occurrence.
 
-## Task Lifecycle
-
-```
-active ──→ paused ──→ active (unpause)
-  │           │
-  │           └──→ soft-deleted
-  └──→ soft-deleted
-```
+### Task Lifecycle
 
 | Status | Generates next occurrence? | Future pending occurrences |
 |--------|--------------------------|---------------------------|
-| **Active** | Yes (on complete/skip, scheduler as backup) | One pending at a time |
-| **Paused** | No | Marked as deleted |
-| **Soft-deleted** | No | Marked as deleted |
+| **Active** | Yes | One pending at a time |
+| **Paused** | No | Removed |
+| **Deleted** | No | Removed |
 
-- **Pausing**: All future pending occurrences are deleted. Current/overdue occurrences can still be completed or skipped.
-- **Unpausing**: Re-activates the task and immediately generates the next occurrence based on the task's schedule. For variable interval tasks, the next date is calculated from the last completed/skipped occurrence.
-- **Deleting**: Same as pausing, but the task is hidden from queries and cannot be restored.
+- **Pausing** removes all future pending occurrences (they move to the Deleted filter in the occurrence list). Current and overdue occurrences can still be completed or skipped.
+- **Unpausing** re-activates a recurring task and generates its next occurrence from the schedule. For variable schedules, the next date is counted from the last completed or skipped occurrence. If there is none yet, an Annual Variable task goes back to its starting date and a Variable Interval task waits, with no occurrence generated. A task that has already had all of its "After N times" occurrences generates nothing.
+- **Deleting** works like pausing, but the task is hidden everywhere (unless the Deleted filter is chosen) and cannot be restored.
 
-## Editing a Task's Schedule
+### Editing a Task's Schedule
 
-When a task's schedule configuration is changed:
+Changing a task's schedule removes its pending occurrences that are due in the future and generates a new one from the updated schedule. Pending occurrences that are overdue or due today stay, and completed and skipped occurrences are kept as history. Changing anything else (name, description, category, instructions) does not affect existing occurrences.
 
-1. All future pending occurrences (`created`/`assigned`) are deleted
-2. A new occurrence is generated based on the updated schedule
-3. Completed and skipped occurrences are preserved (they are historical records)
-4. Non-schedule changes (name, description, category, instructions) do not affect existing occurrences
+### Catch-Up
 
-## Catch-Up Feature
+When overdue occurrences pile up, you can catch up a task: every overdue occurrence is skipped in one go and a single new occurrence is created on the next appropriate future date, respecting the task's pattern (for example, the next Monday for a weekly-on-Monday task). You can override the calculated date with one of your own, and add a reason. If the task already has a pending occurrence in the future, that one is kept (or moved to your chosen date) instead of a new one being created.
 
-When overdue occurrences pile up, users can "catch up" a task:
+Catch-up also happens automatically. When you complete or skip an overdue occurrence, the next one is calculated from the original due date so the pattern stays aligned; if that date would also be in the past, the system moves it forward to the next future slot. This prevents the "complete one overdue, get another overdue" loop when a task has been missed for several cycles. Each automatic catch-up is recorded in the task's history.
 
-1. All overdue occurrences are bulk-skipped
-2. A single new occurrence is created for the next appropriate future date
-3. The next date respects the task's scheduling pattern (e.g., next Monday for a weekly-on-Monday task)
+### Lists, Filters and Sorting
 
-Users can optionally override the calculated next date with a custom one.
+| List | Filters | Sortable columns |
+|------|---------|------------------|
+| **Tasks** | Search by name or description; Status (Active by default, Overdue, Paused, Deleted); Category | Task name, Category, Next Due date, Status |
+| **Occurrences** | Search by task name or description; Status (Pending by default, Completed, Skipped, Deleted); Category; Assignee; optional date range | Task name, Category, Due Date, Status |
 
-### Automatic Catch-Up on Completion
+Filter and sort selections are remembered in the browser and restored on the next visit.
 
-When a user completes (or skips) an overdue occurrence, the system generates the next occurrence anchored to the completed one's original due date so the schedule pattern stays aligned. If that computed next date would *also* be in the past, the system automatically advances it to the next future slot — equivalent to running catch-up on the user's behalf. This prevents the "complete one overdue, get another overdue" loop when a task has been missed for multiple cycles. Auto-catch-up events are logged on the task history as `catch_up` with `trigger: auto_on_execute_or_skip`.
+### Dashboard
 
-Note on `endCondition.times`: the count tracks *actual* occurrences created, not schedule slots. Auto-catch-up does not consume phantom slots for cycles that were skipped — a task set to "10 times, weekly" will produce 10 occurrences regardless of how many cycles were auto-caught-up, they'll just be spread across more calendar time.
+The dashboard is the landing page after sign-in. It greets you by first name and time of day, offers a New Task button, and shows three stat cards:
 
-## Filtering and Sorting
+| Card | What it shows | Links to |
+|------|--------------|----------|
+| **Overdue** | Pending occurrences past their due date | Occurrences list, pending |
+| **Due Today** | Pending occurrences due today | Occurrences list, pending and due today or earlier (so overdue ones are listed too) |
+| **Completed (7d)** | Occurrences completed in the last 7 days | Occurrences list, completed |
 
-Both the tasks list and occurrences list pages provide a compact toolbar for filtering, sorting, and searching.
+A **Coming Up** feed lists the next 5 pending occurrences, earliest first, each with a color-coded dot (red for overdue, amber for due today, grey for upcoming), the task name and category, the due date, and the assignees on larger screens. Each entry opens its occurrence, and a link at the bottom opens the full occurrences list.
 
-### Task List Filters
+## Connections
 
-| Filter | Options |
-|--------|---------|
-| **Search** | Free-text search across task names |
-| **Status** | Active (default), Overdue, Paused, Deleted |
-| **Category** | All categories or a specific one |
+- **[Notifications and Reminders](./notifications-and-reminders.md)**: creating, pausing and deleting tasks, and assigning, completing, skipping and commenting on occurrences, all notify household members. Each task carries its own reminder rules.
+- **[Household Management](./household-management.md)**: assignees are household members and categories come from the household. When a member leaves, they are removed from task defaults and upcoming occurrences but stay visible in history.
+- **[Providers](./providers.md)**: a task can be linked to the providers who do that work.
+- **[Projects](./projects.md)**: the dashboard also shows each Active project's next step, between the stat cards and Coming Up.
 
-Sortable columns: Task name, Category, Next Due date, Status. Click a column header to toggle ascending/descending.
+## Where It Appears
 
-### Occurrences List Filters
+- **Dashboard**: stat cards and the Coming Up feed
+- **Tasks**: the task list, the create and edit forms, and the task page (details, history, linked providers, pause, delete and catch-up)
+- **Occurrences**: the occurrence list and the occurrence page (complete, skip, reassign, reschedule, comments, history)
+- **Reminder emails**: buttons that open the occurrence and the task
 
-| Filter | Options |
-|--------|---------|
-| **Search** | Free-text search across task names |
-| **Status** | Pending (default), Completed, Skipped, Deleted |
-| **Category** | All categories or a specific one |
-| **Assignee** | All assignees or a specific household member |
-| **Date range** | Optional from/to date filter (collapsible) |
+## Current Limitations
 
-Sortable columns: Task name, Due Date, Status, Assignees.
-
-### Filter Persistence
-
-All filter and sort selections are saved to `localStorage` and restored on the next visit, so users return to their preferred view.
+- A deleted task cannot be restored.
+- Only one pending occurrence exists per task at a time; there is no view of dates further out, and no calendar view.
+- Variable schedules support only the interval and annual patterns.
+- Manual catch-up does not check the end condition, so it can add an occurrence to a task that has already reached its limit.
+- The first occurrence of a new recurring task falls one cycle out rather than today: for example, a monthly day-of-month task starts next month even if the day is still ahead this month.
+- A day-of-month of 29 or higher skips shorter months unless "last day of month" is used.
+- Tasks cannot have file attachments, rich text, or dependencies on other tasks.

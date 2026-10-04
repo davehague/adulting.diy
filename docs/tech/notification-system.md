@@ -62,7 +62,25 @@ All providers implement this interface. The service iterates enabled providers a
 - Generates Slack Block Kit messages (header + section + optional action button)
 - Webhook URL validated on preference save (`https://hooks.slack.com/services/...`)
 
+## Reminder Config Format
+
+`TaskDefinition.reminderConfig` is JSON holding up to 5 entries (`ReminderConfig` / `ReminderEntry` in `types/task.ts`, validated by `validateReminderConfig` in `server/utils/validation.ts`):
+
+```json
+{
+  "reminders": [
+    { "days": 7, "timing": "before" },
+    { "days": 0, "timing": "on" },
+    { "days": 3, "timing": "after" }
+  ]
+}
+```
+
+`days` is an integer of 0 or more (always 0 when `timing` is `on`); `timing` is `before`, `on` or `after`, relative to the due date.
+
 ## Reminder Processing Flow
+
+The occurrence query's lower bound is UTC midnight today minus (largest `after` days + 1). It is deliberately a day wider than needed: due dates are calendar days stored anywhere between 00:00 and 12:00 UTC and the cron runs at 13:00 UTC, so a bound of "now minus N days" would drop an occurrence due exactly N days ago. The per-occurrence date check in the household's timezone decides what actually sends.
 
 ```
 Vercel Cron (daily at 13:00 UTC)
@@ -71,7 +89,7 @@ Vercel Cron (daily at 13:00 UTC)
           ├→ Fetch all active tasks with reminderConfig
           └→ For each task:
               └→ checkAndSendTaskReminders(task)
-                  ├→ Get active/assigned occurrences
+                  ├→ Get created/assigned occurrences due on or after the lookback bound (see below)
                   └→ For each reminder entry in task.reminderConfig:
                       ├→ Calculate target date based on timing
                       │   before: dueDate - days

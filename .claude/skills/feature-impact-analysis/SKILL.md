@@ -7,7 +7,7 @@ description: Use when adding a new feature and need to identify edge cases, miss
 
 ## Overview
 
-Systematically identify edge cases and affected areas by analyzing how a new feature intersects with existing functionality. Read @DOCS/project-context to understand the system before getting started. The key insight: edge cases live at the boundaries between new and existing features.
+Systematically identify edge cases and affected areas by analyzing how a new feature intersects with existing functionality. Read the capability docs in `docs/functionality/` to understand the system before getting started (they are kept current by the `update-docs` skill). The key insight: edge cases live at the boundaries between new and existing features.
 
 ## When to Use
 
@@ -53,7 +53,7 @@ For each existing feature, ask these questions about the new feature:
 ## Prompt Template
 
 ```
-Consider the existing features and how this product works by studying [PROJECT_CONTEXT_DOCS].
+Consider the existing features and how this product works by studying the capability docs in docs/functionality/.
 
 Then consider the new feature design in [DESIGN_DOC].
 

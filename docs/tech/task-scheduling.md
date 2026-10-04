@@ -144,8 +144,8 @@ When a task's lifecycle state changes, occurrences are affected:
 ### Unpause
 - Sets `metaStatus` back to `"active"`
 - Immediately generates the next occurrence:
-  - For `variable_interval` / `annual_variable`: finds last completed/skipped occurrence as base date, calls `generateNextOccurrence()`
-  - For all other recurring types: calls `createInitialOccurrence()` to calculate and create the next due date
+  - For variable schedules (`variable_interval` / `annual_variable`, see `isVariableSchedule()` in `utils/schedule-type.ts`): finds last completed/skipped occurrence as base date, calls `generateNextOccurrence()`. With no such occurrence, `annual_variable` falls back to `createInitialOccurrence()` (its anchor date) and `variable_interval` generates nothing
+  - For all other recurring types: calls `createInitialOccurrence()` to calculate and create the next due date (it checks the end condition first, so a task that has used up its `times` limit gets nothing)
   - For `once` type: no occurrence generated (one-time tasks don't recur)
 
 ### Soft Delete
@@ -180,7 +180,7 @@ When the flag is set and the computed next due date falls before `startOfDay(tod
 
 The collision-handling recursion inside `generateNextOccurrence` threads `options` through unchanged — the `< today` check is a no-op when the prior iteration already advanced to a future date, so propagation is safe.
 
-`endCondition.times` counts actual occurrences created; auto-catch-up does not consume phantom slots for skipped cycles.
+`endCondition.times` counts actual occurrences created, excluding those with `deleted` status (cancelled by a pause or schedule edit); auto-catch-up does not consume phantom slots for skipped cycles.
 
 ## End Conditions
 
@@ -189,7 +189,9 @@ Checked in `checkEndCondition()` before creating each occurrence:
 | Type | Config | Stops When |
 |------|--------|-----------|
 | `never` | (default) | Never stops |
-| `times` | `{ times: number }` | Total occurrence count >= times |
-| `date` | `{ date: Date }` | Next due date > cutoff date |
+| `times` | `{ times: number }` | Count of existing non-deleted occurrences >= times, so a task gets exactly `times` occurrences |
+| `date` | `{ date: Date }` | Next due date is on or after the cutoff date |
+
+Callers pass the number of occurrences that already exist, not counting the one about to be created. Manual catch-up (`TaskService.catchUp`) does not check end conditions.
 
 Safety limit: Generation loop caps at 1000 occurrences to prevent infinite loops.

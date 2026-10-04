@@ -1,84 +1,84 @@
 # Household Management
 
-## Overview
+> A household is the shared space where members work together. Create one or join one, manage who is in it and what they can do, and set the timezone and categories everyone shares.
 
-A household is the shared space where members collaborate on tasks. All task data is isolated per household, ensuring multi-tenancy.
+## What You Can Do
 
-## Creating a Household
+- Create a household, or join one with an invite code
+- Leave a household
+- As an admin: rename the household, set its timezone, remove members, promote or demote admins, and regenerate the invite code
 
-Any authenticated user without a household can create one:
-- Provide a **name** and optional **timezone** (defaults to UTC)
-- The creator automatically becomes an **admin**
-- An 8-character **invite code** (alphanumeric, e.g. `A3BX9K2M`) is generated for sharing
+## How It Works
 
-## Joining a Household
+### Creating and Joining
 
-Users join by entering the household's invite code. New members join with **member** role (not admin). A user can only belong to one household at a time.
+Anyone signed in without a household can create one by giving it a **name**. Its **timezone** is taken from the browser and can be changed later by an admin. The creator becomes an **admin**, and an 8-character **invite code** of letters and numbers (for example, A3BX9K2M) is generated for sharing.
 
-## Leaving a Household
+Others join by entering that invite code. New members join as regular members, not admins. A person can belong to only one household at a time.
 
-Any member can leave from the **Profile** page, with one constraint: the **last admin cannot leave** if other members are still present. The admin must either promote another member to admin first or remove all other members.
+All data is isolated per household: one household never sees another's tasks, providers or projects.
 
-When a user leaves (or is removed by an admin):
-- A **former member record** is created, snapshotting the user's name at departure time
-- The user is **removed from default assignees** on all task definitions in the household
-- The user is **removed from assignees** on all future actionable occurrences (status `created` or `assigned`, due date today or later)
-- Past and completed occurrences are **left untouched** for historical accuracy
-- The user's name appears with **dimmed grey italic styling** wherever it was referenced historically
-
-If a user rejoins the same household, the former member record is deleted and they become a normal active member again.
-
-## Former Members
-
-Departed members remain visible in the household's historical data. Their names appear in:
-- Assignee lists on past/completed occurrences
-- Occurrence timeline history (comments, status changes, etc.)
-- Task detail default assignees (if they were assigned before cleanup)
-
-Former members are styled with dimmed/italic text to distinguish them from active members. They do not appear in assignee filter dropdowns or assignment pickers.
-
-## Roles
-
-The household uses a two-tier role system:
+### Roles
 
 | Capability | Admin | Member |
 |-----------|-------|--------|
 | View household details and members | Yes | Yes |
 | Create and manage tasks | Yes | Yes |
-| Complete/skip/comment on occurrences | Yes | Yes |
+| Complete, skip and comment on occurrences | Yes | Yes |
 | Update household settings (name, timezone) | Yes | No |
 | Remove members | Yes | No |
-| Promote/demote admins | Yes | No |
+| Promote and demote admins | Yes | No |
 | Create custom categories | Yes | No |
-| Regenerate invite code | Yes | No |
+| Regenerate the invite code | Yes | No |
 
-## Timezone
+### Leaving and Former Members
 
-Each household has a timezone setting (IANA format, e.g. `America/New_York`). This is used for:
-- Determining "today" for reminder scheduling
-- Daily boundary calculations for deduplication
-- Display formatting on the client
+Any member can leave, with one constraint: the **last admin cannot leave** while other members remain. They must first promote someone else or remove the other members.
 
-All dates are stored in UTC in the database; the household timezone is applied at the presentation and scheduling layers.
+When someone leaves, or is removed by an admin:
 
-## Categories
+- Their name is kept as a **former member**, as it was at the time they left
+- They are removed from the default assignees of every task
+- They are removed from pending occurrences due today or later; overdue ones keep them
+- Past and completed occurrences are left untouched, for historical accuracy
 
-Tasks are organized using categories. The system provides two tiers:
+Former members stay visible wherever they appear in history: assignee lists on past occurrences, occurrence timelines, and comments. Their names are shown dimmed and in italics to set them apart from current members. They do not appear in assignee filters or pickers.
 
-### Default Categories
-- System-wide, shared across all households
-- Cannot be modified or deleted
-- Always available
+If the person rejoins the same household, they become a normal active member again.
 
-### Custom Categories
-- Created by household admins
-- Private to the household
-- Category names must be unique within a household
-- Cannot be deleted while tasks reference them (reassign tasks first)
+### Timezone
 
-## Invite Codes
+Each household has a timezone (for example, America/New_York), which admins pick from a list of common timezones. It decides what "today" means for reminders, makes sure a reminder is sent at most once per day, and is used when showing dates and times.
 
-- 8-character alphanumeric codes (A-Z, 0-9)
-- Case-sensitive
-- Admins can regenerate the invite code at any time (the old code becomes invalid immediately)
-- Useful if a code is shared too broadly or compromised
+### Categories
+
+Tasks are organized by category, in two tiers:
+
+- **Default categories** are shared by every household, always available, and cannot be changed or removed.
+- **Custom categories** are private to one household, can only be created by its admins, and must have a name that is unique within the household. There is no screen for creating them yet.
+
+### Invite Codes
+
+Invite codes are 8 characters and case-sensitive. An admin can regenerate the code at any time, and the old code stops working immediately, which is useful if a code has been shared too widely.
+
+## Connections
+
+- **[Task Management](./task-management.md)**: members are the people tasks are assigned to, and categories organize tasks.
+- **[Notifications and Reminders](./notifications-and-reminders.md)**: notifications go to household members, timed by the household's timezone.
+- **[Providers](./providers.md)**: the provider directory is shared by the household, and admins manage its categories, statuses and access keys.
+- **[Projects](./projects.md)**: the project list is shared by the household, and any member can change any project.
+
+## Where It Appears
+
+- **Household setup**: shown after first sign-in, to create or join a household
+- **Household page**: details, members, invite code and settings
+- **Profile page**: leaving the household
+- **Throughout the app**: member names in assignee pickers and filters, and former members in history
+
+## Current Limitations
+
+- A person can belong to only one household at a time.
+- There are only two roles, admin and member; there are no finer-grained permissions.
+- Default categories cannot be edited or removed.
+- Custom categories have no screen for creating them, and cannot be renamed or deleted.
+- The timezone list on the Household page covers common timezones only.

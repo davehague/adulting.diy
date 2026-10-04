@@ -1,6 +1,6 @@
-# adulting.diy Task Management System
+# adulting.diy
 
-This project is a task management system built with Nuxt 3, Vue.js, Prisma, and CockroachDB. It's designed to help households manage recurring and non-recurring tasks efficiently.
+A household management app built with Nuxt 3, Vue.js, Prisma, and CockroachDB. It helps households manage recurring and one-time tasks, keep a directory of contractors, and track home projects.
 
 ## Features
 
@@ -10,6 +10,8 @@ This project is a task management system built with Nuxt 3, Vue.js, Prisma, and 
 - Custom categorization system for tasks
 - Flexible notification system (email + Slack) with configurable reminders
 - Task pausing and soft deletion
+- Provider directory: contractors and service providers with ratings, notes, neighbor recommendations and task links
+- Home projects with private photos, step checklists and next steps on the dashboard
 - User authentication (Google OAuth)
 - Persistent authentication state
 
@@ -21,6 +23,8 @@ This project is a task management system built with Nuxt 3, Vue.js, Prisma, and 
 - **State Management:** [Pinia](https://pinia.vuejs.org/)
 - **Database ORM:** [Prisma](https://www.prisma.io/)
 - **Database:** [CockroachDB](https://www.cockroachlabs.com/) (compatible with PostgreSQL)
+- **Storage:** [Vercel Blob](https://vercel.com/docs/vercel-blob) (private store, project photos)
+- **Notifications:** [Mailjet](https://www.mailjet.com/) email and Slack incoming webhooks
 - **Icons:** [Lucide Vue Next](https://lucide.dev/)
 
 ## Prerequisites
@@ -112,11 +116,15 @@ See [docs/tech/testing.md](docs/tech/testing.md) for full details on test struct
 
 Project documentation is organized in `docs/`:
 
-- **[Functionality docs](docs/functionality/)** - Feature descriptions from a product perspective
-- **[Tech docs](docs/tech/)** - Implementation details for developers
-- **[API reference](docs/tech/api-endpoints.md)** - Full API endpoint documentation
-- **[Brand guide](docs/brand.md)** - Colors, typography, component patterns
-- **[Changelog](docs/functionality/changelog.md)** - Record of changes
+| Location | Audience | What it covers |
+|----------|----------|----------------|
+| [docs/functionality/](docs/functionality/) | Product | One doc per capability, no code: [tasks](docs/functionality/task-management.md), [notifications and reminders](docs/functionality/notifications-and-reminders.md), [households](docs/functionality/household-management.md), [providers](docs/functionality/providers.md), [projects](docs/functionality/projects.md) |
+| [docs/functionality/changelog.md](docs/functionality/changelog.md) | Product | What changed, from the user's point of view |
+| [docs/tech/architecture.md](docs/tech/architecture.md) | Developers | System map: structure, request flow, auth, data model, integrations |
+| [docs/tech/](docs/tech/) | Developers | Subsystem docs: [API reference](docs/tech/api-endpoints.md), [task scheduling](docs/tech/task-scheduling.md), [notification system](docs/tech/notification-system.md), [provider ingest](docs/tech/provider-ingest.md), [testing](docs/tech/testing.md), [dev login bypass](docs/tech/dev-login-bypass.md) |
+| [docs/adrs/](docs/adrs/) | Developers | Architectural Decision Records |
+| [docs/brand.md](docs/brand.md) | Everyone | Colors, typography, component patterns |
+| [docs/next-up.md](docs/next-up.md) | Everyone | Roadmap and deferred work |
 
 ## Development Features
 
@@ -139,14 +147,18 @@ Ensure your `.env` file contains the necessary variables:
 # Example .env file
 DATABASE_URL="postgresql://user:password@host:port/adulting?sslmode=verify-full"
 
-# Google OAuth (for authentication)
-GOOGLE_CLIENT_ID="your-google-client-id"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
+# Google Sign-In (for authentication)
+NUXT_PUBLIC_GOOGLE_CLIENT_ID="your-google-client-id"
 
 # Email service (Mailjet for notifications)
-MAILJET_API_KEY="your-mailjet-api-key"
-MAILJET_SECRET_KEY="your-mailjet-secret-key"
-MAILJET_FROM_EMAIL="noreply@yourdomain.com"
+MJ_APIKEY_PUBLIC="your-mailjet-api-key"
+MJ_APIKEY_PRIVATE="your-mailjet-secret-key"
+
+# Vercel Blob (private store for project photos; shared by local dev and production)
+BLOB_READ_WRITE_TOKEN="your-vercel-blob-token"
+
+# Base URL used in notification links (defaults to https://adulting.diy)
+APP_URL="https://localhost:3000"
 
 # Vercel Cron
 CRON_SECRET="your-random-secret"        # Must match Vercel project settings

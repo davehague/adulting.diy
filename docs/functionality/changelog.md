@@ -2,6 +2,13 @@
 
 ## 2026-10-04
 
+### Fixes to schedules, reminders and household permissions
+- Tasks set to end "after N times" now get all N occurrences; they used to stop one short. A task that stopped early will get its missing occurrence
+- Annual Variable tasks now schedule the next occurrence a year after the task was actually completed or skipped, as intended, instead of a year after the due date
+- Reminders that were silently never sent now go out: the longest "after the due date" reminder on a task (including the default "3 days after"), and "on the due date" reminders on tasks with no "after" reminder
+- Only household admins can change household settings, regenerate the invite code, remove members and change who is an admin; the check behind this was unreliable
+- Account details can only be looked up by the signed-in person they belong to
+
 ### Home Projects (slice 2): steps and next steps
 - Each project can have a checklist of steps: a line of text, a done checkbox and an optional time estimate in minutes; steps stay in the order they were added
 - The dashboard has a new **Project next steps** section showing the next undone step of every Active project, which can be checked off there

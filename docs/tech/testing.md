@@ -11,8 +11,10 @@
 ```
 tests/
 ├── unit/                    # Unit tests for business logic
-│   ├── utils/              # Date calculations, scheduling algorithms
-│   └── logic/              # Notification preferences, business rules
+│   ├── utils/              # Date calculations, scheduling algorithms, schemas, helpers
+│   ├── services/           # Service classes against a mocked Prisma client
+│   ├── api/                # Route handlers run through the real auth wrappers
+│   └── logic/              # Notification preferences, occurrence lifecycle rules
 ├── integration/            # Integration tests for system components
 ├── e2e/                    # End-to-end tests (excluded from default run)
 │   └── task-lifecycle.test.ts
@@ -37,6 +39,7 @@ E2E tests are excluded from the default run via `vitest.config.ts` configuration
 |------|--------------|
 | **Schedule Logic** | All 8 recurrence patterns, date calculations, edge cases |
 | **Notification Logic** | User preferences, email templates, reminder timing |
+| **Authorization** | Household admin routes, the sign-in user routes, dev bypass on and off |
 | **Integration** | Scheduler endpoints, business rule validation |
 | **E2E** | Task lifecycle (exists but excluded from default run) |
 | **Edge Cases** | Timezone handling, month boundaries, leap years |
@@ -48,4 +51,4 @@ E2E tests are excluded from the default run via `vitest.config.ts` configuration
 3. **E2E tests** for task lifecycle workflows (exist but excluded from default run)
 4. **Type tests** for TypeScript type validation
 
-The test suite includes 530 tests across 34 test files, covering task scheduling, notification systems, occurrence management, filter logic, and edge cases.
+The test suite covers task scheduling, notification systems, occurrence management, providers, projects, authorization, filter logic, and edge cases.
