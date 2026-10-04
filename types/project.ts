@@ -8,6 +8,8 @@ export type ProjectPathFilter = ProjectPath | 'none';
 
 export const DEFAULT_LIST_STATUSES: ProjectStatus[] = ['planning', 'active'];
 
+export const UNTITLED_PROJECT_TITLE = 'Untitled project';
+
 export const MAX_PROJECT_PHOTOS = 10;
 export const MAX_FULL_PHOTO_BYTES = 3 * 1024 * 1024;
 export const MAX_THUMB_PHOTO_BYTES = 200 * 1024;

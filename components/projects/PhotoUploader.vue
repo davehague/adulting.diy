@@ -14,7 +14,7 @@
                 @click="removeItem(item.key)">
           &times;
         </button>
-        <button v-if="item.state === 'failed' && targetProjectId"
+        <button v-if="item.state === 'failed' && canRetry"
                 type="button"
                 class="mt-1 w-full text-xs font-medium text-amber-700 hover:text-amber-800"
                 @click="retry(item.key)">
@@ -62,9 +62,15 @@ const props = withDefaults(defineProps<{
   // How many more photos the project can take, not counting ones picked here.
   remaining: number;
   projectId?: string;
-  // Upload as soon as photos are picked (used on an existing project).
+  // Upload as soon as photos are picked (used on an existing project, and on the new-project form).
   autoUpload?: boolean;
-}>(), { projectId: undefined, autoUpload: false });
+  // Creates the project (once) and returns its id. Used for auto-upload when there is no projectId
+  // yet (the new-project form); the caller is expected to memoise the in-flight create so that
+  // concurrent calls (two picks, or a pick racing a Save) share one request.
+  ensureProjectId?: () => Promise<string>;
+  // Keep finished items visible instead of clearing them, for forms with no other photo grid.
+  keepUploaded?: boolean;
+}>(), { projectId: undefined, autoUpload: false, ensureProjectId: undefined, keepUploaded: false });
 
 const emit = defineEmits<{ uploaded: [photo: ProjectPhotoDto] }>();
 
@@ -78,6 +84,18 @@ let nextKey = 0;
 const unsent = computed(() => items.value.filter((item) => item.state !== 'done'));
 const roomLeft = computed(() => props.remaining - unsent.value.length);
 const hasPending = computed(() => unsent.value.length > 0);
+// Whether a Retry button can do anything: either we already know the project, or we have a way to create it.
+const canRetry = computed(() => !!(targetProjectId.value || props.projectId || props.ensureProjectId));
+
+// Every operation that touches the upload queue (auto-upload on pick, a per-photo retry, and the
+// parent's own uploadAll on Save) runs through this chain, one at a time, so two of them can never
+// race against the same items. The chain itself never rejects, so a failing task never blocks later ones.
+let chain: Promise<unknown> = Promise.resolve();
+const enqueue = <T,>(task: () => Promise<T>): Promise<T> => {
+  const result = chain.then(task);
+  chain = result.catch(() => undefined);
+  return result;
+};
 
 const uploadOne = async (item: UploadItem, projectId: string): Promise<void> => {
   item.state = 'uploading';
@@ -94,14 +112,24 @@ const uploadOne = async (item: UploadItem, projectId: string): Promise<void> => 
 };
 
 // One at a time: phone uploads on cellular data are more reliable in sequence, and photo order is kept.
-const uploadAll = async (projectId: string): Promise<boolean> => {
+const uploadAllTask = async (projectId: string): Promise<boolean> => {
   targetProjectId.value = projectId;
   for (const item of items.value) {
     if (item.state === 'waiting' || item.state === 'failed') await uploadOne(item, projectId);
   }
   const allDone = items.value.every((item) => item.state === 'done');
-  if (props.autoUpload) clearDone();
+  if (props.autoUpload && !props.keepUploaded) clearDone();
   return allDone;
+};
+
+const uploadAll = (projectId: string): Promise<boolean> => enqueue(() => uploadAllTask(projectId));
+
+// Resolves the project to upload into for the auto-upload and retry paths: the given projectId, or
+// (on the new-project form) ensureProjectId, which creates it on first use.
+const resolveTarget = (): Promise<string> => {
+  if (props.projectId) return Promise.resolve(props.projectId);
+  if (props.ensureProjectId) return props.ensureProjectId();
+  return Promise.reject(new Error('No project to upload to'));
 };
 
 const clearDone = (): void => {
@@ -110,6 +138,25 @@ const clearDone = (): void => {
   }
   items.value = items.value.filter((item) => item.state !== 'done');
 };
+
+const startAutoUpload = (): Promise<void> => enqueue(async () => {
+  let projectId: string;
+  try {
+    projectId = await resolveTarget();
+  } catch (e) {
+    // The project could not be created (e.g. no signal): leave the just-picked photos as failed so
+    // Retry (per photo, or a later Save) can try creating it again.
+    const message = e instanceof Error ? e.message : 'Could not create the project';
+    for (const item of items.value) {
+      if (item.state === 'waiting') {
+        item.state = 'failed';
+        item.error = message;
+      }
+    }
+    return;
+  }
+  await uploadAllTask(projectId);
+});
 
 const onPick = async (event: Event): Promise<void> => {
   const input = event.target as HTMLInputElement;
@@ -124,7 +171,7 @@ const onPick = async (event: Event): Promise<void> => {
   for (const file of files.slice(0, room)) {
     items.value.push({ key: nextKey++, file, previewUrl: URL.createObjectURL(file), state: 'waiting', error: null });
   }
-  if (props.autoUpload && props.projectId) await uploadAll(props.projectId);
+  if (props.autoUpload) await startAutoUpload();
 };
 
 const removeItem = (key: number): void => {
@@ -133,12 +180,22 @@ const removeItem = (key: number): void => {
   items.value = items.value.filter((candidate) => candidate.key !== key);
 };
 
-const retry = async (key: number): Promise<void> => {
+const retry = (key: number): Promise<void> => enqueue(async () => {
   const item = items.value.find((candidate) => candidate.key === key);
-  if (!item || !targetProjectId.value) return;
-  await uploadOne(item, targetProjectId.value);
-  if (props.autoUpload) clearDone();
-};
+  if (!item) return;
+  let projectId = targetProjectId.value;
+  if (!projectId) {
+    try {
+      projectId = await resolveTarget();
+    } catch (e) {
+      item.state = 'failed';
+      item.error = e instanceof Error ? e.message : 'Could not create the project';
+      return;
+    }
+  }
+  await uploadOne(item, projectId);
+  if (props.autoUpload && !props.keepUploaded) clearDone();
+});
 
 onBeforeUnmount(() => {
   for (const item of items.value) URL.revokeObjectURL(item.previewUrl);
