@@ -1,10 +1,14 @@
 import {
+  type NextStepsResponse,
   type PhotoVariant,
   type ProjectCreateInput,
   type ProjectDetail,
   type ProjectListFilters,
   type ProjectListItem,
   type ProjectPhotoDto,
+  type ProjectStepCreateInput,
+  type ProjectStepDto,
+  type ProjectStepUpdateInput,
   type ProjectUpdateInput,
 } from '@/types/project';
 import { type ResizedPhoto } from '@/utils/image-resize';
@@ -44,8 +48,17 @@ export const useProjects = () => {
     return response.blob();
   };
 
+  const listNextSteps = () => api.get<NextStepsResponse>('/api/projects/next-steps');
+  const addStep = (projectId: string, input: ProjectStepCreateInput) =>
+    api.post<ProjectStepDto>(`/api/projects/${projectId}/steps`, input);
+  const updateStep = (projectId: string, stepId: string, input: ProjectStepUpdateInput) =>
+    api.put<ProjectStepDto>(`/api/projects/${projectId}/steps/${stepId}`, input);
+  const deleteStep = (projectId: string, stepId: string) =>
+    api.delete(`/api/projects/${projectId}/steps/${stepId}`);
+
   return {
     listProjects, getProject, createProject, updateProject, deleteProject, listLocations,
     uploadPhoto, deletePhoto, fetchPhotoBlob,
+    listNextSteps, addStep, updateStep, deleteStep,
   };
 };
