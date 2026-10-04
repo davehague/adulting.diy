@@ -99,6 +99,9 @@
         </NuxtLink>
       </div>
 
+      <!-- Project next steps: loads its own data, so a failure here never affects the chore sections. -->
+      <ProjectNextSteps />
+
       <!-- Coming Up -->
       <div class="bg-white rounded-xl shadow-sm border border-stone-100 mb-8">
         <div class="px-6 py-4 border-b border-stone-100">
@@ -146,6 +149,7 @@ import { useAuthStore } from '@/stores/auth';
 import { useApi } from '@/utils/api';
 import type { DashboardData } from '@/types/task';
 import { Plus, Clock, AlertTriangle } from 'lucide-vue-next';
+import ProjectNextSteps from '@/components/projects/ProjectNextSteps.vue';
 
 type PendingOccurrence = DashboardData['pendingOccurrences'][number];
 
