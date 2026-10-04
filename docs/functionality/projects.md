@@ -4,7 +4,7 @@ Projects are the household's running list of things to fix, improve or build aro
 
 ## What a Project Is
 
-Each project has a title, an optional location (free text, e.g. "Master bathroom"), a status, a path, optional notes, and up to 10 photos. There is no owner or assignee field; anyone in the household can change anything.
+Each project has a title, an optional location (free text, e.g. "Master bathroom"), a status, a path, optional notes, up to 10 photos, and a checklist of steps. There is no owner or assignee field; anyone in the household can change anything.
 
 ## Status
 
@@ -40,6 +40,20 @@ The project page (`/projects/:id`) shows every photo in order; tapping one opens
 
 The full-size viewer opens on the photo that was tapped and shows the whole photo, scaled to fit the screen rather than cropped. When a project has more than one photo, swiping (or, on desktop, the previous/next arrow buttons or the Left/Right arrow keys) moves between them, and a counter such as "2 / 5" shows the position. Close it with the close button, the Escape key, or by tapping the dark area outside the photo; tapping the photo itself, or swiping, never closes it.
 
+## Steps
+
+A project can have a checklist of steps, shown in a **Steps** section on the project page between the details and the photos. A step is a line of text (up to 200 characters) with a checkbox and an optional time estimate in whole minutes. Steps stay in the order they were added; a new step goes to the bottom, and there is no reordering. A project can hold at most 100 steps. Steps can be added and edited on a project in any status, and any household member can add, change, check off and remove them.
+
+Type into **Add a step** and press Enter or tap Add; the cursor stays in the box so several steps can be entered in a row. Tapping a step's text opens that step for editing: the text and the estimate each save when the field is left or Enter is pressed, clearing the estimate removes it, and **Remove** deletes the step for good after a confirmation. Checked-off steps stay where they are, greyed and struck through, and unchecking one brings it back.
+
+Checking off the last undone step asks "Mark the project Done?" with **Mark Done** and **Not yet**. Not yet changes nothing. The question is not asked when the project is already Done, or when a step is unchecked, edited or removed.
+
+## Next Steps on the Dashboard
+
+The dashboard shows a **Project next steps** section under the stat cards with one row for each Active project: its next undone step (the first one not checked off), the project's title beneath it, and the estimate when there is one. Only Active projects appear, newest project first. Tapping the text opens the project; ticking the box checks the step off and the row moves on to that project's next step.
+
+An Active project with no steps, or with every step done, appears as itself, labelled "No steps yet" or "All steps done". Ticking that row, or ticking a project's last step, asks whether to mark the project Done; choosing Mark Done takes it off the list. When the household has projects but none is Active, the section says so and links to Projects. When the household has no projects, the section is not shown.
+
 ## Photo Limits and Privacy
 
 A project can hold at most 10 photos. Photos are private: only a signed-in member of the owning household can load one. A photo URL opened without the right household's credentials (for example, in a private browser window) returns an error, not the image.
@@ -51,8 +65,9 @@ Deleting a project hides it everywhere but keeps the record and its photos; noth
 ## Not Yet
 
 These are designed for later slices and are not part of this one:
-- Steps on a project (a checklist with an order and an optional time estimate).
-- A cross-project next-step list showing what to do next on each active project.
+- Reordering steps.
+- A step count on project cards and a total of the time remaining.
+- Assignees, due dates or reminders on steps.
 - Linking providers to a project, with an engagement status and quotes.
 - AI help: suggested next steps, time estimates, or problem-to-category routing.
 

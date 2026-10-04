@@ -93,12 +93,16 @@ The API uses these authentication levels:
 | `GET` | `/api/projects` | Household | List projects (query: `status` comma-separated, defaults to `planning,active`; `path` = `diy`, `hire`, `unsure`, or `none` for not set). Returns each project with its photo count, cover photo id, and ordered photo ids, sorted Active first then Planning, Future, Done, newest first within each |
 | `POST` | `/api/projects` | Household | Create project (`title` required, `location` and `notes` optional); status starts as `planning`, path as null |
 | `GET` | `/api/projects/locations` | Household | Distinct locations already used by the household's non-deleted projects, for suggestions |
-| `GET` | `/api/projects/[id]` | Household | Get one project with its photos in order |
+| `GET` | `/api/projects/next-steps` | Household | The dashboard list: `hasProjects` (any non-deleted project exists) and one item per Active project, newest first, each with `kind` = `step`, `noSteps` or `allDone` and, for `step`, the next undone step (id, text, estimate) |
+| `GET` | `/api/projects/[id]` | Household | Get one project with its photos in order and its steps in order (position, then creation time) |
 | `PUT` | `/api/projects/[id]` | Household | Update any of title, location, status, path, notes; moving to `done` sets `completedAt`, moving away clears it |
 | `DELETE` | `/api/projects/[id]` | Household | Soft delete project |
 | `POST` | `/api/projects/[id]/photos` | Household | Upload one photo; multipart form fields `full` and `thumb` (the JPEG files) plus `width` and `height` (the full image's pixel size) |
 | `GET` | `/api/projects/[id]/photos/[photoId]` | Household | Stream a photo; query `variant` = `thumb` or `full` (default `full`) |
 | `DELETE` | `/api/projects/[id]/photos/[photoId]` | Household | Remove a photo's row and both stored files |
+| `POST` | `/api/projects/[id]/steps` | Household | Add a step (`text` required, 1 to 200 characters; `estimateMinutes` optional, whole number 1 to 9999); it goes last. 409 at 100 steps |
+| `PUT` | `/api/projects/[id]/steps/[stepId]` | Household | Update any of `text`, `estimateMinutes` (null clears it), `done` (true sets the done time unless already set, false clears it) |
+| `DELETE` | `/api/projects/[id]/steps/[stepId]` | Household | Remove a step for good |
 
 See [projects.md](../functionality/projects.md) for the product view.
 
@@ -189,7 +193,7 @@ Key data models handled by the API:
 - **OccurrenceHistoryLog**: Audit trail for occurrence changes
 - **FormerHouseholdMember**: Snapshot of departed users for historical display
 - **Provider**, **ProviderCategory**, **ProviderStatus**, **ProviderContact**, **ProviderEvidence**, **ProviderComment**, **TaskProvider**, **ApiKey**: Provider directory and machine ingest (see [provider-ingest.md](provider-ingest.md))
-- **Project**, **ProjectPhoto**: Home project tracking with private photos (see [projects.md](../functionality/projects.md))
+- **Project**, **ProjectPhoto**, **ProjectStep**: Home project tracking with private photos and a checklist of steps (see [projects.md](../functionality/projects.md))
 
 ## Rate Limiting
 

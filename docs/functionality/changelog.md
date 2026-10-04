@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-04
+
+### Home Projects (slice 2): steps and next steps
+- Added on the `feat/project-steps` branch; not yet merged, and pending the database migration
+- Each project can have a checklist of steps: a line of text, a done checkbox and an optional time estimate in minutes; steps stay in the order they were added
+- The dashboard has a new **Project next steps** section showing the next undone step of every Active project, which can be checked off there
+- Checking off a project's last step asks whether to mark the project Done
+- Projects with no steps, or with every step done, appear in the dashboard list as themselves
+
 ## 2026-10-03
 
 ### Home Projects (slice 1)

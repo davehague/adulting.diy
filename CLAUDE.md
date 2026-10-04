@@ -62,7 +62,7 @@ After completing feature work, use the `update-docs` skill to update relevant do
 6. **OccurrenceHistoryLog**: Audit trail for task occurrences
 7. **FormerHouseholdMember**: Name snapshots of users who left a household
 8. **Provider**: Contractors/service providers, with **ProviderCategory**, **ProviderStatus**, **ProviderContact**, **ProviderEvidence** (neighbor sightings), **ProviderComment**, and **TaskProvider** (task link); **ApiKey** is the per-household key for machine ingest. See [docs/functionality/providers.md](docs/functionality/providers.md) and [docs/tech/provider-ingest.md](docs/tech/provider-ingest.md)
-9. **Project**: Household home-project tracking (title, location, status, path, notes), with **ProjectPhoto** (private photos in Vercel Blob). See [docs/functionality/projects.md](docs/functionality/projects.md)
+9. **Project**: Household home-project tracking (title, location, status, path, notes), with **ProjectPhoto** (private photos in Vercel Blob) and **ProjectStep** (a checklist; the dashboard shows each Active project's next undone step). See [docs/functionality/projects.md](docs/functionality/projects.md)
 
 ### Task Scheduling System
 
@@ -87,7 +87,7 @@ adulting.diy/
 │   ├── NotificationPreferences.vue
 │   ├── TaskDetails.vue
 │   ├── providers/        # Provider form, comment list, task provider picker
-│   ├── projects/         # Photo uploader and authenticated image components
+│   ├── projects/         # Photo uploader, authenticated image, steps, dashboard next steps and mark-Done dialog components
 │   ├── occurrences/      # Occurrence-related components
 │   │   ├── OccurrenceEditForm.vue
 │   │   └── OccurrenceTimeline.vue
@@ -150,7 +150,7 @@ adulting.diy/
 │   │   ├── Provider*Service.ts   # Provider, Category, Status, Comment, Contact, Ingest
 │   │   ├── ApiKeyService.ts
 │   │   ├── TaskProviderService.ts
-│   │   ├── Project*Service.ts    # Project, ProjectPhoto
+│   │   ├── Project*Service.ts    # Project, ProjectPhoto, ProjectStep
 │   │   ├── TaskService.ts
 │   │   └── UserService.ts
 │   └── utils/          # Server utilities
