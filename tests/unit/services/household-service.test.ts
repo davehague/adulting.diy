@@ -141,6 +141,44 @@ describe('HouseholdService', () => {
     })
   })
 
+  describe('isUserAdmin', () => {
+    it('returns true for an admin member of the household', async () => {
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({ isAdmin: true } as any)
+
+      await expect(service.isUserAdmin('user-1', 'household-1')).resolves.toBe(true)
+      expect(vi.mocked(prisma.user.findFirst)).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'user-1', householdId: 'household-1' } })
+      )
+    })
+
+    it('returns false for a non-admin member', async () => {
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({ isAdmin: false } as any)
+
+      await expect(service.isUserAdmin('user-1', 'household-1')).resolves.toBe(false)
+    })
+
+    it('returns false when the user is not in the household', async () => {
+      vi.mocked(prisma.user.findFirst).mockResolvedValue(null)
+
+      await expect(service.isUserAdmin('user-1', 'household-1')).resolves.toBe(false)
+    })
+
+    // Prisma drops an undefined filter, so an unguarded lookup matches an arbitrary member.
+    it.each([undefined, null, ''])('never treats userId %j as admin and skips the lookup', async (badId) => {
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({ isAdmin: true } as any)
+
+      await expect(service.isUserAdmin(badId as any, 'household-1')).resolves.toBe(false)
+      expect(vi.mocked(prisma.user.findFirst)).not.toHaveBeenCalled()
+    })
+
+    it('returns false for an empty householdId without querying', async () => {
+      vi.mocked(prisma.user.findFirst).mockResolvedValue({ isAdmin: true } as any)
+
+      await expect(service.isUserAdmin('user-1', '' as any)).resolves.toBe(false)
+      expect(vi.mocked(prisma.user.findFirst)).not.toHaveBeenCalled()
+    })
+  })
+
   describe('addUser', () => {
     it('deletes former member record when user rejoins', async () => {
       vi.mocked(prisma.user.update).mockResolvedValue({} as any)

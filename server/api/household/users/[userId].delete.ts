@@ -1,8 +1,8 @@
-import { defineHouseholdProtectedEventHandler } from '@/server/utils/auth';
+import { defineHouseholdAdminEventHandler } from '@/server/utils/auth';
 import { HouseholdService } from '@/server/services/HouseholdService';
 import { createError, getRouterParam } from 'h3';
 
-export default defineHouseholdProtectedEventHandler(async (event, authUser, householdId) => {
+export default defineHouseholdAdminEventHandler(async (event, authUser, householdId) => {
   try {
     const householdService = new HouseholdService();
     const targetUserId = getRouterParam(event, 'userId');
@@ -14,18 +14,8 @@ export default defineHouseholdProtectedEventHandler(async (event, authUser, hous
       });
     }
 
-    // Check if current user is admin
-    const isAdmin = await householdService.isUserAdmin(authUser.id, householdId);
-    
-    if (!isAdmin) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'Only household admins can remove users'
-      });
-    }
-
     // Prevent admin from removing themselves
-    if (targetUserId === authUser.id) {
+    if (targetUserId === authUser.userId) {
       throw createError({
         statusCode: 400,
         statusMessage: 'You cannot remove yourself. Use the leave household option instead.'

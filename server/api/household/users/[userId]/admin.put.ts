@@ -1,4 +1,4 @@
-import { defineHouseholdProtectedEventHandler } from '@/server/utils/auth';
+import { defineHouseholdAdminEventHandler } from '@/server/utils/auth';
 import { HouseholdService } from '@/server/services/HouseholdService';
 import { createError, getRouterParam, readBody } from 'h3';
 import { z } from 'zod';
@@ -7,7 +7,7 @@ const updateAdminSchema = z.object({
   isAdmin: z.boolean()
 });
 
-export default defineHouseholdProtectedEventHandler(async (event, authUser, householdId) => {
+export default defineHouseholdAdminEventHandler(async (event, _authUser, householdId) => {
   try {
     const householdService = new HouseholdService();
     const targetUserId = getRouterParam(event, 'userId');
@@ -16,16 +16,6 @@ export default defineHouseholdProtectedEventHandler(async (event, authUser, hous
       throw createError({
         statusCode: 400,
         statusMessage: 'User ID is required'
-      });
-    }
-
-    // Check if current user is admin
-    const isAdmin = await householdService.isUserAdmin(authUser.id, householdId);
-    
-    if (!isAdmin) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'Only household admins can change admin privileges'
       });
     }
 

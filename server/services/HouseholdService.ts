@@ -228,6 +228,9 @@ export class HouseholdService {
    * Check if user is admin of a household
    */
   async isUserAdmin(userId: string, householdId: string): Promise<boolean> {
+    // Prisma ignores undefined filters, so a missing id would match any member.
+    if (!userId || !householdId) return false;
+
     try {
       const user = await prisma.user.findFirst({
         where: {

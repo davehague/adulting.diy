@@ -1,4 +1,4 @@
-import { defineHouseholdProtectedEventHandler } from '@/server/utils/auth';
+import { defineHouseholdAdminEventHandler } from '@/server/utils/auth';
 import { HouseholdService } from '@/server/services/HouseholdService';
 import { createError, readBody } from 'h3';
 import { z } from 'zod';
@@ -10,20 +10,10 @@ const updateHouseholdSchema = z.object({
   message: 'At least one field must be provided'
 });
 
-export default defineHouseholdProtectedEventHandler(async (event, authUser, householdId) => {
+export default defineHouseholdAdminEventHandler(async (event, _authUser, householdId) => {
   try {
     const householdService = new HouseholdService();
     
-    // Check if user is admin
-    const isAdmin = await householdService.isUserAdmin(authUser.id, householdId);
-    
-    if (!isAdmin) {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'Only household admins can update household settings'
-      });
-    }
-
     // Validate request body
     const body = await readBody(event);
     const validatedData = updateHouseholdSchema.parse(body);
