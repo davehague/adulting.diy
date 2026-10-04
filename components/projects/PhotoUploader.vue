@@ -29,7 +29,7 @@
       <Camera :size="16" />Add photo
       <input type="file" accept="image/*" multiple class="sr-only" @change="onPick">
     </label>
-    <p v-else class="text-sm text-stone-600">This project has the maximum of {{ MAX_PROJECT_PHOTOS }} photos.</p>
+    <p v-else class="text-sm text-stone-600">That's the maximum of {{ MAX_PROJECT_PHOTOS }} photos for a project.</p>
     <p v-if="notice" class="mt-2 text-sm text-stone-600">{{ notice }}</p>
   </div>
 </template>

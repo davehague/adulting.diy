@@ -184,6 +184,8 @@ const saveError = ref<string | null>(null);
 const photoError = ref<string | null>(null);
 const saving = ref(false);
 const savedAt = ref<number | null>(null);
+// Restarted on every successful save, so the "Saved" text clears ~2s after the latest save settles.
+let savedIndicatorTimer: ReturnType<typeof setTimeout> | null = null;
 // The id of the photo that was tapped; the viewer opens the carousel on that one. null = closed.
 const viewing = ref<string | null>(null);
 const viewerCarousel = ref<InstanceType<typeof PhotoCarousel> | null>(null);
@@ -217,6 +219,11 @@ const save = async (patch: ProjectUpdateInput): Promise<void> => {
     project.value = updated;
     fillForm(updated);
     savedAt.value = Date.now();
+    if (savedIndicatorTimer) clearTimeout(savedIndicatorTimer);
+    savedIndicatorTimer = setTimeout(() => {
+      savedAt.value = null;
+      savedIndicatorTimer = null;
+    }, 2000);
   } catch (e) {
     saveError.value = e instanceof Error ? e.message : 'Could not save';
     // Put the fields back to what the server has, so the screen never shows an unsaved value as saved.
@@ -267,6 +274,7 @@ watch(viewing, (value) => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onViewerKeydown);
+  if (savedIndicatorTimer) clearTimeout(savedIndicatorTimer);
 });
 
 const removePhoto = async (photoId: string): Promise<void> => {

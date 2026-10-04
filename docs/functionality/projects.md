@@ -1,6 +1,6 @@
 # Projects
 
-Projects are the household's running list of things to fix, improve or build around the house, from a 15-minute chore to a multi-contractor build. The Projects page (`/projects`) is a shared, household-wide list: both household members can create, edit and delete any project.
+Projects are the household's running list of things to fix, improve or build around the house, from a 15-minute chore to a multi-contractor build. The Projects page (`/projects`) is a shared, household-wide list: any household member can create, edit and delete any project.
 
 ## What a Project Is
 
