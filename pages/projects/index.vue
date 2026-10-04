@@ -57,9 +57,9 @@
         <NuxtLink :to="`/projects/${project.id}`"
                   class="block bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden hover:border-amber-400 transition-colors">
           <div class="aspect-[4/3] bg-stone-100 relative">
-            <PhotoCarousel v-if="project.photoCount > 1"
+            <PhotoCarousel v-if="photoIdsOf(project).length > 1"
                            :project-id="project.id"
-                           :photo-ids="project.photoIds"
+                           :photo-ids="photoIdsOf(project)"
                            variant="thumb"
                            :alt="project.title"
                            @update:current-index="(index) => setCardPhotoIndex(project.id, index)" />
@@ -74,9 +74,9 @@
 
             <!-- Indicator dots: display only, never tappable, so a swipe or tap over them still
                  behaves like a swipe or tap on the card. -->
-            <div v-if="project.photoCount > 1"
+            <div v-if="photoIdsOf(project).length > 1"
                  class="absolute inset-x-0 bottom-0 flex justify-center gap-1.5 py-2 bg-gradient-to-t from-black/40 to-transparent pointer-events-none">
-              <span v-for="(photoId, index) in project.photoIds"
+              <span v-for="(photoId, index) in photoIdsOf(project)"
                     :key="photoId"
                     class="w-1.5 h-1.5 rounded-full"
                     :class="(cardPhotoIndex[project.id] ?? 0) === index ? 'bg-white' : 'bg-white/50'" />
@@ -133,6 +133,11 @@ const cardPhotoIndex = reactive<Record<string, number>>({});
 const setCardPhotoIndex = (projectId: string, index: number): void => {
   cardPhotoIndex[projectId] = index;
 };
+
+// A response from an older server build (mid-deploy) may not have `photoIds` yet. Guard every use
+// of it here so a card falls back to the single cover photo (or the placeholder), rather than
+// crashing, when it's missing — the type says it's always there, but the wire doesn't guarantee it.
+const photoIdsOf = (project: ProjectListItem): string[] => project.photoIds ?? [];
 
 // Ignore a slow response that arrives after a newer filter change.
 let latestRequestId = 0;
