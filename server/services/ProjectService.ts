@@ -1,6 +1,7 @@
 import { type Prisma } from '@prisma/client';
 import prisma from '@/server/utils/prisma/client';
 import { HttpError } from '@/server/utils/api-errors';
+import { stepOrder, stepSelect } from '@/server/services/ProjectStepService';
 import {
   DEFAULT_LIST_STATUSES,
   type ProjectCreateInput,
@@ -19,6 +20,7 @@ const detailInclude = {
     orderBy: { position: 'asc' },
     select: { id: true, width: true, height: true, position: true },
   },
+  steps: { orderBy: stepOrder, select: stepSelect },
 } satisfies Prisma.ProjectInclude;
 
 type ProjectWithPhotos = Prisma.ProjectGetPayload<{ include: typeof detailInclude }>;
@@ -33,6 +35,7 @@ const toDetail = (project: ProjectWithPhotos): ProjectDetail => ({
   completedAt: project.completedAt,
   createdAt: project.createdAt,
   photos: project.photos,
+  steps: project.steps,
 });
 
 export class ProjectService {

@@ -23,6 +23,7 @@ const row = (overrides: Record<string, unknown> = {}) => ({
   metaStatus: 'active',
   createdAt: new Date('2026-10-01T00:00:00Z'),
   photos: [],
+  steps: [],
   ...overrides,
 })
 
@@ -116,6 +117,17 @@ describe('ProjectService', () => {
       const result = await service.get('h1', 'p1')
       expect(result.title).toBe('Paint ceiling spots')
       expect(result.photos).toEqual([{ id: 'ph1', width: 2000, height: 1500, position: 0 }])
+    })
+
+    it('returns the project with its steps, asked for in position then creation order', async () => {
+      const steps = [
+        { id: 's1', text: 'Buy primer', position: 0, doneAt: new Date('2026-10-02T12:00:00Z'), estimateMinutes: 20 },
+        { id: 's2', text: 'Paint', position: 1, doneAt: null, estimateMinutes: null },
+      ]
+      db.project.findFirst.mockResolvedValue(row({ steps }))
+      const result = await service.get('h1', 'p1')
+      expect(result.steps).toEqual(steps)
+      expect(db.project.findFirst.mock.calls[0][0].include.steps.orderBy).toEqual([{ position: 'asc' }, { createdAt: 'asc' }])
     })
   })
 
