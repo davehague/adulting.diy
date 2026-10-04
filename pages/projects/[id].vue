@@ -70,6 +70,13 @@
         </p>
       </section>
 
+      <!-- Steps -->
+      <ProjectSteps :project-id="project.id"
+                    :steps="project.steps ?? []"
+                    :project-status="project.status"
+                    @update:steps="onStepsChange"
+                    @all-done="openMarkDone" />
+
       <!-- Photos -->
       <section class="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-6">
         <h2 class="text-lg font-medium text-stone-900 mb-3">Photos</h2>
@@ -106,6 +113,15 @@
         </button>
       </section>
     </div>
+
+    <MarkDoneDialog v-if="project"
+                    :show="markDone.open"
+                    :project-title="project.title"
+                    after-last-step
+                    :saving="markDone.saving"
+                    :error="markDone.error"
+                    @confirm="confirmMarkDone"
+                    @cancel="markDone.open = false" />
 
     <!-- Full-size viewer -->
     <div v-if="project && viewing"
@@ -164,6 +180,7 @@ import {
   type ProjectPath,
   type ProjectPhotoDto,
   type ProjectStatus,
+  type ProjectStepDto,
   type ProjectUpdateInput,
 } from '@/types/project';
 import { useProjects } from '@/composables/useProjects';
@@ -171,6 +188,8 @@ import { PATH_LABELS, STATUS_LABELS } from '@/utils/project-labels';
 import AuthedImage from '@/components/projects/AuthedImage.vue';
 import PhotoUploader from '@/components/projects/PhotoUploader.vue';
 import PhotoCarousel from '@/components/projects/PhotoCarousel.vue';
+import ProjectSteps from '@/components/projects/ProjectSteps.vue';
+import MarkDoneDialog from '@/components/projects/MarkDoneDialog.vue';
 
 const route = useRoute();
 const id = computed(() => String(route.params.id));
@@ -245,6 +264,36 @@ const saveTitle = async (): Promise<void> => {
 
 const onUploaded = (photo: ProjectPhotoDto): void => {
   if (project.value) project.value.photos = [...project.value.photos, photo];
+};
+
+// An older server build (mid-deploy) may send a project without `steps`; the template guards the
+// read with `?? []`, and every change replaces the array here.
+const onStepsChange = (steps: ProjectStepDto[]): void => {
+  if (project.value) project.value.steps = steps;
+};
+
+const markDone = reactive<{ open: boolean; saving: boolean; error: string | null }>({
+  open: false, saving: false, error: null,
+});
+
+const openMarkDone = (): void => {
+  markDone.error = null;
+  markDone.open = true;
+};
+
+const confirmMarkDone = async (): Promise<void> => {
+  markDone.saving = true;
+  markDone.error = null;
+  try {
+    const updated = await updateProject(id.value, { status: 'done' });
+    project.value = updated;
+    fillForm(updated);
+    markDone.open = false;
+  } catch (e) {
+    markDone.error = e instanceof Error ? e.message : 'Could not mark the project Done';
+  } finally {
+    markDone.saving = false;
+  }
 };
 
 const closeViewer = (): void => {
