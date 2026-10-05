@@ -33,11 +33,11 @@ Neighborhood watcher (external) ──→ /api/ingest/providers  (household API 
 | `stores/` | Pinia stores: `auth` (persisted), `tasks`, `dev-auth` |
 | `middleware/auth.global.ts` | Client route guard: login redirect, household setup redirect |
 | `plugins/` | `auth-ready.client.ts` (waits for the persisted auth store), `dev-auth.client.ts` |
-| `utils/` | Shared client helpers: `api.ts` (authenticated fetch), `api-error.ts`, `image-resize.ts`, `project-labels.ts`, `project-steps.ts`, `project-providers.ts`, `schedule-type.ts` (shared with the server) |
+| `utils/` | Shared client helpers: `api.ts` (authenticated fetch), `api-error.ts`, `image-resize.ts`, `project-labels.ts`, `project-steps.ts`, `project-providers.ts`, `google-search.ts` and `schedule-type.ts` (both shared with the server) |
 | `types/` | Shared TypeScript types, one file per domain |
 | `server/api/` | HTTP endpoints, one file per route and method |
 | `server/services/` | Business logic and all database access, one class per domain |
-| `server/utils/` | Auth wrappers, Zod schemas, scheduling maths, blob storage, error helpers, the Prisma client |
+| `server/utils/` | Auth wrappers, Zod schemas, scheduling maths, blob storage, the model call and prompts for provider suggestions, error helpers, the Prisma client |
 | `prisma/` | `schema.prisma` and migrations |
 | `scripts/` | Database setup, seed, and maintenance scripts |
 | `tests/` | Vitest suites (see [testing.md](testing.md)) |
@@ -74,7 +74,8 @@ Defined in `prisma/schema.prisma`. Every household-owned model carries `househol
 | Identity | `User`, `Household`, `FormerHouseholdMember` |
 | Tasks | `Category`, `TaskDefinition`, `TaskOccurrence`, `OccurrenceHistoryLog`, `TaskHistoryLog` |
 | Providers | `Provider`, `ProviderCategory`, `ProviderStatus`, `ProviderContact`, `ProviderEvidence`, `ProviderComment`, `TaskProvider`, `ApiKey` |
-| Projects | `Project`, `ProjectPhoto`, `ProjectStep`, `ProjectProvider` |
+| Projects | `Project`, `ProjectPhoto`, `ProjectStep`, `ProjectProvider`, `ProjectSuggestion` |
+| AI usage | `AiRequestLog` |
 
 Conventions:
 
@@ -109,6 +110,7 @@ The full endpoint list is in [api-endpoints.md](api-endpoints.md).
 | Notifications and reminders | `NotificationService`, `server/services/notifications/*`, `/api/scheduler/reminders` | [notification-system.md](notification-system.md) |
 | Provider directory and machine ingest | `Provider*Service`, `ApiKeyService`, `/api/ingest/providers` | [provider-ingest.md](provider-ingest.md) |
 | Projects, photos, steps and provider links | `ProjectService`, `ProjectPhotoService`, `ProjectStepService`, `ProjectProviderService` | Below |
+| AI provider suggestions | `ProviderSuggestionService`, `/api/projects/[id]/suggestions`, `server/utils/ollama.ts`, `suggestion-*.ts`, `provider-ranking.ts` | Below |
 | Dashboard | `DashboardService`, `/api/dashboard`, `/api/projects/next-steps` | Below |
 
 ### Projects and Photo Storage
@@ -122,6 +124,19 @@ The full endpoint list is in [api-endpoints.md](api-endpoints.md).
 - `Project.providerCategoryId` is the project's saved provider category. The "Find a provider" modal (`components/projects/FindProviderModal.vue`, with `FindProviderDetails.vue` for the details view) lists providers through the existing `GET /api/providers` (search, category, status, sort, hidden statuses included), starting on that category, and loads details through `GET /api/providers/[id]`; it adds no endpoints. `ProviderCategoryService.remove` moves projects along with providers when a replacement is given; otherwise the foreign key clears the column.
 - Link order, labels, the card's "Chosen:" line and the tap-to-call link live in `utils/project-providers.ts`.
 
+### AI Provider Suggestions
+
+Design: [the slice 4a spec](../superpowers/specs/2026-10-05-projects-ai-provider-suggestions-design.md). This is the only AI integration in the app.
+
+- **Flow.** `ProviderSuggestionService.run` checks the project, the allowed-household list and the daily cap, writes an `AiRequestLog` row as `started`, then makes two model calls: routing (project text and category names in; up to four parts out, each tied to a category or to none) and picking (the parts with their candidate pools in; up to three picks per part with reasons out). It saves the result as the project's single `ProjectSuggestion` row and finishes the log row. The whole ask has one 45-second deadline.
+- **The model is injected.** The service takes a `ModelCall` function (default `callOllama` in `server/utils/ollama.ts`, a plain `fetch` to Ollama Cloud), so every test supplies canned replies. Nothing in the test suite calls a model.
+- **Code sets the limits, not the model.** Pools are built in code: the part's category, no negative-kind status, not removed, not already on the project, capped at 40 by the fixed ranking in `server/utils/provider-ranking.ts` (positive-kind status, then rating, neighbor count, recency, name). `server/utils/suggestion-checks.ts` drops any pick outside its part's pool, unknown categories and repeats. The model never supplies a URL; `utils/google-search.ts` builds every search link.
+- **Replies are never trusted to be well-formed.** Ollama's `format` setting was shown not to enforce a shape, so `server/utils/suggestion-schemas.ts` parses leniently, validates with Zod, and the service retries once.
+- **What may leave the household is decided in one place.** `server/utils/suggestion-prompts.ts` builds both prompts from a `PoolProvider` shape that has no contact fields, sends providers and categories under throwaway labels (`p1`, `c1`), cuts long text, and masks phone numbers, emails and links in all free text.
+- **Reading.** `getState` returns the saved result refreshed against the directory as it is now (picks for removed or negative-status providers dropped, current list fields attached). A failed ask keeps the previous result and returns a fallback list from the fixed ranking.
+- **Logging.** `AiRequestLog` and the console hold outcome, timing, sizes and error type only, never prompt or reply text. The cap counts log rows from the last 24 hours.
+- **Screen.** `components/projects/ProviderSuggestions.vue` sits inside the Find a provider modal's scrolling area. An add from a suggestion emits `linked` with `keepOpen` so `ProjectProviders.vue` leaves the window open. An ask still running when the window is closed is picked up again on reopen within the same tab.
+
 ### Dashboard
 
 `DashboardService` returns the stat counts, the coming-up feed and household members in one call. The project next-steps section is a separate call to `/api/projects/next-steps`.
@@ -133,6 +148,7 @@ The full endpoint list is in [api-endpoints.md](api-endpoints.md).
 | Google Sign-In | Authentication (ID token as bearer) | `NUXT_PUBLIC_GOOGLE_CLIENT_ID` |
 | CockroachDB | All application data | `DATABASE_URL` |
 | Vercel Blob (private store) | Project photos | `BLOB_READ_WRITE_TOKEN` (read by the `@vercel/blob` SDK) |
+| Ollama Cloud | AI provider suggestions | `OLLAMA_API_KEY`; `AI_SUGGESTIONS_MODEL` (optional, defaults to `glm-5.3-flash`); `AI_SUGGESTIONS_HOUSEHOLD_IDS` (comma-separated household ids allowed to use it; unset means nobody). Read from `process.env` at call time in `server/utils/ai-config.ts` |
 | Mailjet | Email notifications | `MJ_APIKEY_PUBLIC`, `MJ_APIKEY_PRIVATE` |
 | Slack incoming webhooks | Slack notifications | Per-user webhook URL stored in notification preferences |
 | Vercel Cron | Daily occurrence generation and reminders | `vercel.json`, `CRON_SECRET` |
@@ -140,6 +156,8 @@ The full endpoint list is in [api-endpoints.md](api-endpoints.md).
 Other environment variables: `APP_URL` (base URL used in notification links; defaults to `https://adulting.diy`) and `DEV_LOGIN_BYPASS` (development only).
 
 Local development and production share one blob store, so a local photo upload is a real upload.
+
+`nuxt.config.ts` sets `nitro.vercel.functions.maxDuration` to 60 seconds so a provider-suggestions ask can finish. Nitro deploys the server as one function, so the limit applies to every route, including the scheduled jobs below.
 
 ## Scheduled Jobs
 

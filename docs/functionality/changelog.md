@@ -2,6 +2,14 @@
 
 ## 2026-10-05
 
+### Suggested providers (on for selected households)
+- The Find a provider window can now suggest providers: tap **Suggest providers** and the project is split into the trades it needs, with up to three providers from your own directory for each and a short reason for every pick
+- An optional "Anything to add?" box takes details the project's notes do not have
+- Add from a suggestion keeps the window open, so several providers can be added in a row
+- Every trade has a **Search Google** link for finding that kind of contractor nearby, including when the directory has nobody to suggest
+- The latest suggestions are saved on the project and shown again when the window is reopened
+- Providers marked Avoid or Passed are never suggested, and phone numbers, emails and links are masked before anything is sent to the AI model
+
 ### Find a provider
 - Adding a provider to a project now opens a **Find a provider** window with search, category and status filters, and sorting by most mentioned, recently mentioned, highest rated or name
 - Tapping a provider there shows its details first (phone, your rating and notes, what neighbors said with links to the original posts, comments) instead of adding it straight away

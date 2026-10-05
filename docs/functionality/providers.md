@@ -62,6 +62,8 @@ A task can have many providers and a provider can be linked to many tasks. Links
 
 A provider can be linked to home projects, each link with its own status for that project (Considering, Contacted, Chosen or Passed), separate from the provider's status in the directory. Links are made, changed and removed on the project's page. The provider page lists the projects it is linked to, newest link first, each with that status; finished projects stay on the list as a record, and deleted projects do not appear.
 
+On a project, the household can also ask for suggested providers; a provider's status, rating, notes, comments and neighbor evidence are what the suggestions draw on, and a provider in a negative status is never suggested. See [Projects](./projects.md).
+
 Deleting a category that providers use moves any project saved with that category to the same replacement. Deleting a category no provider uses leaves those projects with no category.
 
 ## Connections

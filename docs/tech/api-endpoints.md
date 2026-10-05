@@ -108,6 +108,8 @@ The API uses these authentication levels:
 | `POST` | `/api/projects/[id]/providers` | Household | Link a provider (`providerId` required); the link starts as `considering`. 404 if the provider is not the household's or is removed, 409 if already linked or at 25 links. Returns the full list |
 | `PUT` | `/api/projects/[id]/providers/[providerId]` | Household | Set the link's `status` (`considering`, `contacted`, `chosen`, `passed`). Returns the full list |
 | `DELETE` | `/api/projects/[id]/providers/[providerId]` | Household | Remove the link for good. Returns the remaining list |
+| `GET` | `/api/projects/[id]/suggestions` | Household | AI provider suggestions for the project: `{ enabled, limitReached, suggestion }`. `enabled` is false for a household not on the allowed list. `suggestion` is the saved result (parts with category, search URL, pool size and picks with current provider fields and the saved reason) or null |
+| `POST` | `/api/projects/[id]/suggestions` | Household | Run an ask (`extraText` optional, up to 500 characters). Takes about 15 seconds; makes two model calls. 403 when not enabled, 429 at 20 asks in 24 hours. Otherwise 200 with `{ status, limitReached, suggestion, fallback }`, where `status` is `ok`, `too_vague` or `failed`; on `failed` the previous result is kept and `fallback` lists top providers in the project's category |
 
 See [projects.md](../functionality/projects.md) for the product view.
 
@@ -198,7 +200,8 @@ Key data models handled by the API:
 - **OccurrenceHistoryLog**: Audit trail for occurrence changes
 - **FormerHouseholdMember**: Snapshot of departed users for historical display
 - **Provider**, **ProviderCategory**, **ProviderStatus**, **ProviderContact**, **ProviderEvidence**, **ProviderComment**, **TaskProvider**, **ApiKey**: Provider directory and machine ingest (see [provider-ingest.md](provider-ingest.md))
-- **Project**, **ProjectPhoto**, **ProjectStep**, **ProjectProvider**: Home project tracking with private photos, a checklist of steps, and providers linked with a per-project status (see [projects.md](../functionality/projects.md))
+- **Project**, **ProjectPhoto**, **ProjectStep**, **ProjectProvider**, **ProjectSuggestion**: Home project tracking with private photos, a checklist of steps, providers linked with a per-project status, and the latest AI provider suggestion (see [projects.md](../functionality/projects.md))
+- **AiRequestLog**: One row per AI ask (outcome, timing, sizes; no text), used for the daily cap
 
 ## Rate Limiting
 

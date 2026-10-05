@@ -11,6 +11,7 @@
 - Check off each Active project's next step from the dashboard
 - Link providers from the household directory to a project and track where you stand with each: Considering, Contacted, Chosen or Passed
 - Search, filter and sort the directory from the project, and read a provider's details and what neighbors said before adding them
+- Ask for suggestions: the project is split into the trades it needs, with up to three providers from your own directory for each and a reason for every pick (on for selected households)
 - Call a linked provider straight from the project page
 - Browse, filter and swipe through projects and their photos
 - Edit anything in place, and delete photos or whole projects
@@ -73,6 +74,22 @@ Tapping a result opens that provider's details without leaving the window: phone
 
 **Add** on a result, or **Add to project** in the details, links the provider as Considering and closes the window. A provider that is already linked is marked "On this project" and cannot be added again.
 
+### Suggested Providers
+
+For households that have it turned on, the Find a provider window has a suggestions panel above the list: a box reading "Anything to add? (optional)" and a **Suggest providers** button. Nothing is sent anywhere until the button is tapped. Other households see the window without the panel.
+
+Tapping the button reads the project's title, location and notes, plus anything typed in the box, and after about fifteen seconds shows the project split into parts, one per trade, in the order the work would happen (at most four). Each part has a short name, the provider category it matched, one line on why that trade is needed, and up to three providers from the household's directory, each with a sentence or two of reason drawn from your own rating, notes and comments and from what neighbors wrote. Tapping a suggested provider opens the same details view as the rest of the window, so the reason can be checked against the original posts.
+
+The suggestions come from an AI model, within limits it cannot cross: it can only pick providers that are in the matching category, are not in a negative status such as Avoid or Passed, and are not already on the project. It is told that your own record outweighs neighbor posts, that a business advertising itself is never a reason to pick it, and not to pad the list, so a part can show fewer than three providers, or none.
+
+**Add** on a suggested provider links it as Considering and keeps the window open, so several can be added in a row; the provider then reads "On this project". **See all in** a category sets the list below to that category without changing the project's saved category. **Search Google** opens a search for that kind of contractor near you in a new tab, and is offered on every part, including ones where the directory has nobody.
+
+When there is no good answer the window says so: "No matching category in your directory", "No one to suggest" when everyone in the category is ruled out, "No one stood out" when nobody had real grounds, and, for a project with too little description, a line asking for a sentence about what is wrong or what you want done. If the request fails, an error and **Try again** appear, with the top providers in the project's saved category by your ratings and neighbor recommendations beneath, and any earlier suggestions stay on screen.
+
+The latest suggestions are saved on the project and shown again, with their date, whenever the window is opened by anyone in the household; **Suggest again** replaces them. They are checked against the directory each time: a provider since removed or moved to a negative status drops out, and the status, rating and neighbor count shown are current. Closing the window while a request is running does not cancel it; reopening picks it back up.
+
+What is sent to the model is text only: the project's title, location and notes, the extra text, the household's category names, and for each candidate its name, directory status, rating, notes, household comments and neighbor posts. Phone numbers, email addresses and links inside that text are masked first. Photos, contact details, links to the original posts, the names of the groups they came from, and anything identifying the household or its members are not sent. A household can ask 20 times in any 24 hours.
+
 Each linked provider shows its name (which opens the provider's page), a status dropdown that saves as soon as a value is picked, a tap-to-call phone number or "No phone on file", the neighbor count when there is one, and **Remove**. The list is ordered Chosen, Contacted, Considering, then Passed (greyed), and within a status in the order the providers were linked. More than one provider can be Chosen.
 
 Nothing else changes on its own: choosing a provider does not mark the others Passed, does not change the provider's status in the directory, and does not change the project's status or path.
@@ -117,4 +134,7 @@ Deleting a project hides it everywhere but keeps the record and its photos; noth
 - There is nowhere to record quotes yet.
 - No notes or dates on a linked provider.
 - A step cannot point at a provider, and the dashboard shows nothing about providers.
-- No AI help yet: suggested next steps, time estimates, or routing a problem to a category.
+- Provider suggestions are on only for households switched on by hand, read no photos, and keep only the latest result per project.
+- Suggestions only look inside the category each part was matched to, so a provider filed under a different category is not considered.
+- Names of people that appear inside neighbor posts or notes are sent to the model as written; only phone numbers, emails and links are masked.
+- No AI help with steps yet: suggested next steps or time estimates.

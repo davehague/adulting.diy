@@ -4,7 +4,7 @@ Status: written 2026-10-05 from the brainstorm with David. Awaiting his review. 
 
 This is the first half of slice 4 (AI help). The second half, suggested steps and time estimates, is a later slice with its own spec. Quotes (slice 3b) stay on hold.
 
-Supersedes the slice 4 section of the handoff brief, `2026-10-05-projects-slice-4-brief.md`. Once this spec is approved the brief is deleted and the link in `docs/next-up.md` points here.
+Supersedes the slice 4 section of the handoff brief (`2026-10-05-projects-slice-4-brief.md`, deleted once this spec was approved; it is in git history).
 
 ## Goal
 

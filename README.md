@@ -11,7 +11,7 @@ A household management app built with Nuxt 3, Vue.js, Prisma, and CockroachDB. I
 - Flexible notification system (email + Slack) with configurable reminders
 - Task pausing and soft deletion
 - Provider directory: contractors and service providers with ratings, notes, neighbor recommendations and task links
-- Home projects with private photos, step checklists, linked providers with a per-project status, and next steps on the dashboard
+- Home projects with private photos, step checklists, linked providers with a per-project status, AI provider suggestions (for households switched on), and next steps on the dashboard
 - User authentication (Google OAuth)
 - Persistent authentication state
 
@@ -24,6 +24,7 @@ A household management app built with Nuxt 3, Vue.js, Prisma, and CockroachDB. I
 - **Database ORM:** [Prisma](https://www.prisma.io/)
 - **Database:** [CockroachDB](https://www.cockroachlabs.com/) (compatible with PostgreSQL)
 - **Storage:** [Vercel Blob](https://vercel.com/docs/vercel-blob) (private store, project photos)
+- **AI:** [Ollama Cloud](https://ollama.com/) for provider suggestions (plain HTTP, no SDK)
 - **Notifications:** [Mailjet](https://www.mailjet.com/) email and Slack incoming webhooks
 - **Icons:** [Lucide Vue Next](https://lucide.dev/)
 
@@ -156,6 +157,11 @@ MJ_APIKEY_PRIVATE="your-mailjet-secret-key"
 
 # Vercel Blob (private store for project photos; shared by local dev and production)
 BLOB_READ_WRITE_TOKEN="your-vercel-blob-token"
+
+# AI provider suggestions (optional; the feature is off without the key and the household list)
+OLLAMA_API_KEY="your-ollama-cloud-key"
+AI_SUGGESTIONS_HOUSEHOLD_IDS="household-id-1,household-id-2"  # Households allowed to use suggestions
+AI_SUGGESTIONS_MODEL="glm-5.3-flash"   # Optional; this is the default
 
 # Base URL used in notification links (defaults to https://adulting.diy)
 APP_URL="https://localhost:3000"
