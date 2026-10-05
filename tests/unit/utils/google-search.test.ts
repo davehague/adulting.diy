@@ -19,6 +19,13 @@ describe('withNearMe', () => {
   it('keeps a real emoji, which is a valid surrogate pair', () => {
     expect(withNearMe('🔧 plumber')).toBe('🔧 plumber near me')
   })
+  it('removes a lone high surrogate directly before a valid pair and keeps the pair', () => {
+    expect(withNearMe('\uD83D🔧')).toBe('🔧 near me')
+    expect(withNearMe('a\uD83D\uD83D\uDD27b')).toBe('a🔧b near me')
+  })
+  it('removes a lone low surrogate directly after a valid pair and keeps the pair', () => {
+    expect(withNearMe('🔧\uDE00')).toBe('🔧 near me')
+  })
 })
 
 describe('googleSearchUrl', () => {
