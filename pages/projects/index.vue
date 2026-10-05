@@ -97,6 +97,10 @@
               </span>
               <span v-if="project.photoCount > 1" class="text-xs text-stone-500">{{ project.photoCount }} photos</span>
             </div>
+            <!-- chosenProviderNames may be missing in a response from an older server build; chosenLine handles that. -->
+            <p v-if="chosenLine(project.chosenProviderNames)" class="text-sm text-stone-700 mt-2 truncate">
+              {{ chosenLine(project.chosenProviderNames) }}
+            </p>
           </div>
         </NuxtLink>
       </li>
@@ -115,6 +119,7 @@ import {
 } from '@/types/project';
 import { useProjects } from '@/composables/useProjects';
 import { PATH_LABELS, STATUS_LABELS, statusBadgeClass } from '@/utils/project-labels';
+import { chosenLine } from '@/utils/project-providers';
 import AuthedImage from '@/components/projects/AuthedImage.vue';
 import PhotoCarousel from '@/components/projects/PhotoCarousel.vue';
 

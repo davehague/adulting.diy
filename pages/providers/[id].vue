@@ -174,6 +174,19 @@
           </ul>
         </section>
 
+        <!-- Linked projects (read-only; links are managed on the project page) -->
+        <section class="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-6">
+          <h2 class="text-lg font-semibold text-stone-900 font-heading mb-3">Projects</h2>
+          <p v-if="linkedProjects.length === 0" class="text-sm text-stone-500">No projects linked.</p>
+          <ul v-else class="space-y-2 text-sm">
+            <li v-for="link in linkedProjects" :key="link.project.id" class="flex items-center justify-between gap-2">
+              <NuxtLink :to="`/projects/${link.project.id}`" class="min-w-0 text-amber-700 hover:text-amber-800 break-words">{{ link.project.title }}</NuxtLink>
+              <span class="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                    :class="linkStatusBadgeClass(link.status)">{{ PROVIDER_LINK_STATUS_LABELS[link.status] }}</span>
+            </li>
+          </ul>
+        </section>
+
         <!-- Comments -->
         <section class="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-6">
           <h2 class="text-lg font-semibold text-stone-900 font-heading mb-3">Comments</h2>
@@ -201,6 +214,7 @@ import {
 } from '@/types/provider';
 import { useProviders } from '@/composables/useProviders';
 import { useAuthStore } from '@/stores/auth';
+import { PROVIDER_LINK_STATUS_LABELS, linkStatusBadgeClass } from '@/utils/project-providers';
 import ProviderForm from '@/components/providers/ProviderForm.vue';
 import ProviderCommentList from '@/components/providers/ProviderCommentList.vue';
 
@@ -216,6 +230,8 @@ const isNew = computed(() => id.value === 'new');
 const currentUserId = computed(() => authStore.user?.id ?? null);
 
 const provider = ref<ProviderDetail | null>(null);
+// An older server build (mid-deploy) may send a provider without `projects`.
+const linkedProjects = computed(() => provider.value?.projects ?? []);
 const categories = ref<ProviderCategoryDto[]>([]);
 const statuses = ref<ProviderStatusDto[]>([]);
 const loading = ref(true);
