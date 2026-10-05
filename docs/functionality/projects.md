@@ -64,9 +64,15 @@ Checking off the last undone step asks whether to mark the project Done, with **
 
 A project can have providers from the household's directory linked to it, shown on the project page between the steps and the photos, whatever the project's path. Each link has its own status for this project: Considering, Contacted, Chosen or Passed. This is separate from the provider's status in the directory, so the same provider can be Chosen on one project and Passed on another. A project can have at most 25 linked providers.
 
-Finding a provider starts from a category, so nobody has to scroll the whole directory. A project has one optional provider category (Plumber, HVAC and so on), shown at the top of the Providers section, where it can be changed or cleared. **Add provider** opens a list, in place, of that category's providers, most-mentioned first, each with its directory status and its count of neighbor recommendations. Providers of every directory status are listed, including ones the directory hides by default, and providers already linked to the project are left out. The list has its own category switcher, so a project that needs several trades can pull a provider from another category; switching there does not change the project's saved category. If the project has no category yet, the list asks "What kind of provider?" first and saves the answer to the project.
+Finding a provider starts from a category, so nobody has to scroll the whole directory. A project has one optional provider category (Plumber, HVAC and so on), shown at the top of the Providers section, where it can be changed or cleared.
 
-Tapping a provider links it as Considering. Each linked provider shows its name (which opens the provider's page), a status dropdown that saves as soon as a value is picked, a tap-to-call phone number or "No phone on file", the neighbor count when there is one, and **Remove**. The list is ordered Chosen, Contacted, Considering, then Passed (greyed), and within a status in the order the providers were linked. More than one provider can be Chosen.
+**Find a provider** opens a window over the page (full screen on a phone) with a search box, a category filter that starts on the project's category, a status filter, and a sort order: most mentioned (the default), recently mentioned, highest rated, or name. Providers of every directory status are listed, including ones the directory hides by default. Each result shows the provider's name, directory status, count of neighbor recommendations, your rating and when it was last mentioned. Changing the category filter there does not change the project's saved category, with one exception: on a project with no category yet, the first category picked is saved to the project.
+
+Tapping a result opens that provider's details without leaving the window: phone (tap to call), company, contact, your rating and notes, every neighbor mention with its date and a link to the original post, the household's comments, and a link to the provider's full page. **Back to results** returns to the list as it was.
+
+**Add** on a result, or **Add to project** in the details, links the provider as Considering and closes the window. A provider that is already linked is marked "On this project" and cannot be added again.
+
+Each linked provider shows its name (which opens the provider's page), a status dropdown that saves as soon as a value is picked, a tap-to-call phone number or "No phone on file", the neighbor count when there is one, and **Remove**. The list is ordered Chosen, Contacted, Considering, then Passed (greyed), and within a status in the order the providers were linked. More than one provider can be Chosen.
 
 Nothing else changes on its own: choosing a provider does not mark the others Passed, does not change the provider's status in the directory, and does not change the project's status or path.
 
@@ -108,6 +114,6 @@ Deleting a project hides it everywhere but keeps the record and its photos; noth
 - Statuses are fixed and cannot be customized.
 - The date a project was marked Done is recorded but not shown anywhere.
 - There is nowhere to record quotes yet.
-- No search in the provider list, and no notes or dates on a linked provider.
+- No notes or dates on a linked provider.
 - A step cannot point at a provider, and the dashboard shows nothing about providers.
 - No AI help yet: suggested next steps, time estimates, or routing a problem to a category.

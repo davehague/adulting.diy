@@ -1,5 +1,7 @@
 # Home projects, slice 3a: providers on a project (design spec)
 
+Amended 2026-10-05, after David used it in production: the in-place picker described below (decisions 2 to 5 and the section "The picker") was replaced by a "Find a provider" modal with search, category and status filters, sorting, a details view and an explicit Add button. The current behaviour is in `docs/functionality/projects.md`; the brief for the change is in the git-ignored `.superpowers/sdd/2026-10-05-find-provider-modal/brief.md`. The rest of this spec stands.
+
 Status: design agreed in conversation on 2026-10-04, awaiting David's review of this written spec. No code is written until this spec and a written implementation plan are both approved.
 
 This replaces the handoff `2026-10-04-projects-slice-3-brief.md`. Slices 1 and 2 are described in `2026-10-03-projects-design.md`, `2026-10-04-projects-steps-design.md` and `docs/functionality/projects.md`. The providers directory is described in `docs/functionality/providers.md`.

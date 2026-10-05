@@ -1,10 +1,17 @@
 # Changelog
 
+## 2026-10-05
+
+### Find a provider
+- Adding a provider to a project now opens a **Find a provider** window with search, category and status filters, and sorting by most mentioned, recently mentioned, highest rated or name
+- Tapping a provider there shows its details first (phone, your rating and notes, what neighbors said with links to the original posts, comments) instead of adding it straight away
+- A provider is added with an explicit Add button, and ones already on the project are marked
+
 ## 2026-10-04
 
 ### Home Projects (slice 3a): providers on a project
 - A project can have providers from the household directory linked to it, each with its own status for that project: Considering, Contacted, Chosen or Passed
-- Finding a provider starts from a category saved on the project, so the list shows only that kind of provider, most-mentioned first; a switcher reaches other categories
+- Finding a provider starts from a category saved on the project, so the list shows only that kind of provider first, most-mentioned first; other categories are a filter away
 - Each linked provider shows a tap-to-call phone number and its neighbor recommendation count
 - A project's card shows who has been chosen
 - A provider's page lists the projects it is linked to, with the status on each
