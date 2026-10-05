@@ -49,9 +49,15 @@
           </select>
         </div>
 
-        <!-- Slice 4 (AI suggestions) goes here, between the filter bar and the list. -->
-
+        <!-- The suggestions panel is inside the scrolling area so it scrolls away with the list and never pins the list off a phone screen. -->
         <div ref="listArea" class="min-h-0 overflow-y-auto overscroll-contain">
+          <ProviderSuggestions :project-id="projectId"
+                               :linked-provider-ids="linkedProviderIds"
+                               :linking="linking"
+                               @add="addSuggested"
+                               @details="openSuggestedDetails"
+                               @see-all="seeAll" />
+          <div ref="resultsTop"></div>
           <p v-if="loading" class="p-4 text-sm text-stone-600">Loading providers...</p>
           <p v-else-if="loadError" class="p-4 text-sm text-stone-600">
             {{ loadError }}
@@ -66,7 +72,7 @@
                 <span class="block text-sm font-medium text-stone-900 break-words">{{ provider.name }}</span>
                 <span class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                        :class="statusClass(provider.status.kind)">{{ provider.status.name }}</span>
+                        :class="providerStatusBadgeClass(provider.status.kind)">{{ provider.status.name }}</span>
                   <span v-if="neighborLabel(provider.neighborCount)" class="text-xs text-stone-600">{{ neighborLabel(provider.neighborCount) }}</span>
                   <span v-if="provider.rating" class="text-xs text-stone-600">{{ provider.rating }}/5</span>
                 </span>
@@ -108,13 +114,13 @@ import {
   type ProviderListItem,
   type ProviderSort,
   type ProviderStatusDto,
-  type ProviderStatusKind,
 } from '@/types/provider';
 import { useProjects } from '@/composables/useProjects';
 import { useProviders } from '@/composables/useProviders';
 import { hasApiStatus } from '@/utils/api-error';
-import { neighborLabel } from '@/utils/project-providers';
+import { neighborLabel, providerStatusBadgeClass } from '@/utils/project-providers';
 import FindProviderDetails from '@/components/projects/FindProviderDetails.vue';
+import ProviderSuggestions from '@/components/projects/ProviderSuggestions.vue';
 
 const props = defineProps<{
   projectId: string;
@@ -125,8 +131,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  // a provider was linked; carries the project's full list
-  (e: 'linked', links: ProjectProviderDto[]): void;
+  // a provider was linked; carries the project's full list. keepOpen is true when the add came from a suggestion.
+  (e: 'linked', links: ProjectProviderDto[], keepOpen: boolean): void;
   // the project had no category and one was just picked here, so the parent should save it
   (e: 'save-category', categoryId: string): void;
   // the link was refused because the list on screen is out of date
@@ -152,6 +158,11 @@ const loadError = ref<string | null>(null);
 
 const detailId = ref<string | null>(null);
 const listArea = ref<HTMLElement | null>(null);
+const resultsTop = ref<HTMLElement | null>(null);
+// The details view was opened from a suggested row, so adding from it must not close the window.
+const detailFromSuggestion = ref(false);
+// "See all" changes the filter without that counting as the person choosing the project's category.
+let categorySetBySuggestion = false;
 let listScrollTop = 0;
 
 const linking = ref(false);
@@ -161,12 +172,6 @@ const linkedSet = computed(() => new Set(props.linkedProviderIds));
 const isLinked = (providerId: string): boolean => linkedSet.value.has(providerId);
 
 const messageOf = (e: unknown, fallback: string): string => (e instanceof Error ? e.message : fallback);
-
-const statusClass = (kind: ProviderStatusKind): string => {
-  if (kind === 'positive') return 'bg-green-100 text-green-800';
-  if (kind === 'negative') return 'bg-red-50 text-red-700';
-  return 'bg-stone-100 text-stone-700';
-};
 
 // lastSightingAt is typed Date but arrives over the wire as an ISO string; new Date() takes either.
 // Date-only values are stored as UTC midnight; format their UTC calendar day so local timezones don't shift it.
@@ -217,14 +222,22 @@ watch([statusId, sort], () => {
 watch(categoryId, (picked) => {
   clearTimeout(searchTimer);
   void load();
-  // Only a project with no category takes the first one picked here; after that the prop is set and this stays quiet.
-  if (picked !== '' && props.categoryId === null) emit('save-category', picked);
+  const fromSuggestion = categorySetBySuggestion;
+  categorySetBySuggestion = false;
+  // Only a project with no category takes the first one picked here by hand; "See all" never saves one.
+  if (picked !== '' && props.categoryId === null && !fromSuggestion) emit('save-category', picked);
 });
 
 const openDetails = (providerId: string): void => {
   listScrollTop = listArea.value?.scrollTop ?? 0;
   linkError.value = null;
+  detailFromSuggestion.value = false;
   detailId.value = providerId;
+};
+
+const openSuggestedDetails = (providerId: string): void => {
+  openDetails(providerId);
+  detailFromSuggestion.value = true;
 };
 
 const closeDetails = async (): Promise<void> => {
@@ -234,23 +247,44 @@ const closeDetails = async (): Promise<void> => {
   if (listArea.value) listArea.value.scrollTop = listScrollTop;
 };
 
-const addProvider = async (providerId: string): Promise<void> => {
-  if (linking.value) return;
+// Returns true when the provider was linked.
+const addProvider = async (providerId: string, keepOpen = false): Promise<boolean> => {
+  if (linking.value) return false;
   linking.value = true;
   linkError.value = null;
   try {
-    emit('linked', await linkProvider(props.projectId, providerId));
+    emit('linked', await linkProvider(props.projectId, providerId), keepOpen);
+    return true;
   } catch (e) {
     linkError.value = messageOf(e, 'Could not add the provider');
     // 409: someone else linked this provider, or the project is full. Ask the parent to reload.
     if (hasApiStatus(e, 409)) emit('stale');
+    return false;
   } finally {
     linking.value = false;
   }
 };
 
-const addDetailProvider = (): void => {
-  if (detailId.value !== null) void addProvider(detailId.value);
+const addSuggested = (providerId: string): void => {
+  void addProvider(providerId, true);
+};
+
+const addDetailProvider = async (): Promise<void> => {
+  if (detailId.value === null) return;
+  const keepOpen = detailFromSuggestion.value;
+  const added = await addProvider(detailId.value, keepOpen);
+  // From a suggestion the window stays open, so go back to the results the person came from.
+  if (added && keepOpen) await closeDetails();
+};
+
+const seeAll = async (id: string): Promise<void> => {
+  if (!props.categories.some((category) => category.id === id)) return;
+  if (categoryId.value !== id) {
+    categorySetBySuggestion = true;
+    categoryId.value = id;
+  }
+  await nextTick();
+  resultsTop.value?.scrollIntoView({ block: 'start' });
 };
 
 const requestClose = (): void => {

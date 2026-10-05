@@ -1,4 +1,5 @@
 import { type ProjectProviderStatus } from '@/types/project';
+import { type ProviderStatusKind } from '@/types/provider';
 
 export const PROVIDER_LINK_STATUS_LABELS: Record<ProjectProviderStatus, string> = {
   considering: 'Considering',
@@ -36,5 +37,12 @@ export const telHref = (phone: string | null): string | null => {
 export const linkStatusBadgeClass = (status: ProjectProviderStatus): string => {
   if (status === 'chosen') return 'bg-green-100 text-green-800';
   if (status === 'contacted') return 'bg-amber-100 text-amber-800';
+  return 'bg-stone-100 text-stone-700';
+};
+
+// The badge for a provider's directory status, colored by the status's kind.
+export const providerStatusBadgeClass = (kind: ProviderStatusKind): string => {
+  if (kind === 'positive') return 'bg-green-100 text-green-800';
+  if (kind === 'negative') return 'bg-red-50 text-red-700';
   return 'bg-stone-100 text-stone-700';
 };

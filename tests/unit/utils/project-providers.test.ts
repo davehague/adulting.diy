@@ -3,6 +3,7 @@ import {
   PROVIDER_LINK_STATUS_LABELS,
   chosenLine,
   neighborLabel,
+  providerStatusBadgeClass,
   sortProviderLinks,
   telHref,
 } from '@/utils/project-providers'
@@ -84,5 +85,13 @@ describe('PROVIDER_LINK_STATUS_LABELS', () => {
     expect(PROVIDER_LINK_STATUS_LABELS).toEqual({
       considering: 'Considering', contacted: 'Contacted', chosen: 'Chosen', passed: 'Passed',
     })
+  })
+})
+
+describe('providerStatusBadgeClass', () => {
+  it('colors by status kind', () => {
+    expect(providerStatusBadgeClass('positive')).toBe('bg-green-100 text-green-800')
+    expect(providerStatusBadgeClass('negative')).toBe('bg-red-50 text-red-700')
+    expect(providerStatusBadgeClass('neutral')).toBe('bg-stone-100 text-stone-700')
   })
 })

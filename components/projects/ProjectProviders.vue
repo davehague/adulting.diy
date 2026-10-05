@@ -211,9 +211,10 @@ const remove = async (link: ProjectProviderDto): Promise<void> => {
   }
 };
 
-const onLinked = (links: ProjectProviderDto[]): void => {
+// An add from a suggestion keeps the finder open so several can be added; at the cap it has nothing left to offer.
+const onLinked = (links: ProjectProviderDto[], keepOpen = false): void => {
   emit('update:links', links);
-  finderOpen.value = false;
+  if (!keepOpen || links.length >= MAX_PROJECT_PROVIDERS) finderOpen.value = false;
 };
 
 // The finder was refused because this list is out of date; show what the server has now.
