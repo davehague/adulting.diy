@@ -77,6 +77,13 @@
                     @update:steps="onStepsChange"
                     @all-done="openMarkDone" />
 
+      <!-- Providers -->
+      <ProjectProviders :project-id="project.id"
+                        :category-id="project.providerCategoryId ?? null"
+                        :links="project.providers ?? []"
+                        @update:links="onProviderLinksChange"
+                        @update:category="onProviderCategoryChange" />
+
       <!-- Photos -->
       <section class="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-6">
         <h2 class="text-lg font-medium text-stone-900 mb-3">Photos</h2>
@@ -179,6 +186,7 @@ import {
   type ProjectDetail,
   type ProjectPath,
   type ProjectPhotoDto,
+  type ProjectProviderDto,
   type ProjectStatus,
   type ProjectStepDto,
   type ProjectUpdateInput,
@@ -189,6 +197,7 @@ import AuthedImage from '@/components/projects/AuthedImage.vue';
 import PhotoUploader from '@/components/projects/PhotoUploader.vue';
 import PhotoCarousel from '@/components/projects/PhotoCarousel.vue';
 import ProjectSteps from '@/components/projects/ProjectSteps.vue';
+import ProjectProviders from '@/components/projects/ProjectProviders.vue';
 import MarkDoneDialog from '@/components/projects/MarkDoneDialog.vue';
 
 const route = useRoute();
@@ -270,6 +279,16 @@ const onUploaded = (photo: ProjectPhotoDto): void => {
 // read with `?? []`, and every change replaces the array here.
 const onStepsChange = (steps: ProjectStepDto[]): void => {
   if (project.value) project.value.steps = steps;
+};
+
+// As with steps, an older server build may send a project without `providers` or
+// `providerCategoryId`; the template guards both reads, and every change replaces the value here.
+const onProviderLinksChange = (links: ProjectProviderDto[]): void => {
+  if (project.value) project.value.providers = links;
+};
+
+const onProviderCategoryChange = (categoryId: string | null): void => {
+  if (project.value) project.value.providerCategoryId = categoryId;
 };
 
 const markDone = reactive<{ open: boolean; saving: boolean; error: string | null }>({
