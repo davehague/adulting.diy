@@ -62,21 +62,22 @@
       <p v-if="links.length >= MAX_PROJECT_PROVIDERS" class="text-sm text-stone-600">
         That's the maximum of {{ MAX_PROJECT_PROVIDERS }} providers for a project.
       </p>
-      <ProjectProviderPicker v-else-if="pickerOpen"
-                             :project-id="projectId"
-                             :categories="categories"
-                             :category-id="knownCategoryId"
-                             :linked-provider-ids="links.map((link) => link.providerId)"
-                             @linked="onLinked"
-                             @save-category="saveCategory"
-                             @stale="reloadLinks"
-                             @cancel="pickerOpen = false" />
-      <button v-else
-              type="button"
-              class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors"
-              @click="pickerOpen = true">
-        <Plus :size="16" />Add provider
-      </button>
+      <template v-else>
+        <button type="button"
+                class="inline-flex items-center gap-1.5 bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-amber-700 transition-colors"
+                @click="finderOpen = true">
+          <Plus :size="16" />Find a provider
+        </button>
+        <FindProviderModal v-if="finderOpen"
+                           :project-id="projectId"
+                           :categories="categories"
+                           :category-id="knownCategoryId"
+                           :linked-provider-ids="links.map((link) => link.providerId)"
+                           @linked="onLinked"
+                           @save-category="saveCategory"
+                           @stale="reloadLinks"
+                           @close="finderOpen = false" />
+      </template>
     </template>
   </section>
 </template>
@@ -94,7 +95,7 @@ import { type ProviderCategoryDto } from '@/types/provider';
 import { useProjects } from '@/composables/useProjects';
 import { useProviders } from '@/composables/useProviders';
 import { PROVIDER_LINK_STATUS_LABELS, neighborLabel, telHref } from '@/utils/project-providers';
-import ProjectProviderPicker from '@/components/projects/ProjectProviderPicker.vue';
+import FindProviderModal from '@/components/projects/FindProviderModal.vue';
 
 const props = defineProps<{
   projectId: string;
@@ -122,7 +123,7 @@ const busyIds = ref<string[]>([]);
 const pendingStatus = ref<Record<string, ProjectProviderStatus>>({});
 // undefined means no category save is pending from the header dropdown; null means "No category" was picked.
 const pendingCategory = ref<string | null | undefined>(undefined);
-const pickerOpen = ref(false);
+const finderOpen = ref(false);
 
 // A saved category that is not in the household's list (deleted since) shows as "No category".
 const knownCategoryId = computed<string | null>(() =>
@@ -212,18 +213,18 @@ const remove = async (link: ProjectProviderDto): Promise<void> => {
 
 const onLinked = (links: ProjectProviderDto[]): void => {
   emit('update:links', links);
-  pickerOpen.value = false;
+  finderOpen.value = false;
 };
 
-// The picker was refused because this list is out of date; show what the server has now.
+// The finder was refused because this list is out of date; show what the server has now.
 const reloadLinks = async (): Promise<void> => {
   try {
     const latest = await listProjectProviders(props.projectId);
     emit('update:links', latest);
-    // At the cap the picker is replaced by the maximum message; close it so it does not reopen by itself after a removal.
-    if (latest.length >= MAX_PROJECT_PROVIDERS) pickerOpen.value = false;
+    // At the cap the finder is replaced by the maximum message; close it so it does not reopen by itself after a removal.
+    if (latest.length >= MAX_PROJECT_PROVIDERS) finderOpen.value = false;
   } catch {
-    // The picker already shows the server's message; a failed reload adds nothing to say.
+    // The finder already shows the server's message; a failed reload adds nothing to say.
   }
 };
 
