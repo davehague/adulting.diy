@@ -134,6 +134,18 @@ describe('readSuggestion (through getState)', () => {
     expect(where.id).toEqual({ in: ['prov-alpha', 'prov-gone'] })
   })
 
+  it('asks only for this household\'s categories when it reads the saved result', async () => {
+    saved({ tooVague: false, parts: [part()] })
+    await service.getState('h1', 'p1')
+    expect(db.providerCategory.findMany.mock.calls[0][0].where).toEqual({ householdId: 'h1', id: { in: [PLUMB.id] } })
+  })
+
+  it('reads a saved result whose search phrase has a lone surrogate without throwing', async () => {
+    saved({ tooVague: false, parts: [part({ searchPhrase: 'leak \uD83D plumber near me' })] })
+    const { suggestion } = await service.getState('h1', 'p1')
+    expect(suggestion!.parts[0].searchUrl).toBe('https://www.google.com/search?q=leak%20%20plumber%20near%20me')
+  })
+
   it('shows no category when it has since been deleted', async () => {
     saved({ tooVague: false, parts: [part({ categoryId: 'cat-deleted' })] })
     const { suggestion } = await service.getState('h1', 'p1')
@@ -211,6 +223,12 @@ describe('run', () => {
     })
   })
 
+  it('offers the model only this household\'s categories', async () => {
+    model.mockResolvedValueOnce(reply(routingOk)).mockResolvedValueOnce(reply(pickingOk))
+    await service.run('h1', 'u1', 'p1', null)
+    expect(db.providerCategory.findMany.mock.calls[0][0].where).toEqual({ householdId: 'h1' })
+  })
+
   it('sends no contact details, source links, group names or database ids to the model', async () => {
     model.mockResolvedValueOnce(reply(routingOk)).mockResolvedValueOnce(reply(pickingOk))
     await service.run('h1', 'u1', 'p1', 'extra words')
@@ -267,11 +285,18 @@ describe('run', () => {
     expect(db.provider.findMany).not.toHaveBeenCalled()
   })
 
-  it('caps a pool at 40 by the fixed ranking', async () => {
-    poolRows = Array.from({ length: 45 }, (_, i) => providerRow(`prov-${i}`, `Provider ${String(i).padStart(2, '0')}`))
+  it('caps a pool at 40 after ranking, so the best providers survive even when the query returns them last', async () => {
+    const positive = { id: 's-fav', name: 'Favorite', kind: 'positive', hiddenByDefault: false, sortOrder: 1 }
+    poolRows = [
+      ...Array.from({ length: 40 }, (_, i) => providerRow(`prov-${i}`, `Provider ${String(i).padStart(2, '0')}`)),
+      ...Array.from({ length: 5 }, (_, i) => providerRow(`prov-top-${i}`, `Top ${i}`, { status: positive })),
+    ]
     model.mockResolvedValueOnce(reply(routingOk)).mockResolvedValueOnce(reply({ parts: [{ partIndex: 0, picks: [] }] }))
     await service.run('h1', 'u1', 'p1', null)
-    expect(JSON.parse(model.mock.calls[1][0].user).parts[0].pool).toHaveLength(40)
+    const pool: { name: string }[] = JSON.parse(model.mock.calls[1][0].user).parts[0].pool
+    expect(pool).toHaveLength(40)
+    expect(pool.slice(0, 5).map((entry) => entry.name)).toEqual(['Top 0', 'Top 1', 'Top 2', 'Top 3', 'Top 4'])
+    expect(pool.map((entry) => entry.name)).not.toContain('Provider 39')
     expect(savedArgs().create.result.parts[0].poolSize).toBe(40)
   })
 
@@ -325,14 +350,35 @@ describe('run', () => {
     expect(response.fallback).toMatchObject({ category: PLUMB, searchUrl: 'https://www.google.com/search?q=Plumber%20near%20me' })
     // Beta has no rating and no neighbor recommendation, so the floor leaves it out.
     expect(response.fallback!.providers.map((p) => p.id)).toEqual(['prov-alpha'])
-    const where = db.provider.findMany.mock.calls.at(-1)![0].where
-    expect(where).toMatchObject({ categoryId: PLUMB.id, projects: { none: { projectId: 'p1' } } })
+    expect(db.provider.findMany.mock.calls.at(-1)![0].where).toEqual({
+      householdId: 'h1',
+      metaStatus: 'active',
+      status: { kind: { not: 'negative' } },
+      categoryId: PLUMB.id,
+      projects: { none: { projectId: 'p1' } },
+    })
+    expect(db.providerCategory.findFirst.mock.calls[0][0].where).toEqual({ id: PLUMB.id, householdId: 'h1' })
   })
 
   it('still answers when updating the log row fails', async () => {
     db.aiRequestLog.update.mockRejectedValue(new Error('db down'))
     model.mockResolvedValueOnce(reply(routingOk)).mockResolvedValueOnce(reply(pickingOk))
     expect((await service.run('h1', 'u1', 'p1', null)).status).toBe('ok')
+  })
+
+  it('never logs the message of an error thrown by the model call', async () => {
+    model.mockRejectedValue(new Error('SECRET PROMPT ECHO'))
+    const response = await service.run('h1', 'u1', 'p1', 'SECRET EXTRA')
+    expect(response.status).toBe('failed')
+    expect(vi.mocked(console.error).mock.calls.flat().join(' ')).not.toContain('SECRET')
+  })
+
+  it('never logs the message of an error thrown by the database inside the ask', async () => {
+    model.mockResolvedValueOnce(reply(routingOk)).mockResolvedValueOnce(reply(pickingOk))
+    db.projectSuggestion.upsert.mockRejectedValue(new Error('SECRET ROW DATA'))
+    const response = await service.run('h1', 'u1', 'p1', null)
+    expect(response.status).toBe('failed')
+    expect(vi.mocked(console.error).mock.calls.flat().join(' ')).not.toContain('SECRET')
   })
 
   it('never logs prompt or reply text to the console', async () => {

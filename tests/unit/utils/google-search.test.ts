@@ -11,6 +11,14 @@ describe('withNearMe', () => {
   it('trims and collapses whitespace', () => {
     expect(withNearMe('  drywall   repair \n')).toBe('drywall repair near me')
   })
+  it('removes a lone surrogate so the phrase is clean before it is saved', () => {
+    const out = withNearMe('leak \uD83D plumber')
+    expect(out).toBe('leak plumber near me')
+    expect(() => encodeURIComponent(out)).not.toThrow()
+  })
+  it('keeps a real emoji, which is a valid surrogate pair', () => {
+    expect(withNearMe('🔧 plumber')).toBe('🔧 plumber near me')
+  })
 })
 
 describe('googleSearchUrl', () => {
@@ -19,5 +27,17 @@ describe('googleSearchUrl', () => {
   })
   it('cannot be turned into another site by the phrase', () => {
     expect(googleSearchUrl('https://evil.example/?q=x')).toMatch(/^https:\/\/www\.google\.com\/search\?q=https%3A%2F%2Fevil/)
+  })
+  it('does not throw on a lone surrogate and still returns a Google URL', () => {
+    const url = googleSearchUrl('plumber \uD83D near me')
+    expect(url).toMatch(/^https:\/\/www\.google\.com\/search\?q=/)
+    expect(url).toBe('https://www.google.com/search?q=plumber%20%20near%20me')
+  })
+  it('removes a lone low surrogate too', () => {
+    expect(() => googleSearchUrl('a\uDE00b')).not.toThrow()
+    expect(googleSearchUrl('a\uDE00b')).toBe('https://www.google.com/search?q=ab')
+  })
+  it('keeps a real emoji intact and encodes it', () => {
+    expect(googleSearchUrl('🔧 plumber')).toBe('https://www.google.com/search?q=%F0%9F%94%A7%20plumber')
   })
 })
