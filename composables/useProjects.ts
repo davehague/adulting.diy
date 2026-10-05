@@ -6,6 +6,8 @@ import {
   type ProjectListFilters,
   type ProjectListItem,
   type ProjectPhotoDto,
+  type ProjectProviderDto,
+  type ProjectProviderStatus,
   type ProjectStepCreateInput,
   type ProjectStepDto,
   type ProjectStepUpdateInput,
@@ -56,9 +58,19 @@ export const useProjects = () => {
   const deleteStep = (projectId: string, stepId: string) =>
     api.delete(`/api/projects/${projectId}/steps/${stepId}`);
 
+  const listProjectProviders = (projectId: string) =>
+    api.get<ProjectProviderDto[]>(`/api/projects/${projectId}/providers`);
+  const linkProvider = (projectId: string, providerId: string) =>
+    api.post<ProjectProviderDto[]>(`/api/projects/${projectId}/providers`, { providerId });
+  const setProviderLinkStatus = (projectId: string, providerId: string, status: ProjectProviderStatus) =>
+    api.put<ProjectProviderDto[]>(`/api/projects/${projectId}/providers/${providerId}`, { status });
+  const unlinkProvider = (projectId: string, providerId: string) =>
+    api.delete(`/api/projects/${projectId}/providers/${providerId}`);
+
   return {
     listProjects, getProject, createProject, updateProject, deleteProject, listLocations,
     uploadPhoto, deletePhoto, fetchPhotoBlob,
     listNextSteps, addStep, updateStep, deleteStep,
+    listProjectProviders, linkProvider, setProviderLinkStatus, unlinkProvider,
   };
 };
