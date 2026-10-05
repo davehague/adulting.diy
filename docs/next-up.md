@@ -18,10 +18,10 @@
 
 ## Projects - Planned
 
-Capture with photos (slice 1), steps with next steps on the dashboard (slice 2) and providers linked to a project with a status (slice 3a) are built. See [functionality/projects.md](functionality/projects.md).
+Capture with photos (slice 1), steps with next steps on the dashboard (slice 2), and providers linked to a project with a status through the Find a provider window (slice 3a) are live. See [functionality/projects.md](functionality/projects.md).
 
-- Slice 3b: quotes recorded as numbers on a project's provider link. Not designed yet; open questions are one quote per link or several over time, and whether a quote has a date, a note and what it covers
-- Slice 4: AI help. Suggested next steps and time estimates, and "describe your problem" routing to a provider category with a reason for each shortlisted provider, shown as suggestions at the top of the Find a provider window. Ranking stays deterministic; the AI explains and routes and never picks the contractor. Regenerating steps must keep existing ones, and planning must not run inside a single web request
+- Slice 4, next: AI help, in two parts. First, provider suggestions inside the Find a provider window: "describe your problem" routing to a provider category, with a reason for each shortlisted provider. Second, suggested next steps and time estimates on a project. Ranking stays deterministic; the AI explains and routes and never picks the contractor. Regenerating steps must keep existing ones, and planning must not run inside a single web request. Not designed yet; the handoff is [superpowers/specs/2026-10-05-projects-slice-4-brief.md](superpowers/specs/2026-10-05-projects-slice-4-brief.md)
+- Slice 3b, on hold until the first real quote arrives: quotes recorded as numbers on a project's provider link. Not designed yet; open questions are one quote per link or several over time, and whether a quote has a date, a note and what it covers
 - A clean-up job for the stored photos of long-deleted projects
 
 ## Projects - Deferred

@@ -10,6 +10,7 @@
 - Break a project into a checklist of steps, each with an optional time estimate
 - Check off each Active project's next step from the dashboard
 - Link providers from the household directory to a project and track where you stand with each: Considering, Contacted, Chosen or Passed
+- Search, filter and sort the directory from the project, and read a provider's details and what neighbors said before adding them
 - Call a linked provider straight from the project page
 - Browse, filter and swipe through projects and their photos
 - Edit anything in place, and delete photos or whole projects
