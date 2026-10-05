@@ -9,6 +9,7 @@
              :maxlength="MAX_EXTRA_TEXT_LENGTH"
              :disabled="running"
              placeholder="Anything to add? (optional)"
+             enterkeyhint="go"
              aria-label="Anything to add?"
              class="w-full min-w-0 rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-sm disabled:opacity-60"
              @keydown.enter.prevent="run">
@@ -102,6 +103,18 @@
   </section>
 </template>
 
+<script lang="ts">
+import { type SuggestionRunResponse } from '@/types/suggestion';
+
+interface InFlightAsk {
+  promise: Promise<SuggestionRunResponse>;
+  extraText: string;
+}
+
+// Asks still waiting for the server, by project id. It lives here, outside any one mount, so closing the window during the wait and opening it again picks the same ask up instead of offering a second one. It is per browser tab and is lost on a page reload.
+const inFlight = new Map<string, InFlightAsk>();
+</script>
+
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { format } from 'date-fns';
@@ -126,6 +139,8 @@ const emit = defineEmits<{
   (e: 'add', providerId: string): void;
   (e: 'details', providerId: string): void;
   (e: 'see-all', categoryId: string): void;
+  // the first read of the saved state has finished, whether or not it worked
+  (e: 'ready'): void;
 }>();
 
 const { getSuggestions, runSuggestions } = useProjects();
@@ -173,15 +188,10 @@ const stopWaiting = (): void => {
   waitingLine.value = '';
 };
 
-const run = async (): Promise<void> => {
-  if (running.value || limitReached.value) return;
-  running.value = true;
-  failed.value = false;
-  error.value = null;
-  fallback.value = null;
-  startWaiting();
+// Shows the outcome of an ask. It never rejects, so every caller can await it.
+const follow = async (promise: Promise<SuggestionRunResponse>): Promise<void> => {
   try {
-    const response = await runSuggestions(props.projectId, extraText.value.trim());
+    const response = await promise;
     limitReached.value = response.limitReached === true;
     // On a failure this is the previous result, so what was on screen stays there under the error.
     suggestion.value = response.suggestion ?? null;
@@ -205,7 +215,41 @@ const run = async (): Promise<void> => {
   }
 };
 
+const run = async (): Promise<void> => {
+  if (running.value || limitReached.value) return;
+  running.value = true;
+  failed.value = false;
+  error.value = null;
+  fallback.value = null;
+  startWaiting();
+
+  const projectId = props.projectId;
+  const text = extraText.value.trim();
+  // Wrapped so that even a synchronous throw becomes a rejection that follow() handles.
+  const promise = (async () => runSuggestions(projectId, text))();
+  const entry: InFlightAsk = { promise, extraText: text };
+  inFlight.set(projectId, entry);
+  // Removed when the ask settles, whether it worked or not and whether or not this panel is still on screen. A newer ask for the same project is left alone.
+  const release = (): void => {
+    if (inFlight.get(projectId) === entry) inFlight.delete(projectId);
+  };
+  promise.then(release, release);
+
+  await follow(promise);
+};
+
 onMounted(async () => {
+  const pending = inFlight.get(props.projectId);
+  if (pending) {
+    // The window was closed during an ask and opened again before the answer came: pick that ask up, and do not read the saved state, which is still the old one.
+    enabled.value = true;
+    extraText.value = pending.extraText;
+    running.value = true;
+    startWaiting();
+    emit('ready');
+    await follow(pending.promise);
+    return;
+  }
   try {
     const state = await getSuggestions(props.projectId);
     enabled.value = state.enabled === true;
@@ -214,6 +258,9 @@ onMounted(async () => {
     extraText.value = state.suggestion?.extraText ?? '';
   } catch {
     // The window works without suggestions; say nothing.
+  } finally {
+    // The list below waits for this, so the panel cannot appear above a list that is already on screen.
+    emit('ready');
   }
 });
 

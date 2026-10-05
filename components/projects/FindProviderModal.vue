@@ -56,9 +56,11 @@
                                :linking="linking"
                                @add="addSuggested"
                                @details="openSuggestedDetails"
-                               @see-all="seeAll" />
+                               @see-all="seeAll"
+                               @ready="panelReady = true" />
           <div ref="resultsTop"></div>
-          <p v-if="loading" class="p-4 text-sm text-stone-600">Loading providers...</p>
+          <!-- Held until the suggestions panel has settled too, so it cannot push a list that is already on screen down under a finger. -->
+          <p v-if="loading || !panelReady" class="p-4 text-sm text-stone-600">Loading providers...</p>
           <p v-else-if="loadError" class="p-4 text-sm text-stone-600">
             {{ loadError }}
             <button type="button" class="font-medium text-amber-700 hover:text-amber-800" @click="load">Try again</button>
@@ -155,6 +157,8 @@ const statuses = ref<ProviderStatusDto[]>([]);
 const providers = ref<ProviderListItem[]>([]);
 const loading = ref(false);
 const loadError = ref<string | null>(null);
+// The suggestions panel's first read has finished (or failed), so the list may be shown.
+const panelReady = ref(false);
 
 const detailId = ref<string | null>(null);
 const listArea = ref<HTMLElement | null>(null);
