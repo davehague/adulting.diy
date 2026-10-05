@@ -30,6 +30,7 @@ model User {
   createdProjects        Project[]               @relation("ProjectCreatedBy")
   projectPhotos          ProjectPhoto[]          @relation("ProjectPhotoUploadedBy")
   projectSteps           ProjectStep[]           @relation("ProjectStepCreatedBy")
+  projectProviders       ProjectProvider[]       @relation("ProjectProviderCreatedBy")
 
   @@map("users")
 }
@@ -166,6 +167,7 @@ model ProviderCategory {
   name        String
   sortOrder   Int        @default(0)
   providers   Provider[]
+  projects    Project[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -217,6 +219,7 @@ model Provider {
   evidence           ProviderEvidence[]
   comments           ProviderComment[]
   tasks              TaskProvider[]
+  projects           ProjectProvider[]
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 
@@ -313,8 +316,11 @@ model Project {
   metaStatus  String         @default("active") // active, deleted
   createdBy   User           @relation("ProjectCreatedBy", fields: [createdById], references: [id])
   createdById String
+  providerCategory   ProviderCategory? @relation(fields: [providerCategoryId], references: [id], onDelete: SetNull)
+  providerCategoryId String?           // the kind of provider this project needs; the picker starts here
   photos      ProjectPhoto[]
   steps       ProjectStep[]
+  providers   ProjectProvider[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -354,4 +360,22 @@ model ProjectStep {
 
   @@index([projectId, position])
   @@map("project_steps")
+}
+
+// A provider linked to a home project, with a per-project status
+model ProjectProvider {
+  id          String   @id @default(uuid())
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  provider    Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerId  String
+  status      String   @default("considering") // considering, contacted, chosen, passed
+  createdBy   User     @relation("ProjectProviderCreatedBy", fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([projectId, providerId])
+  @@index([providerId])
+  @@map("project_providers")
 }

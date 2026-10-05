@@ -5,6 +5,7 @@ import {
   MAX_STEP_ESTIMATE_MINUTES,
   MAX_STEP_TEXT_LENGTH,
   PROJECT_PATHS,
+  PROJECT_PROVIDER_STATUSES,
   PROJECT_STATUSES,
   type ProjectPathFilter,
   type ProjectStatus,
@@ -42,6 +43,11 @@ export const projectUpdateSchema = z.object({
   status: z.enum(PROJECT_STATUSES, { message: 'Unknown status' }).optional(),
   path: z.enum(PROJECT_PATHS, { message: 'Unknown path' }).nullable().optional(),
   notes,
+  providerCategoryId: z
+    .string({ invalid_type_error: 'Unknown provider category' })
+    .min(1, 'Unknown provider category')
+    .nullable()
+    .optional(),
 });
 
 const ESTIMATE_MESSAGE = `Estimate must be a whole number of minutes from 1 to ${MAX_STEP_ESTIMATE_MINUTES}`;
@@ -66,6 +72,19 @@ export const stepUpdateSchema = z.object({
   text: stepText.optional(),
   estimateMinutes,
   done: z.boolean({ invalid_type_error: 'Done must be true or false' }).optional(),
+});
+
+export const projectProviderLinkSchema = z.object(
+  {
+    providerId: z
+      .string({ required_error: 'Provider is required', invalid_type_error: 'Provider is required' })
+      .min(1, 'Provider is required'),
+  },
+  { required_error: 'Provider is required', invalid_type_error: 'Provider is required' },
+);
+
+export const projectProviderStatusSchema = z.object({
+  status: z.enum(PROJECT_PROVIDER_STATUSES, { message: 'Unknown status' }),
 });
 
 const dimension = z.coerce.number().int().min(1).max(20000);

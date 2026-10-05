@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   projectCreateSchema,
   projectUpdateSchema,
+  projectProviderLinkSchema,
+  projectProviderStatusSchema,
   photoDimensionsSchema,
   stepCreateSchema,
   stepUpdateSchema,
@@ -176,5 +178,51 @@ describe('stepUpdateSchema', () => {
     const result = stepUpdateSchema.safeParse({ estimateMinutes: 1.5 })
     expect(result.success).toBe(false)
     if (!result.success) expect(result.error.issues[0].message).toBe(ESTIMATE_MESSAGE)
+  })
+})
+
+describe('projectUpdateSchema provider category', () => {
+  it('accepts a category id and null', () => {
+    expect(projectUpdateSchema.parse({ providerCategoryId: 'c1' })).toEqual({ providerCategoryId: 'c1' })
+    expect(projectUpdateSchema.parse({ providerCategoryId: null })).toEqual({ providerCategoryId: null })
+  })
+
+  it('leaves the category out when it is not sent', () => {
+    expect('providerCategoryId' in projectUpdateSchema.parse({ status: 'active' })).toBe(false)
+  })
+
+  it('rejects an empty string and a non-string', () => {
+    expect(projectUpdateSchema.safeParse({ providerCategoryId: '' }).success).toBe(false)
+    expect(projectUpdateSchema.safeParse({ providerCategoryId: 7 }).success).toBe(false)
+  })
+})
+
+describe('projectProviderLinkSchema', () => {
+  it('accepts a provider id', () => {
+    expect(projectProviderLinkSchema.parse({ providerId: 'pr1' })).toEqual({ providerId: 'pr1' })
+  })
+
+  it('rejects a missing, empty or non-string provider id with the message', () => {
+    for (const body of [{}, { providerId: '' }, { providerId: 5 }, null]) {
+      const parsed = projectProviderLinkSchema.safeParse(body)
+      expect(parsed.success).toBe(false)
+    }
+    const parsed = projectProviderLinkSchema.safeParse({})
+    expect(parsed.success ? '' : parsed.error.issues[0].message).toBe('Provider is required')
+  })
+})
+
+describe('projectProviderStatusSchema', () => {
+  it('accepts each of the four statuses', () => {
+    for (const status of ['considering', 'contacted', 'chosen', 'passed']) {
+      expect(projectProviderStatusSchema.parse({ status })).toEqual({ status })
+    }
+  })
+
+  it('rejects anything else with the message', () => {
+    for (const body of [{ status: 'hired' }, { status: '' }, {}, { status: 3 }]) {
+      const parsed = projectProviderStatusSchema.safeParse(body)
+      expect(parsed.success ? '' : parsed.error.issues[0].message).toBe('Unknown status')
+    }
   })
 })

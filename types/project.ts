@@ -18,6 +18,11 @@ export const MAX_PROJECT_STEPS = 100;
 export const MAX_STEP_TEXT_LENGTH = 200;
 export const MAX_STEP_ESTIMATE_MINUTES = 9999;
 
+export const PROJECT_PROVIDER_STATUSES = ['considering', 'contacted', 'chosen', 'passed'] as const;
+export type ProjectProviderStatus = (typeof PROJECT_PROVIDER_STATUSES)[number];
+
+export const MAX_PROJECT_PROVIDERS = 25;
+
 export type PhotoVariant = 'full' | 'thumb';
 
 export interface ProjectPhotoDto {
@@ -45,6 +50,13 @@ export interface ProjectStepUpdateInput {
   text?: string;
   estimateMinutes?: number | null;
   done?: boolean;
+}
+
+// A provider linked to a project. `status` is the link's own status, not the provider's household status.
+export interface ProjectProviderDto {
+  providerId: string;
+  status: ProjectProviderStatus;
+  provider: { id: string; name: string; phone: string | null; neighborCount: number };
 }
 
 export type NextStepKind = 'step' | 'noSteps' | 'allDone';
@@ -105,6 +117,7 @@ export interface ProjectUpdateInput {
   status?: ProjectStatus;
   path?: ProjectPath | null;
   notes?: string | null;
+  providerCategoryId?: string | null;
 }
 
 export interface ProjectListFilters {
