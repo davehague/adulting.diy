@@ -26,6 +26,35 @@ const pickWritable = (input: Partial<ProviderInput>): Partial<ProviderInput> => 
   return picked as Partial<ProviderInput>;
 };
 
+// The fields a provider row needs to become a list item. A row with more (notes, snippets) also fits.
+export interface ProviderListRow {
+  id: string;
+  name: string;
+  company: string | null;
+  phone: string | null;
+  rating: number | null;
+  category: { id: string; name: string; sortOrder: number };
+  status: { id: string; name: string; kind: string; hiddenByDefault: boolean; sortOrder: number };
+  evidence: { kind: string; sourceDate: Date | null }[];
+}
+
+export const toProviderListItem = (row: ProviderListRow): ProviderListItem => ({
+  id: row.id,
+  name: row.name,
+  company: row.company,
+  phone: row.phone,
+  rating: row.rating,
+  category: { id: row.category.id, name: row.category.name, sortOrder: row.category.sortOrder },
+  status: {
+    id: row.status.id,
+    name: row.status.name,
+    kind: row.status.kind as ProviderStatusKind,
+    hiddenByDefault: row.status.hiddenByDefault,
+    sortOrder: row.status.sortOrder,
+  },
+  ...summarizeEvidence(row.evidence),
+});
+
 export class ProviderService {
   async list(householdId: string, filters: ProviderListFilters): Promise<ProviderListItem[]> {
     const where: Prisma.ProviderWhereInput = { householdId, metaStatus: 'active' };
@@ -54,24 +83,7 @@ export class ProviderService {
       },
     });
 
-    const items: ProviderListItem[] = rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      company: row.company,
-      phone: row.phone,
-      rating: row.rating,
-      category: {
-        id: row.category.id, name: row.category.name, sortOrder: row.category.sortOrder,
-      },
-      status: {
-        id: row.status.id,
-        name: row.status.name,
-        kind: row.status.kind as ProviderStatusKind,
-        hiddenByDefault: row.status.hiddenByDefault,
-        sortOrder: row.status.sortOrder,
-      },
-      ...summarizeEvidence(row.evidence),
-    }));
+    const items: ProviderListItem[] = rows.map(toProviderListItem);
 
     return this.sort(items, filters.sort ?? 'name');
   }
