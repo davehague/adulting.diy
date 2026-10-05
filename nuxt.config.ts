@@ -13,6 +13,13 @@ export default defineNuxtConfig({
       devBypassEnabled: process.env.NODE_ENV === 'development' && process.env.DEV_LOGIN_BYPASS === 'true'
     }
   },
+  // Provider suggestions make two model calls inside one request (up to 45 seconds). Nitro deploys the
+  // server as a single function, so this applies to every route; 60 is allowed on every Vercel plan.
+  nitro: {
+    vercel: {
+      functions: { maxDuration: 60 },
+    },
+  },
   devServer: {
     https: {
       key: "./localhost-key.pem",

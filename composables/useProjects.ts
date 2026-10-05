@@ -13,6 +13,7 @@ import {
   type ProjectStepUpdateInput,
   type ProjectUpdateInput,
 } from '@/types/project';
+import { type SuggestionRunResponse, type SuggestionStateResponse } from '@/types/suggestion';
 import { type ResizedPhoto } from '@/utils/image-resize';
 
 export const useProjects = () => {
@@ -67,10 +68,17 @@ export const useProjects = () => {
   const unlinkProvider = (projectId: string, providerId: string) =>
     api.delete(`/api/projects/${projectId}/providers/${providerId}`);
 
+  const getSuggestions = (projectId: string) =>
+    api.get<SuggestionStateResponse>(`/api/projects/${projectId}/suggestions`);
+  // Takes around 15 seconds: the server makes two model calls before it answers.
+  const runSuggestions = (projectId: string, extraText: string) =>
+    api.post<SuggestionRunResponse>(`/api/projects/${projectId}/suggestions`, { extraText });
+
   return {
     listProjects, getProject, createProject, updateProject, deleteProject, listLocations,
     uploadPhoto, deletePhoto, fetchPhotoBlob,
     listNextSteps, addStep, updateStep, deleteStep,
     listProjectProviders, linkProvider, setProviderLinkStatus, unlinkProvider,
+    getSuggestions, runSuggestions,
   };
 };
