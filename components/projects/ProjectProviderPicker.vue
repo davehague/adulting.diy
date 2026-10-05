@@ -41,7 +41,8 @@
 
     <div class="mt-3 flex justify-end">
       <button type="button"
-              class="text-sm font-medium text-stone-600 px-2 py-1 rounded-lg hover:bg-stone-100"
+              class="text-sm font-medium text-stone-600 px-2 py-1 rounded-lg hover:bg-stone-100 disabled:opacity-50"
+              :disabled="linkingId !== null"
               @click="emit('cancel')">
         Cancel
       </button>

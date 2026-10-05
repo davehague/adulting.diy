@@ -13,6 +13,8 @@
       </select>
     </div>
 
+    <p v-if="error" class="text-sm text-red-700 mb-3" aria-live="polite">{{ error }}</p>
+
     <ul v-if="links.length > 0" class="divide-y divide-stone-100 mb-3">
       <li v-for="link in links" :key="link.providerId" class="py-2" :class="link.status === 'passed' ? 'opacity-60' : ''">
         <div class="flex items-center gap-3">
@@ -48,8 +50,6 @@
         </div>
       </li>
     </ul>
-
-    <p v-if="error" class="text-sm text-red-700 mb-3" aria-live="polite">{{ error }}</p>
 
     <p v-if="categoriesFailed" class="text-sm text-stone-600">
       Could not load provider categories.
