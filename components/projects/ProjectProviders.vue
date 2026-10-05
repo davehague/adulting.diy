@@ -3,7 +3,7 @@
     <div class="flex items-center justify-between gap-3 mb-3">
       <h2 class="text-lg font-medium text-stone-900">Providers</h2>
       <select v-if="categories.length > 0"
-              :value="knownCategoryId ?? ''"
+              :value="(pendingCategory !== undefined ? pendingCategory : knownCategoryId) ?? ''"
               aria-label="Provider category"
               :disabled="savingCategory"
               class="min-w-0 max-w-[60%] rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-sm"
@@ -20,7 +20,7 @@
                     class="flex-1 min-w-0 text-sm font-medium text-stone-900 break-words hover:text-amber-700">
             {{ link.provider.name }}
           </NuxtLink>
-          <select :value="link.status"
+          <select :value="pendingStatus[link.providerId] ?? link.status"
                   :aria-label="`Status for ${link.provider.name}`"
                   :disabled="busyIds.includes(link.providerId)"
                   class="shrink-0 rounded-md border-stone-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-sm"
@@ -117,6 +117,11 @@ const categoriesFailed = ref(false);
 const savingCategory = ref(false);
 const error = ref<string | null>(null);
 const busyIds = ref<string[]>([]);
+// What the user just picked while its save is in flight. The dropdowns show it instead of the saved
+// value, because any re-render (busy, disabled) would otherwise snap them back to the old value.
+const pendingStatus = ref<Record<string, ProjectProviderStatus>>({});
+// undefined means no category save is pending from the header dropdown; null means "No category" was picked.
+const pendingCategory = ref<string | null | undefined>(undefined);
 const pickerOpen = ref(false);
 
 // A saved category that is not in the household's list (deleted since) shows as "No category".
@@ -130,6 +135,11 @@ const setBusy = (providerId: string, busy: boolean): void => {
   busyIds.value = busy ? [...busyIds.value, providerId] : busyIds.value.filter((id) => id !== providerId);
 };
 
+const setPendingStatus = (providerId: string, status: ProjectProviderStatus | null): void => {
+  const { [providerId]: _previous, ...rest } = pendingStatus.value;
+  pendingStatus.value = status === null ? rest : { ...rest, [providerId]: status };
+};
+
 const loadCategories = async (): Promise<void> => {
   categoriesFailed.value = false;
   try {
@@ -140,7 +150,7 @@ const loadCategories = async (): Promise<void> => {
   }
 };
 
-// Returns whether the save worked, so the header dropdown can be put back when it did not.
+// Returns whether the save worked.
 const saveCategory = async (categoryId: string | null): Promise<boolean> => {
   savingCategory.value = true;
   error.value = null;
@@ -158,9 +168,13 @@ const saveCategory = async (categoryId: string | null): Promise<boolean> => {
 
 const changeCategory = async (event: Event): Promise<void> => {
   const select = event.target as HTMLSelectElement;
-  const saved = await saveCategory(select.value === '' ? null : select.value);
-  // The bound value did not change on a failure, so Vue will not reset the dropdown; put it back by hand.
-  if (!saved) select.value = knownCategoryId.value ?? '';
+  pendingCategory.value = select.value === '' ? null : select.value;
+  try {
+    await saveCategory(pendingCategory.value);
+  } finally {
+    // On a failure this puts the dropdown back to the saved category; on success the saved value is the picked one.
+    pendingCategory.value = undefined;
+  }
 };
 
 const changeStatus = async (link: ProjectProviderDto, event: Event): Promise<void> => {
@@ -169,13 +183,14 @@ const changeStatus = async (link: ProjectProviderDto, event: Event): Promise<voi
   if (status === link.status) return;
   error.value = null;
   setBusy(link.providerId, true);
+  setPendingStatus(link.providerId, status);
   try {
     emit('update:links', await setProviderLinkStatus(props.projectId, link.providerId, status));
   } catch (e) {
-    // The bound value did not change, so Vue will not reset the dropdown; put it back by hand.
-    select.value = link.status;
+    // Dropping the pending value below puts the dropdown back to the saved status.
     error.value = messageOf(e, 'Could not save the status');
   } finally {
+    setPendingStatus(link.providerId, null);
     setBusy(link.providerId, false);
   }
 };
