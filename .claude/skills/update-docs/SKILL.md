@@ -50,7 +50,7 @@ Current capability docs:
 - `notifications-and-reminders.md` — notification events, preferences, channels, reminder rules
 - `household-management.md` — households, roles, invite codes, former members, timezone, task categories
 - `providers.md` — contractor directory, private fields, categories and statuses, neighbor evidence, task links
-- `projects.md` — home projects, photos, steps, next steps on the dashboard
+- `projects.md` — home projects, photos, steps, linked providers and their per-project status, next steps on the dashboard
 
 Good boundaries: "Task Management", "Providers", "Projects". Too granular: "Dashboard" (a page; it is covered by the capabilities it surfaces), "Occurrence Detail Page", "Photo Carousel", "Mailjet Integration" (that last one is a tech detail).
 
@@ -122,7 +122,7 @@ Read the changed files — don't guess from filenames.
 | Recurrence, occurrence generation, catch-up or end-condition logic | `docs/tech/task-scheduling.md`, `docs/functionality/task-management.md` |
 | Notification event, channel, preference or reminder logic | `docs/tech/notification-system.md`, `docs/functionality/notifications-and-reminders.md` |
 | Provider ingest, matching, evidence or API keys | `docs/tech/provider-ingest.md`, `docs/functionality/providers.md` |
-| Project photos, storage or steps | `docs/tech/architecture.md` (Projects and Photo Storage), `docs/functionality/projects.md` |
+| Project photos, storage, steps or provider links | `docs/tech/architecture.md` (Projects and Photo Storage), `docs/functionality/projects.md` |
 | Dashboard content | `docs/functionality/task-management.md` (stat cards, Coming Up) or `docs/functionality/projects.md` (next steps), `docs/tech/architecture.md` (Dashboard) |
 | Roles, membership, invite codes, task categories | `docs/functionality/household-management.md` |
 | New integration, env var or cron job | `docs/tech/architecture.md` (Integrations, Scheduled Jobs), `README.md` (Environment Variables), `CLAUDE.md` (Tech Stack, Development Setup) |

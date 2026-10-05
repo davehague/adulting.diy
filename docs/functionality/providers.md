@@ -10,7 +10,7 @@
 - See which providers neighbors recommend, and read the original posts
 - Search, filter and sort the directory
 - Comment on a provider
-- Link providers to tasks
+- Link providers to tasks, and see which home projects a provider is linked to
 - As an admin: manage the household's provider categories and statuses, and the access keys that let the automated watcher load providers
 
 ## How It Works
@@ -58,18 +58,25 @@ Any household member can comment on a provider ("Came out Tuesday, quote was fai
 
 A task can have many providers and a provider can be linked to many tasks. Links are made and removed from the task page, and the provider page shows which tasks it is linked to.
 
+### Providers and Projects
+
+A provider can be linked to home projects, each link with its own status for that project (Considering, Contacted, Chosen or Passed), separate from the provider's status in the directory. Links are made, changed and removed on the project's page. The provider page lists the projects it is linked to, newest link first, each with that status; finished projects stay on the list as a record, and deleted projects do not appear.
+
+Deleting a category that providers use moves any project saved with that category to the same replacement. Deleting a category no provider uses leaves those projects with no category.
+
 ## Connections
 
 - **[Task Management](./task-management.md)**: providers are linked to the tasks they do.
 - **[Household Management](./household-management.md)**: the directory belongs to the household, and only admins manage its categories, statuses and access keys.
-- **[Projects](./projects.md)**: not connected yet; linking providers to projects is planned.
+- **[Projects](./projects.md)**: providers are linked to home projects with a per-project status, and a project's provider category narrows the list when picking one.
 
 ## Where It Appears
 
 - **Providers page**: the directory, reached from the main navigation
-- **Provider page**: details, private fields, contacts, evidence, comments and linked tasks
+- **Provider page**: details, private fields, contacts, evidence, comments, linked tasks and linked projects
 - **Household > Provider settings**: categories, statuses and access keys (admins)
 - **Task page**: the section for linking providers
+- **Project page**: the section for linking providers and tracking their status
 
 For how the watcher loads providers, see [Provider Ingest (developer)](../tech/provider-ingest.md).
 
@@ -79,4 +86,3 @@ For how the watcher loads providers, see [Provider Ingest (developer)](../tech/p
 - No file attachments on providers (quotes, invoices, photos).
 - Recommendations are not shared between households.
 - Contact details are entered by hand; there is no lookup to fill them in.
-- Providers cannot be linked to projects yet.

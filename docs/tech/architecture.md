@@ -33,7 +33,7 @@ Neighborhood watcher (external) ──→ /api/ingest/providers  (household API 
 | `stores/` | Pinia stores: `auth` (persisted), `tasks`, `dev-auth` |
 | `middleware/auth.global.ts` | Client route guard: login redirect, household setup redirect |
 | `plugins/` | `auth-ready.client.ts` (waits for the persisted auth store), `dev-auth.client.ts` |
-| `utils/` | Shared client helpers: `api.ts` (authenticated fetch), `api-error.ts`, `image-resize.ts`, `project-labels.ts`, `project-steps.ts`, `schedule-type.ts` (shared with the server) |
+| `utils/` | Shared client helpers: `api.ts` (authenticated fetch), `api-error.ts`, `image-resize.ts`, `project-labels.ts`, `project-steps.ts`, `project-providers.ts`, `schedule-type.ts` (shared with the server) |
 | `types/` | Shared TypeScript types, one file per domain |
 | `server/api/` | HTTP endpoints, one file per route and method |
 | `server/services/` | Business logic and all database access, one class per domain |
@@ -74,7 +74,7 @@ Defined in `prisma/schema.prisma`. Every household-owned model carries `househol
 | Identity | `User`, `Household`, `FormerHouseholdMember` |
 | Tasks | `Category`, `TaskDefinition`, `TaskOccurrence`, `OccurrenceHistoryLog`, `TaskHistoryLog` |
 | Providers | `Provider`, `ProviderCategory`, `ProviderStatus`, `ProviderContact`, `ProviderEvidence`, `ProviderComment`, `TaskProvider`, `ApiKey` |
-| Projects | `Project`, `ProjectPhoto`, `ProjectStep` |
+| Projects | `Project`, `ProjectPhoto`, `ProjectStep`, `ProjectProvider` |
 
 Conventions:
 
@@ -108,7 +108,7 @@ The full endpoint list is in [api-endpoints.md](api-endpoints.md).
 | Task scheduling and occurrence generation | `server/utils/schedule.ts`, `TaskService`, `OccurrenceService`, `/api/scheduler/run` | [task-scheduling.md](task-scheduling.md) |
 | Notifications and reminders | `NotificationService`, `server/services/notifications/*`, `/api/scheduler/reminders` | [notification-system.md](notification-system.md) |
 | Provider directory and machine ingest | `Provider*Service`, `ApiKeyService`, `/api/ingest/providers` | [provider-ingest.md](provider-ingest.md) |
-| Projects, photos and steps | `ProjectService`, `ProjectPhotoService`, `ProjectStepService` | Below |
+| Projects, photos, steps and provider links | `ProjectService`, `ProjectPhotoService`, `ProjectStepService`, `ProjectProviderService` | Below |
 | Dashboard | `DashboardService`, `/api/dashboard`, `/api/projects/next-steps` | Below |
 
 ### Projects and Photo Storage
@@ -118,6 +118,9 @@ The full endpoint list is in [api-endpoints.md](api-endpoints.md).
 - `server/utils/blob-storage.ts` is the only module that talks to Vercel Blob, which lets tests fake storage.
 - Photos are never served from a public URL. The photo GET route streams the blob through the household auth wrapper, and `components/projects/AuthedImage.vue` fetches it with the bearer token.
 - The "next step" rule (first undone step in order) lives in `utils/project-steps.ts` and is shared by the project page and the dashboard list.
+- `ProjectProvider` links a provider to a project with a per-project status (`considering`, `contacted`, `chosen`, `passed`), unrelated to the provider's household `ProviderStatus` and to `TaskProvider`. `ProjectProviderService` owns the link rules (household checks, the 25-link cap, link order) and exports the select, filter and mapper that `ProjectService` reuses to put links on the project detail and chosen names on the list. Links are never deleted automatically: reads filter out links whose provider is removed or whose project is deleted.
+- `Project.providerCategoryId` is the project's saved provider category. The picker (`components/projects/ProjectProviderPicker.vue`) reads providers through the existing `GET /api/providers` with that category. `ProviderCategoryService.remove` moves projects along with providers when a replacement is given; otherwise the foreign key clears the column.
+- Link order, labels, the card's "Chosen:" line and the tap-to-call link live in `utils/project-providers.ts`.
 
 ### Dashboard
 

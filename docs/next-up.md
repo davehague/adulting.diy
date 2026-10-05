@@ -18,9 +18,9 @@
 
 ## Projects - Planned
 
-Capture with photos (slice 1) and steps with next steps on the dashboard (slice 2) are live. See [functionality/projects.md](functionality/projects.md).
+Capture with photos (slice 1), steps with next steps on the dashboard (slice 2) and providers linked to a project with a status (slice 3a) are built. See [functionality/projects.md](functionality/projects.md).
 
-- Slice 3: link providers to a project, each link with a status (considering, contacted, chosen, passed), then quotes recorded as numbers. Not designed yet
+- Slice 3b: quotes recorded as numbers on a project's provider link. Not designed yet; open questions are one quote per link or several over time, and whether a quote has a date, a note and what it covers
 - Slice 4: AI help. Suggested next steps and time estimates, and "describe your problem" routing to a provider category with a reason for each shortlisted provider. Ranking stays deterministic; the AI explains and routes and never picks the contractor. Regenerating steps must keep existing ones, and planning must not run inside a single web request
 - A clean-up job for the stored photos of long-deleted projects
 
@@ -33,3 +33,8 @@ Capture with photos (slice 1) and steps with next steps on the dashboard (slice 
 - Keeping typing in an open step when another step's save finishes at the same moment
 - Reserving space for the dashboard's Project next steps section so the page does not shift as it loads
 - An automated test for the shared API helper's error path (new-account sign-up depends on it)
+- Search in the project's provider list; notes or a date on a linked provider; a step that points at a provider
+- Provider links: when two saves overlap, the reply that arrives last wins, so the list can briefly show an older state until the page reloads (steps have the same gap)
+- Provider links: a Remove that fails because someone else already removed the provider leaves the row until reload; two simultaneous adds could pass the cap of 25
+- Tap-to-call: a phone field holding two numbers, or a label before the number, gets no usable call link
+- Loading a project to check it exists also loads its provider links; trim when it matters

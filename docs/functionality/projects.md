@@ -1,6 +1,6 @@
 # Projects
 
-> Keep the household's running list of things to fix, improve or build around the house, from a 15-minute chore to a multi-contractor build, with photos and a checklist of steps for each.
+> Keep the household's running list of things to fix, improve or build around the house, from a 15-minute chore to a multi-contractor build, with photos, a checklist of steps and the providers you are weighing for each.
 
 ## What You Can Do
 
@@ -9,6 +9,8 @@
 - Set a status (Planning, Active, Future, Done) and a path (DIY, Hire, Not sure)
 - Break a project into a checklist of steps, each with an optional time estimate
 - Check off each Active project's next step from the dashboard
+- Link providers from the household directory to a project and track where you stand with each: Considering, Contacted, Chosen or Passed
+- Call a linked provider straight from the project page
 - Browse, filter and swipe through projects and their photos
 - Edit anything in place, and delete photos or whole projects
 
@@ -16,7 +18,7 @@
 
 ### What a Project Is
 
-Each project has a title, an optional location (free text, such as "Master bathroom", with suggestions from locations the household has already used), a status, a path, optional notes, up to 10 photos, and a checklist of steps. The list is shared by the whole household: there is no owner or assignee, and any member can create, edit and delete any project.
+Each project has a title, an optional location (free text, such as "Master bathroom", with suggestions from locations the household has already used), a status, a path, optional notes, up to 10 photos, a checklist of steps, and a list of linked providers. The list is shared by the whole household: there is no owner or assignee, and any member can create, edit and delete any project.
 
 ### Status and Path
 
@@ -40,7 +42,7 @@ Leaving or reloading the new-project form after a photo was picked but before Sa
 
 The list shows Active and Planning projects by default, ordered by status (Active, Planning, Future, Done) and newest first within each. A "Show future and done" toggle adds the other two statuses, and a path filter narrows the list to DIY, Hire, Not sure, or Needs details.
 
-Each card shows the cover thumbnail (the first photo added, or a placeholder if there are none), the title, location, a status badge, a path badge or the "Needs details" marker, and a photo count when there is more than one photo. A card with more than one photo is swipeable: swiping left and right moves between photos, with small dots showing which one is in view. Tapping anywhere on the card opens the project.
+Each card shows the cover thumbnail (the first photo added, or a placeholder if there are none), the title, location, a status badge, a path badge or the "Needs details" marker, and a photo count when there is more than one photo. A project with a chosen provider also shows "Chosen:" and the provider's name, with "+1" (or more) when several are chosen. A card with more than one photo is swipeable: swiping left and right moves between photos, with small dots showing which one is in view. Tapping anywhere on the card opens the project.
 
 When there are no projects, the list shows a short line and the New project button. When a filter leaves nothing to show, it says no projects match.
 
@@ -58,6 +60,20 @@ Type into **Add a step** and press Enter or tap Add; the cursor stays in the box
 
 Checking off the last undone step asks whether to mark the project Done, with **Mark Done** and **Not yet**. Not yet changes nothing. The question is not asked when the project is already Done, or when a step is unchecked, edited or removed.
 
+### Providers on a Project
+
+A project can have providers from the household's directory linked to it, shown on the project page between the steps and the photos, whatever the project's path. Each link has its own status for this project: Considering, Contacted, Chosen or Passed. This is separate from the provider's status in the directory, so the same provider can be Chosen on one project and Passed on another. A project can have at most 25 linked providers.
+
+Finding a provider starts from a category, so nobody has to scroll the whole directory. A project has one optional provider category (Plumber, HVAC and so on), shown at the top of the Providers section, where it can be changed or cleared. **Add provider** opens a list, in place, of that category's providers, most-mentioned first, each with its directory status and its count of neighbor recommendations. Providers of every directory status are listed, including ones the directory hides by default, and providers already linked to the project are left out. The list has its own category switcher, so a project that needs several trades can pull a provider from another category; switching there does not change the project's saved category. If the project has no category yet, the list asks "What kind of provider?" first and saves the answer to the project.
+
+Tapping a provider links it as Considering. Each linked provider shows its name (which opens the provider's page), a status dropdown that saves as soon as a value is picked, a tap-to-call phone number or "No phone on file", the neighbor count when there is one, and **Remove**. The list is ordered Chosen, Contacted, Considering, then Passed (greyed), and within a status in the order the providers were linked. More than one provider can be Chosen.
+
+Nothing else changes on its own: choosing a provider does not mark the others Passed, does not change the provider's status in the directory, and does not change the project's status or path.
+
+Remove takes a provider off the project for good, after a confirmation that suggests setting Passed instead to keep a record that they were considered. A provider removed from the directory disappears from the project, and from the "Chosen:" line on its card, without a prompt.
+
+A household with no provider categories sees a note pointing to Household > Provider settings, since a category is needed before a provider can be linked.
+
 ### Next Steps on the Dashboard
 
 The dashboard shows a **Project next steps** section under the stat cards, with one row for each Active project: its next undone step (the first one not checked off), the project's title beneath it, and the estimate when there is one. Only Active projects appear, newest first. Tapping the text opens the project; ticking the box checks the step off and the row moves on to that project's next step.
@@ -74,22 +90,24 @@ Deleting a project hides it everywhere but keeps the record and its photos; noth
 
 - **[Task Management](./task-management.md)**: project next steps sit on the dashboard alongside the task stat cards and Coming Up feed. Projects and tasks are otherwise separate; a step is not a task.
 - **[Household Management](./household-management.md)**: the list belongs to the household, and membership is what grants access to projects and their photos.
-- **[Providers](./providers.md)**: not connected yet; linking providers to a project is planned.
+- **[Providers](./providers.md)**: providers from the directory are linked to projects, found through the directory's categories; each provider's page lists the projects it is linked to.
 
 ## Where It Appears
 
 - **Projects page**: the list, reached from the main navigation beside Providers on desktop and mobile
 - **New project form**: capture with photos
-- **Project page**: details, steps, photos and the full-size viewer
+- **Project page**: details, steps, linked providers, photos and the full-size viewer
 - **Dashboard**: the Project next steps section
 
 ## Current Limitations
 
-- At most 10 photos and 100 steps per project.
+- At most 10 photos, 100 steps and 25 linked providers per project.
 - Steps cannot be reordered.
 - No step count on project cards, and no total of the time remaining.
 - No assignees, due dates or reminders on steps or projects.
 - Statuses are fixed and cannot be customized.
 - The date a project was marked Done is recorded but not shown anywhere.
-- Providers cannot be linked to a project, and there is nowhere to record quotes.
+- There is nowhere to record quotes yet.
+- No search in the provider list, and no notes or dates on a linked provider.
+- A step cannot point at a provider, and the dashboard shows nothing about providers.
 - No AI help yet: suggested next steps, time estimates, or routing a problem to a category.

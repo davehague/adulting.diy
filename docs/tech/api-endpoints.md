@@ -74,7 +74,7 @@ The API uses these authentication levels:
 |--------|----------|------|-------------|
 | `GET` | `/api/providers` | Household | List providers (query: `search`, `categoryId`, `statusId`, `includeHidden`, `sort` = name, mentions, lastSighting, rating) |
 | `POST` | `/api/providers` | Household | Create provider |
-| `GET` | `/api/providers/[id]` | Household | Get provider with contacts, evidence, comments, linked tasks |
+| `GET` | `/api/providers/[id]` | Household | Get provider with contacts, evidence, comments, linked tasks, and linked projects (`projects`: each link's `status` and the project's `id`, `title`, `status`; deleted projects left out) |
 | `PUT` | `/api/providers/[id]` | Household | Update provider |
 | `DELETE` | `/api/providers/[id]` | Household | Soft delete provider |
 | `POST` | `/api/providers/[id]/comments` | Household | Add comment |
@@ -91,12 +91,12 @@ The API uses these authentication levels:
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| `GET` | `/api/projects` | Household | List projects (query: `status` comma-separated, defaults to `planning,active`; `path` = `diy`, `hire`, `unsure`, or `none` for not set). Returns each project with its photo count, cover photo id, and ordered photo ids, sorted Active first then Planning, Future, Done, newest first within each |
+| `GET` | `/api/projects` | Household | List projects (query: `status` comma-separated, defaults to `planning,active`; `path` = `diy`, `hire`, `unsure`, or `none` for not set). Returns each project with its photo count, cover photo id, ordered photo ids, and `chosenProviderNames` (providers marked chosen, in link order), sorted Active first then Planning, Future, Done, newest first within each |
 | `POST` | `/api/projects` | Household | Create project (`title` required, `location` and `notes` optional); status starts as `planning`, path as null |
 | `GET` | `/api/projects/locations` | Household | Distinct locations already used by the household's non-deleted projects, for suggestions |
 | `GET` | `/api/projects/next-steps` | Household | The dashboard list: `hasProjects` (any non-deleted project exists) and one item per Active project, newest first, each with `kind` = `step`, `noSteps` or `allDone` and, for `step`, the next undone step (id, text, estimate) |
-| `GET` | `/api/projects/[id]` | Household | Get one project with its photos in order and its steps in order (position, then creation time) |
-| `PUT` | `/api/projects/[id]` | Household | Update any of title, location, status, path, notes; moving to `done` sets `completedAt`, moving away clears it |
+| `GET` | `/api/projects/[id]` | Household | Get one project with its photos in order, its steps in order (position, then creation time), its saved `providerCategoryId`, and its linked providers (`providers`, ordered chosen, contacted, considering, passed, then oldest link first) |
+| `PUT` | `/api/projects/[id]` | Household | Update any of title, location, status, path, notes, `providerCategoryId` (null clears it; 400 if the category is not the household's); moving to `done` sets `completedAt`, moving away clears it |
 | `DELETE` | `/api/projects/[id]` | Household | Soft delete project |
 | `POST` | `/api/projects/[id]/photos` | Household | Upload one photo; multipart form fields `full` and `thumb` (the JPEG files) plus `width` and `height` (the full image's pixel size) |
 | `GET` | `/api/projects/[id]/photos/[photoId]` | Household | Stream a photo; query `variant` = `thumb` or `full` (default `full`) |
@@ -104,6 +104,10 @@ The API uses these authentication levels:
 | `POST` | `/api/projects/[id]/steps` | Household | Add a step (`text` required, 1 to 200 characters; `estimateMinutes` optional, whole number 1 to 9999); it goes last. 409 at 100 steps |
 | `PUT` | `/api/projects/[id]/steps/[stepId]` | Household | Update any of `text`, `estimateMinutes` (null clears it), `done` (true sets the done time unless already set, false clears it) |
 | `DELETE` | `/api/projects/[id]/steps/[stepId]` | Household | Remove a step for good |
+| `GET` | `/api/projects/[id]/providers` | Household | List the project's linked providers, each with `providerId`, `status` and `provider` (`id`, `name`, `phone`, `neighborCount`). Links to removed providers are left out |
+| `POST` | `/api/projects/[id]/providers` | Household | Link a provider (`providerId` required); the link starts as `considering`. 404 if the provider is not the household's or is removed, 409 if already linked or at 25 links. Returns the full list |
+| `PUT` | `/api/projects/[id]/providers/[providerId]` | Household | Set the link's `status` (`considering`, `contacted`, `chosen`, `passed`). Returns the full list |
+| `DELETE` | `/api/projects/[id]/providers/[providerId]` | Household | Remove the link for good. Returns the remaining list |
 
 See [projects.md](../functionality/projects.md) for the product view.
 
@@ -114,7 +118,7 @@ See [projects.md](../functionality/projects.md) for the product view.
 | `GET` | `/api/provider-categories` | Household | List provider categories |
 | `POST` | `/api/provider-categories` | Household Admin | Create category |
 | `PUT` | `/api/provider-categories/[id]` | Household Admin | Rename category |
-| `DELETE` | `/api/provider-categories/[id]` | Household Admin | Delete category; 409 if in use unless `moveToId` is given |
+| `DELETE` | `/api/provider-categories/[id]` | Household Admin | Delete category; 409 if providers use it unless `moveToId` is given, in which case providers and projects saved with the category move to it. Otherwise projects saved with it are left with no category |
 | `PUT` | `/api/provider-categories/reorder` | Household Admin | Reorder categories (`{ orderedIds }`) |
 | `GET` | `/api/provider-statuses` | Household | List statuses (seeds defaults on first call) |
 | `POST` | `/api/provider-statuses` | Household Admin | Create status (name, kind, hiddenByDefault) |
@@ -194,7 +198,7 @@ Key data models handled by the API:
 - **OccurrenceHistoryLog**: Audit trail for occurrence changes
 - **FormerHouseholdMember**: Snapshot of departed users for historical display
 - **Provider**, **ProviderCategory**, **ProviderStatus**, **ProviderContact**, **ProviderEvidence**, **ProviderComment**, **TaskProvider**, **ApiKey**: Provider directory and machine ingest (see [provider-ingest.md](provider-ingest.md))
-- **Project**, **ProjectPhoto**, **ProjectStep**: Home project tracking with private photos and a checklist of steps (see [projects.md](../functionality/projects.md))
+- **Project**, **ProjectPhoto**, **ProjectStep**, **ProjectProvider**: Home project tracking with private photos, a checklist of steps, and providers linked with a per-project status (see [projects.md](../functionality/projects.md))
 
 ## Rate Limiting
 

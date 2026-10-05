@@ -11,7 +11,7 @@ A household management app built with Nuxt 3, Vue.js, Prisma, and CockroachDB. I
 - Flexible notification system (email + Slack) with configurable reminders
 - Task pausing and soft deletion
 - Provider directory: contractors and service providers with ratings, notes, neighbor recommendations and task links
-- Home projects with private photos, step checklists and next steps on the dashboard
+- Home projects with private photos, step checklists, linked providers with a per-project status, and next steps on the dashboard
 - User authentication (Google OAuth)
 - Persistent authentication state
 

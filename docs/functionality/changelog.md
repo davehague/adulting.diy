@@ -2,6 +2,13 @@
 
 ## 2026-10-04
 
+### Home Projects (slice 3a): providers on a project
+- A project can have providers from the household directory linked to it, each with its own status for that project: Considering, Contacted, Chosen or Passed
+- Finding a provider starts from a category saved on the project, so the list shows only that kind of provider, most-mentioned first; a switcher reaches other categories
+- Each linked provider shows a tap-to-call phone number and its neighbor recommendation count
+- A project's card shows who has been chosen
+- A provider's page lists the projects it is linked to, with the status on each
+
 ### Fixes to schedules, reminders and household permissions
 - Tasks set to end "after N times" now get all N occurrences; they used to stop one short. A task that stopped early will get its missing occurrence
 - Annual Variable tasks now schedule the next occurrence a year after the task was actually completed or skipped, as intended, instead of a year after the due date
