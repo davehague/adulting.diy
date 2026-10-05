@@ -2,6 +2,7 @@ import { type Prisma } from '@prisma/client';
 import prisma from '@/server/utils/prisma/client';
 import { HttpError } from '@/server/utils/api-errors';
 import { stepOrder, stepSelect } from '@/server/services/ProjectStepService';
+import { linkOrder, linkSelect, toProviderLinks, visibleLinkWhere } from '@/server/services/ProjectProviderService';
 import {
   DEFAULT_LIST_STATUSES,
   type ProjectCreateInput,
@@ -21,6 +22,7 @@ const detailInclude = {
     select: { id: true, width: true, height: true, position: true },
   },
   steps: { orderBy: stepOrder, select: stepSelect },
+  providers: { where: visibleLinkWhere, orderBy: linkOrder, select: linkSelect },
 } satisfies Prisma.ProjectInclude;
 
 type ProjectWithPhotos = Prisma.ProjectGetPayload<{ include: typeof detailInclude }>;
@@ -34,8 +36,10 @@ const toDetail = (project: ProjectWithPhotos): ProjectDetail => ({
   notes: project.notes,
   completedAt: project.completedAt,
   createdAt: project.createdAt,
+  providerCategoryId: project.providerCategoryId,
   photos: project.photos,
   steps: project.steps,
+  providers: toProviderLinks(project.providers),
 });
 
 export class ProjectService {
@@ -48,7 +52,14 @@ export class ProjectService {
     const rows = await prisma.project.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: { photos: { orderBy: { position: 'asc' }, select: { id: true } } },
+      include: {
+        photos: { orderBy: { position: 'asc' }, select: { id: true } },
+        providers: {
+          where: { status: 'chosen', ...visibleLinkWhere },
+          orderBy: linkOrder,
+          select: { provider: { select: { name: true } } },
+        },
+      },
     });
 
     // Array.prototype.sort is stable, so newest-first from the query survives within each status.
@@ -63,6 +74,7 @@ export class ProjectService {
         photoCount: project.photos.length,
         coverPhotoId: project.photos[0]?.id ?? null,
         photoIds: project.photos.map((photo) => photo.id),
+        chosenProviderNames: project.providers.map((link) => link.provider.name),
       }));
   }
 
@@ -85,11 +97,21 @@ export class ProjectService {
 
   async update(householdId: string, id: string, input: ProjectUpdateInput): Promise<ProjectDetail> {
     const existing = await this.requireProject(householdId, id);
-    const data: Prisma.ProjectUpdateInput = {};
+    const data: Prisma.ProjectUncheckedUpdateInput = {};
     if (input.title !== undefined) data.title = input.title;
     if (input.location !== undefined) data.location = input.location;
     if (input.path !== undefined) data.path = input.path;
     if (input.notes !== undefined) data.notes = input.notes;
+    if (input.providerCategoryId !== undefined) {
+      if (input.providerCategoryId !== null) {
+        const category = await prisma.providerCategory.findFirst({
+          where: { id: input.providerCategoryId, householdId },
+          select: { id: true },
+        });
+        if (!category) throw new HttpError('Unknown provider category', 400);
+      }
+      data.providerCategoryId = input.providerCategoryId;
+    }
     if (input.status !== undefined) {
       data.status = input.status;
       if (input.status !== 'done') data.completedAt = null;

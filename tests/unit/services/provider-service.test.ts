@@ -122,3 +122,35 @@ describe('ProviderService.softDelete', () => {
     await expect(service.softDelete('h1', 'p1')).rejects.toMatchObject({ statusCode: 404 })
   })
 })
+
+describe('ProviderService.findById projects', () => {
+  let service: ProviderService
+  beforeEach(() => { service = new ProviderService(); vi.clearAllMocks() })
+
+  const detailRow = (over: Record<string, unknown> = {}) => ({
+    ...row({ id: 'pr1' }), contacts: [], comments: [], tasks: [], projects: [], ...over,
+  })
+
+  it('asks for links to projects that are not deleted, newest link first', async () => {
+    db.provider.findFirst.mockResolvedValue(detailRow())
+    await service.findById('h1', 'pr1')
+    expect(db.provider.findFirst.mock.calls[0][0].include.projects).toEqual({
+      where: { project: { metaStatus: 'active' } },
+      orderBy: { createdAt: 'desc' },
+      select: { status: true, project: { select: { id: true, title: true, status: true } } },
+    })
+  })
+
+  it('returns the linked projects with each link status', async () => {
+    const projects = [{ status: 'chosen', project: { id: 'p1', title: 'Deck', status: 'done' } }]
+    db.provider.findFirst.mockResolvedValue(detailRow({ projects }))
+    const detail = await service.findById('h1', 'pr1')
+    expect(detail.projects).toEqual(projects)
+  })
+
+  it('still scopes the provider to the household and hides removed ones', async () => {
+    db.provider.findFirst.mockResolvedValue(null)
+    await expect(service.findById('h1', 'pr1')).rejects.toMatchObject({ statusCode: 404 })
+    expect(db.provider.findFirst.mock.calls[0][0].where).toEqual({ id: 'pr1', householdId: 'h1', metaStatus: 'active' })
+  })
+})

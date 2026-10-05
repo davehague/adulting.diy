@@ -90,6 +90,8 @@ export interface ProjectListItem {
   photoCount: number;
   coverPhotoId: string | null;
   photoIds: string[];
+  // names of the providers marked chosen on this project, in the order they were linked
+  chosenProviderNames: string[];
 }
 
 export interface ProjectDetail {
@@ -101,8 +103,11 @@ export interface ProjectDetail {
   notes: string | null;
   completedAt: Date | string | null;
   createdAt: Date | string;
+  // the kind of provider this project needs; null means not chosen yet
+  providerCategoryId: string | null;
   photos: ProjectPhotoDto[];
   steps: ProjectStepDto[];
+  providers: ProjectProviderDto[];
 }
 
 export interface ProjectCreateInput {

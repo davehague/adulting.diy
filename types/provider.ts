@@ -1,3 +1,4 @@
+import { type ProjectProviderStatus, type ProjectStatus } from '@/types/project';
 export type ProviderStatusKind = 'neutral' | 'positive' | 'negative';
 export type EvidenceKind = 'third_party' | 'self_promo' | 'lead';
 
@@ -142,6 +143,7 @@ export interface ProviderDetail {
   evidence: ProviderEvidenceDto[];
   comments: ProviderCommentDto[];
   tasks: { taskId: string; providerId: string; task: { id: string; name: string } }[];
+  projects: { status: ProjectProviderStatus; project: { id: string; title: string; status: ProjectStatus } }[];
   mentionCount: number;
   neighborCount: number;
   lastSightingAt: string | null;

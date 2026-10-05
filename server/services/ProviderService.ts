@@ -89,6 +89,12 @@ export class ProviderService {
           include: { author: { select: { id: true, name: true, picture: true } } },
         },
         tasks: { include: { task: { select: { id: true, name: true } } } },
+        // Links to deleted projects are kept but not shown.
+        projects: {
+          where: { project: { metaStatus: 'active' } },
+          orderBy: { createdAt: 'desc' },
+          select: { status: true, project: { select: { id: true, title: true, status: true } } },
+        },
       },
     });
     if (!provider) throw new HttpError('Provider not found', 404);

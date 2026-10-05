@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('@/server/utils/prisma/client', () => ({
   default: {
     project: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
+    providerCategory: { findFirst: vi.fn() },
   },
 }))
 
@@ -24,6 +25,8 @@ const row = (overrides: Record<string, unknown> = {}) => ({
   createdAt: new Date('2026-10-01T00:00:00Z'),
   photos: [],
   steps: [],
+  providerCategoryId: null,
+  providers: [],
   ...overrides,
 })
 
@@ -198,6 +201,92 @@ describe('ProjectService', () => {
       const args = db.project.findMany.mock.calls[0][0]
       expect(args.where).toEqual({ householdId: 'h1', metaStatus: 'active', location: { not: null } })
       expect(args.distinct).toEqual(['location'])
+    })
+  })
+
+  describe('providers on a project', () => {
+    const chosen = (name: string) => ({ provider: { name } })
+    const linkRow = (providerId: string, status: string) => ({
+      providerId, status, provider: { id: providerId, name: `Provider ${providerId}`, phone: null, evidence: [] },
+    })
+
+    it('list asks only for chosen links of providers that are not removed, oldest first', async () => {
+      db.project.findMany.mockResolvedValue([])
+      await service.list('h1', {})
+      expect(db.project.findMany.mock.calls[0][0].include.providers).toEqual({
+        where: { status: 'chosen', provider: { metaStatus: 'active' } },
+        orderBy: { createdAt: 'asc' },
+        select: { provider: { select: { name: true } } },
+      })
+    })
+
+    it('list reports chosen provider names in order, and an empty list when there are none', async () => {
+      db.project.findMany.mockResolvedValue([
+        row({ providers: [chosen('Acme Plumbing'), chosen('Tile Co')] }),
+        row({ id: 'p2' }),
+      ])
+      const [withChosen, without] = await service.list('h1', {})
+      expect(withChosen.chosenProviderNames).toEqual(['Acme Plumbing', 'Tile Co'])
+      expect(without.chosenProviderNames).toEqual([])
+    })
+
+    it('get asks only for links of providers that are not removed, oldest first', async () => {
+      db.project.findFirst.mockResolvedValue(row())
+      await service.get('h1', 'p1')
+      const providers = db.project.findFirst.mock.calls[0][0].include.providers
+      expect(providers.where).toEqual({ provider: { metaStatus: 'active' } })
+      expect(providers.orderBy).toEqual({ createdAt: 'asc' })
+    })
+
+    it('get carries the saved category and the links sorted by status', async () => {
+      db.project.findFirst.mockResolvedValue(row({
+        providerCategoryId: 'c1',
+        providers: [linkRow('a', 'considering'), linkRow('b', 'chosen')],
+      }))
+      const detail = await service.get('h1', 'p1')
+      expect(detail.providerCategoryId).toBe('c1')
+      expect(detail.providers.map((l) => l.providerId)).toEqual(['b', 'a'])
+    })
+
+    it('get reports no category and no links on a project that has neither', async () => {
+      db.project.findFirst.mockResolvedValue(row())
+      const detail = await service.get('h1', 'p1')
+      expect(detail.providerCategoryId).toBeNull()
+      expect(detail.providers).toEqual([])
+    })
+
+    it('update saves a category that belongs to the household', async () => {
+      db.project.findFirst.mockResolvedValue(row())
+      db.providerCategory.findFirst.mockResolvedValue({ id: 'c1' })
+      db.project.update.mockResolvedValue(row({ providerCategoryId: 'c1' }))
+      const detail = await service.update('h1', 'p1', { providerCategoryId: 'c1' })
+      expect(db.providerCategory.findFirst.mock.calls[0][0].where).toEqual({ id: 'c1', householdId: 'h1' })
+      expect(db.project.update.mock.calls[0][0].data).toEqual({ providerCategoryId: 'c1' })
+      expect(detail.providerCategoryId).toBe('c1')
+    })
+
+    it('update rejects a category from another household with 400 and writes nothing', async () => {
+      db.project.findFirst.mockResolvedValue(row())
+      db.providerCategory.findFirst.mockResolvedValue(null)
+      await expect(service.update('h1', 'p1', { providerCategoryId: 'theirs' })).rejects.toMatchObject({
+        statusCode: 400, message: 'Unknown provider category',
+      })
+      expect(db.project.update).not.toHaveBeenCalled()
+    })
+
+    it('update clears the category without looking one up', async () => {
+      db.project.findFirst.mockResolvedValue(row({ providerCategoryId: 'c1' }))
+      db.project.update.mockResolvedValue(row())
+      await service.update('h1', 'p1', { providerCategoryId: null })
+      expect(db.providerCategory.findFirst).not.toHaveBeenCalled()
+      expect(db.project.update.mock.calls[0][0].data).toEqual({ providerCategoryId: null })
+    })
+
+    it('update leaves the category alone when it is not sent', async () => {
+      db.project.findFirst.mockResolvedValue(row())
+      db.project.update.mockResolvedValue(row({ title: 'New' }))
+      await service.update('h1', 'p1', { title: 'New' })
+      expect('providerCategoryId' in db.project.update.mock.calls[0][0].data).toBe(false)
     })
   })
 })

@@ -7,6 +7,7 @@ vi.mock('@/server/utils/prisma/client', () => ({
       update: vi.fn(), delete: vi.fn(), aggregate: vi.fn(),
     },
     provider: { count: vi.fn(), updateMany: vi.fn() },
+    project: { updateMany: vi.fn() },
     $transaction: vi.fn(),
   },
 }))
@@ -17,6 +18,7 @@ import { ProviderCategoryService } from '@/server/services/ProviderCategoryServi
 const db = prisma as unknown as {
   providerCategory: Record<string, ReturnType<typeof vi.fn>>
   provider: Record<string, ReturnType<typeof vi.fn>>
+  project: Record<string, ReturnType<typeof vi.fn>>
   $transaction: ReturnType<typeof vi.fn>
 }
 
@@ -58,6 +60,28 @@ describe('ProviderCategoryService', () => {
     expect(db.providerCategory.delete).toHaveBeenCalledWith({ where: { id: 'c1' } })
     expect(db.provider.updateMany.mock.invocationCallOrder[0])
       .toBeLessThan(db.providerCategory.delete.mock.invocationCallOrder[0])
+  })
+
+  it('moves projects saved with the category to the replacement, before the delete', async () => {
+    db.providerCategory.findFirst
+      .mockResolvedValueOnce({ id: 'c1', householdId: 'h1' })
+      .mockResolvedValueOnce({ id: 'c2', householdId: 'h1' })
+    db.provider.count.mockResolvedValue(3)
+    await service.remove('h1', 'c1', 'c2')
+    expect(db.project.updateMany).toHaveBeenCalledWith({
+      where: { householdId: 'h1', providerCategoryId: 'c1' },
+      data: { providerCategoryId: 'c2' },
+    })
+    expect(db.project.updateMany.mock.invocationCallOrder[0])
+      .toBeLessThan(db.providerCategory.delete.mock.invocationCallOrder[0])
+  })
+
+  it('does not touch projects when no provider uses the category (the foreign key clears them)', async () => {
+    db.providerCategory.findFirst.mockResolvedValue({ id: 'c1', householdId: 'h1' })
+    db.provider.count.mockResolvedValue(0)
+    await service.remove('h1', 'c1')
+    expect(db.project.updateMany).not.toHaveBeenCalled()
+    expect(db.providerCategory.delete).toHaveBeenCalledWith({ where: { id: 'c1' } })
   })
 
   it('404s when the category belongs to another household', async () => {

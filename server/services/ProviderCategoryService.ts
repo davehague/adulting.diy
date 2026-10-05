@@ -37,7 +37,9 @@ export class ProviderCategoryService {
 
   /**
    * Delete a category. If providers use it, moveToId must name another category
-   * in the same household; providers are reassigned first.
+   * in the same household; providers, and projects saved with the category, are
+   * reassigned first. A category no provider uses is simply deleted, and the
+   * foreign key clears it from any project saved with it.
    */
   async remove(householdId: string, id: string, moveToId?: string) {
     await this.requireOwned(householdId, id);
@@ -54,6 +56,10 @@ export class ProviderCategoryService {
         prisma.provider.updateMany({
           where: { householdId, categoryId: id },
           data: { categoryId: moveToId },
+        }),
+        prisma.project.updateMany({
+          where: { householdId, providerCategoryId: id },
+          data: { providerCategoryId: moveToId },
         }),
         prisma.providerCategory.delete({ where: { id } }),
       ]);
