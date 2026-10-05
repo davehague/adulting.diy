@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildRoutingPrompt, buildPickingPrompt, type PoolProvider } from '@/server/utils/suggestion-prompts'
+import { buildRoutingPrompt, buildPickingPrompt, redactContactDetails, type PoolProvider } from '@/server/utils/suggestion-prompts'
 
 const project = { title: 'Water stain on ceiling', location: 'Dining room', notes: 'Under the upstairs bath.', extra: null }
 
@@ -65,5 +65,62 @@ describe('buildPickingPrompt', () => {
   it('sends exactly the agreed provider fields and no database id', () => {
     expect(Object.keys(sent.parts[0].pool[0]).sort()).toEqual(['comments', 'evidence', 'id', 'name', 'notes', 'rating', 'status', 'statusKind'])
     expect(built.user).not.toContain('uuid-')
+  })
+})
+
+describe('redactContactDetails', () => {
+  it.each(['614-555-0101', '(614) 555-0101', '614.555.0101', '+1 614 555 0101', '6145550101'])('masks the phone number %s', (phone) => {
+    expect(redactContactDetails(`Call ${phone} today`)).toBe('Call [phone] today')
+  })
+  it('masks an email address', () => {
+    expect(redactContactDetails('write to owner@example.com now')).toBe('write to [email] now')
+  })
+  it.each(['https://www.facebook.com/groups/123/posts/456', 'http://x.co/a', 'www.acme-plumbing.com'])('masks the link %s', (link) => {
+    expect(redactContactDetails(`see ${link} for more`)).toBe('see [link] for more')
+  })
+  it.each(['2026-01-10', 'rated 4/5 in 2024', 'quoted $1,200 for 3 days', 'house built in 1952', 'Call Tom on Main St'])('leaves "%s" unchanged', (text) => {
+    expect(redactContactDetails(text)).toBe(text)
+  })
+})
+
+describe('contact details in free text', () => {
+  const dirty = 'ring 614-555-0101 or owner@example.com or see https://www.facebook.com/groups/123/posts/456'
+  const literals = ['614-555-0101', 'owner@example.com', 'facebook.com']
+  const expectMasked = (user: string) => {
+    for (const literal of literals) expect(user).not.toContain(literal)
+    for (const mask of ['[phone]', '[email]', '[link]']) expect(user).toContain(mask)
+  }
+
+  it('masks the snippet, notes and comments of a pool provider', () => {
+    const pool = [provider('uuid-a', {
+      notes: dirty,
+      comments: [dirty],
+      evidence: [{ kind: 'third_party', sourceDate: null, snippet: dirty }],
+    })]
+    const sent = JSON.parse(buildPickingPrompt(project, [{ partIndex: 0, name: 'n', categoryName: 'c', pool }], '2026-10-05').user)
+    const sentProvider = sent.parts[0].pool[0]
+    for (const field of [sentProvider.notes, sentProvider.comments[0], sentProvider.evidence[0].snippet]) expectMasked(field)
+  })
+  it('masks the project title, location, notes and extra in the picking prompt', () => {
+    const text = { title: dirty, location: dirty, notes: dirty, extra: dirty }
+    const sent = JSON.parse(buildPickingPrompt(text, [], '2026-10-05').user)
+    for (const field of Object.values(sent.project) as string[]) expectMasked(field)
+  })
+  it('masks the project title, notes and extra in the routing prompt', () => {
+    const text = { title: dirty, location: dirty, notes: dirty, extra: dirty }
+    const sent = JSON.parse(buildRoutingPrompt(text, [], '2026-10-05').user)
+    for (const field of Object.values(sent.project) as string[]) expectMasked(field)
+  })
+  it('still cuts a long snippet to 600 characters after masking', () => {
+    const snippet = `${'x'.repeat(690)} call 614-555-0101`
+    const pool = [provider('uuid-a', { evidence: [{ kind: 'third_party', sourceDate: null, snippet }] })]
+    const sent = JSON.parse(buildPickingPrompt(project, [{ partIndex: 0, name: 'n', categoryName: 'c', pool }], '2026-10-05').user)
+    expect(sent.parts[0].pool[0].evidence[0].snippet).toHaveLength(600)
+  })
+  it('masks a phone number that sits inside the first 600 characters of a long snippet', () => {
+    const snippet = `call 614-555-0101 ${'x'.repeat(700)}`
+    const pool = [provider('uuid-a', { evidence: [{ kind: 'third_party', sourceDate: null, snippet }] })]
+    const sent = JSON.parse(buildPickingPrompt(project, [{ partIndex: 0, name: 'n', categoryName: 'c', pool }], '2026-10-05').user)
+    expect(sent.parts[0].pool[0].evidence[0].snippet.startsWith('call [phone] ')).toBe(true)
   })
 })

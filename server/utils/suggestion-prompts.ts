@@ -61,11 +61,20 @@ Reply with one JSON object and nothing else: no prose before or after, no markdo
 {"parts": [{"partIndex": 0, "picks": [{"providerId": "p1", "reason": "..."}]}]}
 Include every part, in order. A part with no picks has "picks": [].`;
 
+const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+const LINK = /\b(?:https?:\/\/|www\.)\S+/gi;
+// North American numbers in a 3-3-4 grouping, with or without a country code. A date such as 2026-01-10 does not match.
+const PHONE = /(?:\+?1[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}\b/g;
+
+// Free text is other people's writing and the household's own notes; contact details inside it are never sent to the model.
+export const redactContactDetails = (text: string): string =>
+  text.replace(EMAIL, '[email]').replace(LINK, '[link]').replace(PHONE, '[phone]');
+
 const projectPayload = (project: ProjectText) => ({
-  title: project.title,
-  location: project.location ?? '',
-  notes: project.notes ?? '',
-  extra: project.extra ?? '',
+  title: redactContactDetails(project.title),
+  location: redactContactDetails(project.location ?? ''),
+  notes: redactContactDetails(project.notes ?? ''),
+  extra: redactContactDetails(project.extra ?? ''),
 });
 
 export const buildRoutingPrompt = (
@@ -95,7 +104,7 @@ const evidencePayload = (evidence: PoolProvider['evidence']) =>
     .map((row) => ({
       kind: row.kind,
       date: row.sourceDate ? row.sourceDate.toISOString().slice(0, 10) : null,
-      snippet: (row.snippet ?? '').slice(0, MAX_SNIPPET_LENGTH),
+      snippet: redactContactDetails(row.snippet ?? '').slice(0, MAX_SNIPPET_LENGTH),
     }));
 
 export const buildPickingPrompt = (
@@ -124,8 +133,10 @@ export const buildPickingPrompt = (
           status: provider.statusName,
           statusKind: provider.statusKind,
           rating: provider.rating,
-          notes: provider.notes ? provider.notes.slice(0, MAX_PROVIDER_NOTES_LENGTH) : null,
-          comments: provider.comments.slice(0, MAX_COMMENTS_PER_PROVIDER).map((body) => body.slice(0, MAX_SNIPPET_LENGTH)),
+          notes: provider.notes ? redactContactDetails(provider.notes).slice(0, MAX_PROVIDER_NOTES_LENGTH) : null,
+          comments: provider.comments
+            .slice(0, MAX_COMMENTS_PER_PROVIDER)
+            .map((body) => redactContactDetails(body).slice(0, MAX_SNIPPET_LENGTH)),
           evidence: evidencePayload(provider.evidence),
         };
       }),
