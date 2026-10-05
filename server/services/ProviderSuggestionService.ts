@@ -3,7 +3,7 @@ import { type z } from 'zod';
 import prisma from '@/server/utils/prisma/client';
 import { HttpError } from '@/server/utils/api-errors';
 import { suggestionModel, suggestionsEnabledFor } from '@/server/utils/ai-config';
-import { callOllama, type ModelCall } from '@/server/utils/ollama';
+import { callOllama, ModelCallError, type ModelCall } from '@/server/utils/ollama';
 import { fallbackProviders, rankProviders } from '@/server/utils/provider-ranking';
 import { checkPicks, cleanParts } from '@/server/utils/suggestion-checks';
 import {
@@ -74,10 +74,24 @@ interface Usage {
   outputTokens: number;
   // false until the service reports a count at least once
   reported: boolean;
+  // Sizes only, for the one numbers-only log line per ask. 0 until that prompt is built.
+  routingChars: number;
+  pickingChars: number;
+  // pool size of each part, in order
+  poolSizes: number[];
 }
 
 // An expected failure with a message that is safe to log: it never carries prompt or reply text.
 class SuggestionError extends Error {}
+
+// What to log for a failed ask. Only this feature's own errors have messages that are safe to log; for any other error, its message could carry prompt text, so only its kind (and a code, which is a fixed value such as Prisma's P2002) is used.
+const describeError = (error: unknown): string => {
+  if (error instanceof SuggestionError || error instanceof ModelCallError) return error.message;
+  if (!(error instanceof Error)) return 'unknown';
+  return 'code' in error && typeof error.code === 'string' ? `${error.name} ${error.code}` : error.name;
+};
+
+const promptChars = (prompt: { system: string; user: string }): number => prompt.system.length + prompt.user.length;
 
 const toPoolProvider = (row: PoolRow): PoolProvider => ({
   id: row.id,
@@ -121,7 +135,7 @@ export class ProviderSuggestionService {
       select: { id: true },
     });
 
-    const usage: Usage = { promptTokens: 0, outputTokens: 0, reported: false };
+    const usage: Usage = { promptTokens: 0, outputTokens: 0, reported: false, routingChars: 0, pickingChars: 0, poolSizes: [] };
     let status: SuggestionRunStatus;
     try {
       const result = await this.generate(householdId, project, extraText, model, startedAt + SUGGESTION_DEADLINE_MS, usage);
@@ -133,13 +147,16 @@ export class ProviderSuggestionService {
       });
       status = result.tooVague ? 'too_vague' : 'ok';
     } catch (error) {
-      // Only the error's kind or our own fixed message is logged; a raw error could carry prompt text.
-      const detail = error instanceof SuggestionError ? error.message : error instanceof Error ? error.name : 'unknown';
-      console.error(`[suggestions] ask failed: ${detail}`);
+      console.error(`[suggestions] ask failed: ${describeError(error)}`);
       status = 'failed';
     }
 
-    await this.finishLog(log.id, status, this.now() - startedAt, usage);
+    const durationMs = this.now() - startedAt;
+    // Numbers and the status word only, so a first failure (a slow, oversized prompt, say) can be read from the platform logs.
+    console.info(
+      `[suggestions] ${status} in ${durationMs} ms; routing ${usage.routingChars} chars; picking ${usage.pickingChars} chars; pools ${usage.poolSizes.join(',') || '-'}`,
+    );
+    await this.finishLog(log.id, status, durationMs, usage);
     return {
       status,
       limitReached: used + 1 >= DAILY_SUGGESTION_LIMIT,
@@ -166,6 +183,7 @@ export class ProviderSuggestionService {
     });
 
     const routingPrompt = buildRoutingPrompt(text, categories, today);
+    usage.routingChars = promptChars(routingPrompt);
     const routing = await this.askJson(routingPrompt, routingReplySchema, model, deadline, usage);
     const parts = cleanParts(routing.parts, routingPrompt.categoryIdByLabel);
     if (routing.tooVague || parts.length === 0) return { tooVague: true, parts: [] };
@@ -174,6 +192,7 @@ export class ProviderSuggestionService {
     const pools = await this.loadPools(householdId, project.id, categoryIds);
     const nameOf = new Map(categories.map((category) => [category.id, category.name]));
     const poolOf = (categoryId: string | null): PoolProvider[] => (categoryId ? pools.get(categoryId) ?? [] : []);
+    usage.poolSizes = parts.map((part) => poolOf(part.categoryId).length);
 
     const pickingParts: PickingPart[] = parts.flatMap((part, partIndex) => {
       const pool = poolOf(part.categoryId);
@@ -184,6 +203,7 @@ export class ProviderSuggestionService {
     let picks = new Map<number, SavedSuggestionPick[]>();
     if (pickingParts.length > 0) {
       const pickingPrompt = buildPickingPrompt(text, pickingParts, today);
+      usage.pickingChars = promptChars(pickingPrompt);
       const picking = await this.askJson(pickingPrompt, pickingReplySchema, model, deadline, usage);
       picks = checkPicks(picking.parts, pickingPrompt.providerIdByLabel, pickingPrompt.labelsByPart);
     }

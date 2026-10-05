@@ -30,6 +30,16 @@ describe('suggestionsEnabledFor', () => {
     vi.stubEnv('AI_SUGGESTIONS_HOUSEHOLD_IDS', '')
     expect(suggestionsEnabledFor('h1')).toBe(false)
   })
+  it('is off when the key is only whitespace, even for a listed household', () => {
+    vi.stubEnv('OLLAMA_API_KEY', ' \n')
+    vi.stubEnv('AI_SUGGESTIONS_HOUSEHOLD_IDS', 'h1')
+    expect(suggestionsEnabledFor('h1')).toBe(false)
+  })
+  it('is on when the key has a trailing newline around real text', () => {
+    vi.stubEnv('OLLAMA_API_KEY', 'k\n')
+    vi.stubEnv('AI_SUGGESTIONS_HOUSEHOLD_IDS', 'h1')
+    expect(suggestionsEnabledFor('h1')).toBe(true)
+  })
   it('is off when the key is unset, even for a listed household', () => {
     vi.stubEnv('OLLAMA_API_KEY', '')
     vi.stubEnv('AI_SUGGESTIONS_HOUSEHOLD_IDS', 'h1')

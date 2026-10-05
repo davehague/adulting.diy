@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { callOllama } from '@/server/utils/ollama'
+import { callOllama, ModelCallError } from '@/server/utils/ollama'
 
 const fetchMock = vi.fn()
 const input = { model: 'glm-5.3-flash', system: 'sys', user: 'usr', timeoutMs: 5000 }
@@ -46,6 +46,46 @@ describe('callOllama', () => {
   it('throws when the reply has no content', async () => {
     respond({ message: { content: '   ' } })
     await expect(callOllama(input)).rejects.toThrow('Ollama returned no content')
+  })
+
+  it('throws a ModelCallError carrying only the status for a 404', async () => {
+    respond({ error: 'model "secret-model" not found' }, false, 404)
+    const error = await callOllama(input).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ModelCallError)
+    expect((error as Error).message).toBe('Ollama returned HTTP 404')
+  })
+
+  it('throws a fixed message, without quoting the body, when a 200 reply is not JSON', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw new SyntaxError('Unexpected token S in JSON at position 0: SECRET BODY TEXT')
+      },
+    })
+    const error = await callOllama(input).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ModelCallError)
+    expect((error as Error).message).toBe('Ollama reply was not JSON')
+  })
+
+  it('throws a ModelCallError when the reply has no content', async () => {
+    respond({ message: {} })
+    await expect(callOllama(input)).rejects.toBeInstanceOf(ModelCallError)
+  })
+
+  it('trims the key before using it as the bearer token', async () => {
+    vi.stubEnv('OLLAMA_API_KEY', '  secret-key\n')
+    respond({ message: { content: 'x' } })
+    await callOllama(input)
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer secret-key')
+  })
+
+  it('treats a key that is only whitespace as unset', async () => {
+    vi.stubEnv('OLLAMA_API_KEY', ' \n ')
+    const error = await callOllama(input).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(ModelCallError)
+    expect((error as Error).message).toBe('OLLAMA_API_KEY is not set')
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('throws before calling out when the key is unset', async () => {

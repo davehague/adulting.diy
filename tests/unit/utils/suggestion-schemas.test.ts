@@ -35,6 +35,21 @@ describe('routingReplySchema', () => {
   it('rejects a missing tooVague', () => {
     expect(routingReplySchema.safeParse({ parts: [] }).success).toBe(false)
   })
+  it('accepts a too-vague reply that leaves out parts', () => {
+    const result = routingReplySchema.safeParse({ tooVague: true })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data).toEqual({ tooVague: true, parts: [] })
+  })
+  it('turns a part with no categoryId into a null category', () => {
+    const { categoryId: _omitted, ...withoutCategory } = part
+    const result = routingReplySchema.safeParse({ tooVague: false, parts: [withoutCategory] })
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data.parts[0].categoryId).toBeNull()
+  })
+  it('still rejects parts without tooVague, even when parts is empty', () => {
+    expect(routingReplySchema.safeParse({ parts: [] }).success).toBe(false)
+    expect(routingReplySchema.safeParse({ parts: [part] }).success).toBe(false)
+  })
 })
 
 describe('pickingReplySchema', () => {

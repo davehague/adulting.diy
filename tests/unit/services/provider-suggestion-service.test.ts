@@ -12,6 +12,7 @@ vi.mock('@/server/utils/prisma/client', () => ({
 
 import prisma from '@/server/utils/prisma/client'
 import { ProviderSuggestionService } from '@/server/services/ProviderSuggestionService'
+import { callOllama, ModelCallError } from '@/server/utils/ollama'
 
 const db = prisma as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>
 
@@ -47,6 +48,7 @@ let fallbackRows: unknown[]
 beforeEach(() => {
   vi.clearAllMocks()
   vi.spyOn(console, 'error').mockImplementation(() => {})
+  vi.spyOn(console, 'info').mockImplementation(() => {})
   vi.stubEnv('OLLAMA_API_KEY', 'k')
   vi.stubEnv('AI_SUGGESTIONS_HOUSEHOLD_IDS', 'h1')
   vi.stubEnv('AI_SUGGESTIONS_MODEL', '')
@@ -264,6 +266,21 @@ describe('run', () => {
     expect(db.aiRequestLog.update.mock.calls[0][0].data.outcome).toBe('too_vague')
   })
 
+  it('saves too_vague after one call when the reply is only {"tooVague": true}', async () => {
+    model.mockResolvedValueOnce(reply({ tooVague: true }))
+    const response = await service.run('h1', 'u1', 'p1', null)
+    expect(response.status).toBe('too_vague')
+    expect(model).toHaveBeenCalledTimes(1)
+    expect(savedArgs().create.result).toEqual({ tooVague: true, parts: [] })
+    expect(db.aiRequestLog.update.mock.calls[0][0].data.outcome).toBe('too_vague')
+  })
+
+  it('keeps a part whose categoryId was left out, as a part with no matching category', async () => {
+    model.mockResolvedValueOnce(reply({ tooVague: false, parts: [{ name: 'Rebuild the chimney', why: 'Masonry.', searchPhrase: 'chimney mason near me' }] }))
+    expect((await service.run('h1', 'u1', 'p1', null)).status).toBe('ok')
+    expect(savedArgs().create.result.parts[0]).toMatchObject({ categoryId: null, poolSize: 0, picks: [] })
+  })
+
   it('treats a reply with no parts as too vague', async () => {
     model.mockResolvedValueOnce(reply({ tooVague: false, parts: [] }))
     expect((await service.run('h1', 'u1', 'p1', null)).status).toBe('too_vague')
@@ -387,5 +404,78 @@ describe('run', () => {
     const logged = vi.mocked(console.error).mock.calls.flat().join(' ')
     expect(logged).not.toContain('SECRET')
     expect(logged).not.toContain('Water stain')
+  })
+})
+
+describe('diagnosing a failed ask without logging any text', () => {
+  const errorLog = () => vi.mocked(console.error).mock.calls.flat().join(' ')
+  const infoLog = () => vi.mocked(console.info).mock.calls.flat().join(' ')
+
+  it('logs the status when Ollama answers 404', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({ error: 'SECRET body' }) }))
+    try {
+      const real = new ProviderSuggestionService(callOllama, () => clock)
+      expect((await real.run('h1', 'u1', 'p1', 'SECRET EXTRA')).status).toBe('failed')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+    expect(errorLog()).toContain('Ollama returned HTTP 404')
+    expect(errorLog()).not.toContain('SECRET')
+    expect(errorLog()).not.toContain('Bearer')
+  })
+
+  it('logs the fixed text of a ModelCallError', async () => {
+    model.mockRejectedValue(new ModelCallError('Ollama reply was not JSON'))
+    await service.run('h1', 'u1', 'p1', null)
+    expect(errorLog()).toContain('Ollama reply was not JSON')
+  })
+
+  it('logs only the name of another error type, never its message', async () => {
+    model.mockRejectedValue(new TypeError('SECRET invalid header value Bearer abc'))
+    await service.run('h1', 'u1', 'p1', null)
+    expect(errorLog()).toContain('TypeError')
+    expect(errorLog()).not.toContain('SECRET')
+    expect(errorLog()).not.toContain('Bearer')
+  })
+
+  it('logs the name and string code of a database error, never its message', async () => {
+    model.mockResolvedValueOnce(reply(routingOk)).mockResolvedValueOnce(reply(pickingOk))
+    db.projectSuggestion.upsert.mockRejectedValue(Object.assign(new Error('SECRET ROW DATA'), { name: 'PrismaClientKnownRequestError', code: 'P2021' }))
+    await service.run('h1', 'u1', 'p1', null)
+    expect(errorLog()).toContain('PrismaClientKnownRequestError P2021')
+    expect(errorLog()).not.toContain('SECRET')
+  })
+
+  it('ignores a code that is not a string', async () => {
+    model.mockRejectedValue(Object.assign(new Error('SECRET'), { code: { nested: 'SECRET' } }))
+    await service.run('h1', 'u1', 'p1', null)
+    expect(errorLog()).not.toContain('SECRET')
+  })
+
+  it('logs one line of numbers per ask: status, time, prompt sizes and pool sizes', async () => {
+    model.mockResolvedValueOnce(reply(routingOk)).mockResolvedValueOnce(reply(pickingOk))
+    await service.run('h1', 'u1', 'p1', 'SECRET EXTRA')
+    const routingChars = model.mock.calls[0][0].system.length + model.mock.calls[0][0].user.length
+    const pickingChars = model.mock.calls[1][0].system.length + model.mock.calls[1][0].user.length
+    expect(vi.mocked(console.info).mock.calls).toEqual([[`[suggestions] ok in 0 ms; routing ${routingChars} chars; picking ${pickingChars} chars; pools 2`]])
+    expect(infoLog()).not.toContain('SECRET')
+  })
+
+  it('logs the line for a failed ask too, with 0 for a prompt that was never built', async () => {
+    db.providerCategory.findMany.mockRejectedValue(new Error('db down'))
+    await service.run('h1', 'u1', 'p1', null)
+    expect(vi.mocked(console.info).mock.calls).toEqual([['[suggestions] failed in 0 ms; routing 0 chars; picking 0 chars; pools -']])
+  })
+
+  it('lists the pool size of every part, including a part with no category', async () => {
+    model.mockResolvedValueOnce(reply({
+      tooVague: false,
+      parts: [
+        { name: 'Fix the leak', categoryId: 'c1', why: 'It leaks.', searchPhrase: 'leak plumber' },
+        { name: 'Rebuild the chimney', categoryId: null, why: 'Masonry.', searchPhrase: 'chimney mason' },
+      ],
+    })).mockResolvedValueOnce(reply({ parts: [{ partIndex: 0, picks: [] }] }))
+    await service.run('h1', 'u1', 'p1', null)
+    expect(infoLog()).toMatch(/pools 2,0$/)
   })
 })

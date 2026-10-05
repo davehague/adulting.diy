@@ -16,16 +16,22 @@ export const parseModelJson = (text: string): unknown => {
 
 const shortText = (max: number) => z.string().trim().min(1).max(max);
 
+// A too-vague reply may leave out `parts` (the prompt says "return no parts"), and a part may leave out a null `categoryId`.
 export const routingReplySchema = z.object({
   tooVague: z.boolean(),
-  parts: z.array(
-    z.object({
-      name: shortText(100),
-      categoryId: z.string().nullable(),
-      why: shortText(500),
-      searchPhrase: shortText(150),
-    }),
-  ),
+  parts: z
+    .array(
+      z.object({
+        name: shortText(100),
+        categoryId: z
+          .string()
+          .nullish()
+          .transform((value) => value ?? null),
+        why: shortText(500),
+        searchPhrase: shortText(150),
+      }),
+    )
+    .default([]),
 });
 export type RoutingReply = z.infer<typeof routingReplySchema>;
 
