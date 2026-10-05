@@ -72,6 +72,18 @@ describe('redactContactDetails', () => {
   it.each(['614-555-0101', '(614) 555-0101', '614.555.0101', '+1 614 555 0101', '6145550101'])('masks the phone number %s', (phone) => {
     expect(redactContactDetails(`Call ${phone} today`)).toBe('Call [phone] today')
   })
+  it('masks a phone number followed directly by an extension or other letters', () => {
+    expect(redactContactDetails('ring 614-555-0101x23')).toBe('ring [phone]x23')
+    expect(redactContactDetails('call 614-555-0101ext 4')).toBe('call [phone]ext 4')
+    expect(redactContactDetails('call 614-555-0101_')).toBe('call [phone]_')
+  })
+  it('redacts 50,000 unbroken characters without taking quadratic time', () => {
+    const long = 'a'.repeat(50_000)
+    const started = performance.now()
+    expect(redactContactDetails(long)).toBe(long)
+    // A generous bound: the aim is to catch quadratic behaviour (seconds), not to benchmark.
+    expect(performance.now() - started).toBeLessThan(500)
+  })
   it('masks an email address', () => {
     expect(redactContactDetails('write to owner@example.com now')).toBe('write to [email] now')
   })
@@ -116,6 +128,14 @@ describe('contact details in free text', () => {
     const pool = [provider('uuid-a', { evidence: [{ kind: 'third_party', sourceDate: null, snippet }] })]
     const sent = JSON.parse(buildPickingPrompt(project, [{ partIndex: 0, name: 'n', categoryName: 'c', pool }], '2026-10-05').user)
     expect(sent.parts[0].pool[0].evidence[0].snippet).toHaveLength(600)
+  })
+  it('masks before cutting, so a phone number that straddles the 600-character cut appears neither whole nor in part', () => {
+    const snippet = `${'x'.repeat(595)} 614-555-0101 and more words`
+    const pool = [provider('uuid-a', { evidence: [{ kind: 'third_party', sourceDate: null, snippet }] })]
+    const sent = JSON.parse(buildPickingPrompt(project, [{ partIndex: 0, name: 'n', categoryName: 'c', pool }], '2026-10-05').user)
+    const cut: string = sent.parts[0].pool[0].evidence[0].snippet
+    expect(cut).toHaveLength(600)
+    for (const digits of ['614', '555', '0101']) expect(cut).not.toContain(digits)
   })
   it('masks a phone number that sits inside the first 600 characters of a long snippet', () => {
     const snippet = `call 614-555-0101 ${'x'.repeat(700)}`

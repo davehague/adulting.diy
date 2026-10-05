@@ -61,10 +61,11 @@ Reply with one JSON object and nothing else: no prose before or after, no markdo
 {"parts": [{"partIndex": 0, "picks": [{"providerId": "p1", "reason": "..."}]}]}
 Include every part, in order. A part with no picks has "picks": [].`;
 
-const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+// The lookbehind makes each run of address characters start only once, so a long unbroken run is not rescanned from every position (that was quadratic). Server-only, so lookbehind is safe.
+const EMAIL = /(?<![A-Z0-9._%+-])[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const LINK = /\b(?:https?:\/\/|www\.)\S+/gi;
-// North American numbers in a 3-3-4 grouping, with or without a country code. A date such as 2026-01-10 does not match.
-const PHONE = /(?:\+?1[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}\b/g;
+// North American numbers in a 3-3-4 grouping, with or without a country code. A date such as 2026-01-10 does not match. The number may run straight into letters (an extension such as x23).
+const PHONE = /(?:\+?1[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)/g;
 
 // Free text is other people's writing and the household's own notes; contact details inside it are never sent to the model.
 export const redactContactDetails = (text: string): string =>
