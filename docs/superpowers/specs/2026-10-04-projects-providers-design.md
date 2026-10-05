@@ -96,7 +96,7 @@ All routes use `defineHouseholdProtectedEventHandler` and Zod validation, and re
 | Route | Does | Returns |
 |-------|------|---------|
 | `GET /api/projects/[id]/providers` | List the project's links | `ProjectProviderDto[]`, in link order |
-| `POST /api/projects/[id]/providers` | Link a provider. Body `{ providerId }` | 201, the full list |
+| `POST /api/projects/[id]/providers` | Link a provider. Body `{ providerId }` | the full list |
 | `PUT /api/projects/[id]/providers/[providerId]` | Change the status. Body `{ status }` | the full list |
 | `DELETE /api/projects/[id]/providers/[providerId]` | Unlink | the full list |
 
@@ -132,10 +132,10 @@ The picker uses the existing `GET /api/providers` with `categoryId`, `sort=menti
 
 ## Code shape
 
-- New `server/services/ProjectProviderService.ts`: `listForProject`, `link`, `setStatus`, `unlink`, `listForProvider`. It owns the link order, the cap and the hidden-row filters, and exports the select and sort it uses so `ProjectService` can include links in the detail the way it includes steps. `neighborCount` is computed the way `ProviderService` already computes it; the plan must find that code and reuse it, not write a second version.
+- New `server/services/ProjectProviderService.ts`: `listForProject`, `link`, `setStatus`, `unlink`. It owns the link order, the cap and the hidden-row filters, and exports the select and sort it uses so `ProjectService` can include links in the detail the way it includes steps. `neighborCount` is computed the way `ProviderService` already computes it; the plan must find that code and reuse it, not write a second version.
 - New route files under `server/api/projects/[id]/providers`.
 - `server/services/ProjectService.ts`: detail include and `toDetail` carry the category and links; `update` accepts the category; `list` adds chosen names.
-- `server/services/ProviderService.ts`: detail carries the linked projects.
+- `server/services/ProviderService.ts`: detail carries the linked projects, through one more include beside the linked tasks.
 - `server/services/ProviderCategoryService.ts`: `remove` moves projects along with providers inside the same transaction. The case with no providers needs no code, because the foreign key clears the column.
 - `types/project.ts`, `types/provider.ts`, and the project Zod schemas.
 - New `components/projects/ProjectProviders.vue` (the section) and `components/projects/ProjectProviderPicker.vue` (the picker). `TaskProviderPicker.vue` is not changed and not reused.
