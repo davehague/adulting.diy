@@ -34,3 +34,5 @@ localhost.pem
 
 # Project specific files
 scripts/imports
+.vercel
+.env*.local
