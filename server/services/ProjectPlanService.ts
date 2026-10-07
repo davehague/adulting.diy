@@ -45,8 +45,9 @@ export class ProjectPlanService {
     const usage: AskUsage = { promptTokens: 0, outputTokens: 0, reported: false };
     let chars = 0;
     let status: PlanRunStatus;
-    const trades = await this.trades(projectId);
+    let trades: PlanTrade[] = [];
     try {
+      trades = await this.trades(projectId);
       const text: ProjectText = { title: project.title, location: project.location, notes: project.notes, extra: extraText };
       const prompt = buildPlanPrompt(text, trades, new Date(this.now()).toISOString().slice(0, 10));
       chars = promptChars(prompt);
