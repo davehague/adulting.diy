@@ -1,5 +1,5 @@
 <template>
-  <section class="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-6">
+  <section ref="sectionEl" class="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-6">
     <div class="flex items-center justify-between gap-3 mb-3">
       <h2 class="text-lg font-medium text-stone-900">Providers</h2>
       <select v-if="categories.length > 0"
@@ -124,9 +124,17 @@ const pendingStatus = ref<Record<string, ProjectProviderStatus>>({});
 // undefined means no category save is pending from the header dropdown; null means "No category" was picked.
 const pendingCategory = ref<string | null | undefined>(undefined);
 const finderOpen = ref(false);
+const sectionEl = ref<HTMLElement | null>(null);
 
-// The DIY plan section's "Find a provider" button opens this section's window.
-defineExpose({ openFinder: (): void => { finderOpen.value = true; } });
+// The DIY plan section's "Find a provider" button opens this section's window. When the window cannot show (the maximum is reached, or the categories are missing or failed to load) it brings this section into view instead, so its own message is seen.
+const openFinder = (): void => {
+  if (categoriesLoaded.value && categories.value.length > 0 && props.links.length < MAX_PROJECT_PROVIDERS) {
+    finderOpen.value = true;
+    return;
+  }
+  sectionEl.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+defineExpose({ openFinder });
 
 // A saved category that is not in the household's list (deleted since) shows as "No category".
 const knownCategoryId = computed<string | null>(() =>
