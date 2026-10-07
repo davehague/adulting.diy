@@ -32,6 +32,7 @@ model User {
   projectSteps           ProjectStep[]           @relation("ProjectStepCreatedBy")
   projectProviders       ProjectProvider[]       @relation("ProjectProviderCreatedBy")
   projectSuggestions     ProjectSuggestion[]     @relation("ProjectSuggestionCreatedBy")
+  projectPlans           ProjectPlan[]           @relation("ProjectPlanCreatedBy")
 
   @@map("users")
 }
@@ -324,6 +325,7 @@ model Project {
   steps       ProjectStep[]
   providers   ProjectProvider[]
   suggestion  ProjectSuggestion?
+  plan        ProjectPlan?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -396,6 +398,21 @@ model ProjectSuggestion {
   createdAt   DateTime @default(now())
 
   @@map("project_suggestions")
+}
+
+// The latest AI DIY plan for a project. "Plan again" replaces it. The checklist is never written by planning.
+model ProjectPlan {
+  id          String   @id @default(uuid())
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String   @unique
+  extraText   String?  // what was typed in "Anything to add?"
+  result      Json     // SavedPlanResult in types/plan.ts
+  model       String   // the model that produced it
+  createdBy   User     @relation("ProjectPlanCreatedBy", fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime @default(now())
+
+  @@map("project_plans")
 }
 
 // One row per AI ask. Holds no project or provider text; the daily cap counts these rows.
