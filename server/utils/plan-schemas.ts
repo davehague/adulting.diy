@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { stepCreateSchema } from '@/server/utils/project-schemas';
-import { MAX_STEP_TEXT_LENGTH } from '@/types/project';
+import { MAX_STEP_ESTIMATE_MINUTES, MAX_STEP_TEXT_LENGTH } from '@/types/project';
 import {
   MAX_BATCH_STEPS,
   MAX_PLAN_DOLLARS,
@@ -42,13 +42,16 @@ export const planReplySchema = z
           proWhy: optionalText(400),
         }),
       )
-      .default([]),
+      .nullish()
+      .transform((value) => value ?? []),
     tools: z
       .array(z.object({ name: text(120), have: z.boolean().default(false), priceLow: loose.default(0), priceHigh: loose.default(0) }))
-      .default([]),
+      .nullish()
+      .transform((value) => value ?? []),
     materials: z
       .array(z.object({ name: text(120), quantity: z.string().trim().max(60).default(''), priceLow: loose.default(0), priceHigh: loose.default(0) }))
-      .default([]),
+      .nullish()
+      .transform((value) => value ?? []),
   })
   .superRefine((reply, ctx) => {
     if (!reply.tooVague && !reply.summary) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'summary is required' });
@@ -63,7 +66,7 @@ const range = (low: number, high: number, max: number): [number, number] => {
   return a <= b ? [a, b] : [b, a];
 };
 
-// The limits the model cannot be trusted to keep: counts, number bounds, text that must fit the checklist, and the pro-step rules.
+// The limits the model cannot be trusted to keep: counts, number bounds (a step's minutes fit the checklist's estimate limit), text that must fit the checklist, and the pro-step rules.
 export const clampPlan = (reply: PlanReply): SavedPlanResult => {
   if (reply.tooVague || !reply.summary) return { tooVague: true, summary: null, safety: null, steps: [], tools: [], materials: [] };
 
@@ -71,7 +74,7 @@ export const clampPlan = (reply: PlanReply): SavedPlanResult => {
     const [costLow, costHigh] = step.pro ? [0, 0] : range(step.costLow, step.costHigh, MAX_PLAN_DOLLARS);
     return {
       text: step.text.slice(0, MAX_STEP_TEXT_LENGTH).trim(),
-      minutes: whole(step.minutes, MAX_PLAN_MINUTES),
+      minutes: whole(step.minutes, MAX_STEP_ESTIMATE_MINUTES),
       costLow,
       costHigh,
       pro: step.pro,

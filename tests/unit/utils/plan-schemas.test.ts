@@ -33,6 +33,18 @@ describe('planReplySchema', () => {
   })
 })
 
+describe('planReplySchema with null lists', () => {
+  it('parses a too-vague reply whose lists are null and clamps it to the empty result', () => {
+    const parsed = planReplySchema.parse({ tooVague: true, summary: null, safety: null, steps: null, tools: null, materials: null })
+    expect(parsed).toMatchObject({ steps: [], tools: [], materials: [] })
+    expect(clampPlan(parsed)).toEqual({ tooVague: true, summary: null, safety: null, steps: [], tools: [], materials: [] })
+  })
+  it('parses a plan whose lists are null with empty arrays', () => {
+    const parsed = planReplySchema.parse(reply({ steps: null, tools: null, materials: null }))
+    expect(parsed).toMatchObject({ steps: [], tools: [], materials: [] })
+  })
+})
+
 describe('clampPlan', () => {
   it('returns an empty too-vague result', () => {
     expect(clampPlan(planReplySchema.parse({ tooVague: true }))).toEqual({ tooVague: true, summary: null, safety: null, steps: [], tools: [], materials: [] })
@@ -57,6 +69,11 @@ describe('clampPlan', () => {
     const out = clampPlan(planReplySchema.parse(reply({ steps: [step({ pro: true, proWhy: 'Licensed plumber.', costLow: 50, costHigh: 90 }), step({ pro: false, proWhy: 'ignored' })] })))
     expect(out.steps[0]).toMatchObject({ pro: true, proWhy: 'Licensed plumber.', costLow: 0, costHigh: 0 })
     expect(out.steps[1].proWhy).toBeNull()
+  })
+  it('keeps each step within the checklist estimate limit but lets the total go higher', () => {
+    const out = clampPlan(planReplySchema.parse(reply({ steps: [step({ minutes: 10_080 }), step({ minutes: 10_080 })] })))
+    expect(out.steps.map((s) => s.minutes)).toEqual([9999, 9999])
+    expect(out.summary?.totalMinutes).toBe(10_080)
   })
   it('recomputes the total minutes from the steps', () => {
     const out = clampPlan(planReplySchema.parse(reply({ summary: summary({ totalMinutes: 5 }), steps: [step({ minutes: 30 }), step({ minutes: 45 })] })))
