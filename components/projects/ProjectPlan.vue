@@ -1,6 +1,6 @@
 <template>
-  <!-- Rendered only for a household that has AI help turned on; everyone else sees the page as it was. -->
-  <section v-if="enabled" class="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-6" aria-label="DIY plan">
+  <!-- Rendered only for a household that has AI help turned on; everyone else sees the page as it was. A Done project hides it unless there is a real plan to read or an ask is still running. -->
+  <section v-if="enabled && (!isDone || running || (plan && !plan.tooVague))" class="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-6" aria-label="DIY plan">
     <div class="flex items-baseline justify-between gap-3">
       <h2 class="text-lg font-medium text-stone-900">DIY plan</h2>
       <span v-if="plan && !running" class="text-xs text-stone-500">Planned {{ formatDay(plan.createdAt) }}</span>
