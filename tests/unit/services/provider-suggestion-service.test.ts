@@ -103,7 +103,8 @@ describe('getState', () => {
     expect((await service.getState('h1', 'p1')).limitReached).toBe(true)
     const where = db.aiRequestLog.count.mock.calls[0][0].where
     expect(where.householdId).toBe('h1')
-    expect(where.feature).toBe('provider_suggestions')
+    // The cap is shared by every AI feature, so the count has no feature filter.
+    expect(where.feature).toBeUndefined()
     expect(where.createdAt.gte).toEqual(new Date(clock - 24 * 60 * 60 * 1000))
   })
 })

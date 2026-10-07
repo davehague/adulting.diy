@@ -1,9 +1,9 @@
 import { type Prisma } from '@prisma/client';
-import { type z } from 'zod';
 import prisma from '@/server/utils/prisma/client';
 import { HttpError } from '@/server/utils/api-errors';
 import { suggestionModel, suggestionsEnabledFor } from '@/server/utils/ai-config';
-import { callOllama, ModelCallError, type ModelCall } from '@/server/utils/ollama';
+import { askJson, asksInLastDay, describeError, LIMIT_MESSAGE, promptChars, type AskUsage } from '@/server/utils/ai-ask';
+import { callOllama, type ModelCall } from '@/server/utils/ollama';
 import { fallbackProviders, rankProviders } from '@/server/utils/provider-ranking';
 import { checkPicks, cleanParts } from '@/server/utils/suggestion-checks';
 import {
@@ -14,7 +14,6 @@ import {
   type ProjectText,
 } from '@/server/utils/suggestion-prompts';
 import {
-  parseModelJson,
   pickingReplySchema,
   routingReplySchema,
   savedResultSchema,
@@ -35,11 +34,6 @@ import {
   type SuggestionStateResponse,
 } from '@/types/suggestion';
 import { googleSearchUrl, withNearMe } from '@/utils/google-search';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-// A model call given less time than this cannot finish, so it is not started.
-const MIN_CALL_MS = 2000;
-const LIMIT_MESSAGE = 'Daily limit reached. Try again later.';
 
 const projectSelect = {
   id: true,
@@ -69,29 +63,13 @@ type PoolRow = Prisma.ProviderGetPayload<{ include: typeof poolInclude }>;
 const eligibleWhere = (householdId: string) =>
   ({ householdId, metaStatus: 'active', status: { kind: { not: 'negative' } } }) satisfies Prisma.ProviderWhereInput;
 
-interface Usage {
-  promptTokens: number;
-  outputTokens: number;
-  // false until the service reports a count at least once
-  reported: boolean;
+interface Usage extends AskUsage {
   // Sizes only, for the one numbers-only log line per ask. 0 until that prompt is built.
   routingChars: number;
   pickingChars: number;
   // pool size of each part, in order
   poolSizes: number[];
 }
-
-// An expected failure with a message that is safe to log: it never carries prompt or reply text.
-class SuggestionError extends Error {}
-
-// What to log for a failed ask. Only this feature's own errors have messages that are safe to log; for any other error, its message could carry prompt text, so only its kind (and a code, which is a fixed value such as Prisma's P2002) is used.
-const describeError = (error: unknown): string => {
-  if (error instanceof SuggestionError || error instanceof ModelCallError) return error.message;
-  if (!(error instanceof Error)) return 'unknown';
-  return 'code' in error && typeof error.code === 'string' ? `${error.name} ${error.code}` : error.name;
-};
-
-const promptChars = (prompt: { system: string; user: string }): number => prompt.system.length + prompt.user.length;
 
 const toPoolProvider = (row: PoolRow): PoolProvider => ({
   id: row.id,
@@ -184,7 +162,7 @@ export class ProviderSuggestionService {
 
     const routingPrompt = buildRoutingPrompt(text, categories, today);
     usage.routingChars = promptChars(routingPrompt);
-    const routing = await this.askJson(routingPrompt, routingReplySchema, model, deadline, usage);
+    const routing = await askJson(this.callModel, this.now, routingPrompt, routingReplySchema, model, deadline, usage);
     const parts = cleanParts(routing.parts, routingPrompt.categoryIdByLabel);
     if (routing.tooVague || parts.length === 0) return { tooVague: true, parts: [] };
 
@@ -204,7 +182,7 @@ export class ProviderSuggestionService {
     if (pickingParts.length > 0) {
       const pickingPrompt = buildPickingPrompt(text, pickingParts, today);
       usage.pickingChars = promptChars(pickingPrompt);
-      const picking = await this.askJson(pickingPrompt, pickingReplySchema, model, deadline, usage);
+      const picking = await askJson(this.callModel, this.now, pickingPrompt, pickingReplySchema, model, deadline, usage);
       picks = checkPicks(picking.parts, pickingPrompt.providerIdByLabel, pickingPrompt.labelsByPart);
     }
 
@@ -216,34 +194,6 @@ export class ProviderSuggestionService {
         picks: picks.get(partIndex) ?? [],
       })),
     };
-  }
-
-  // One call, validated; a reply that cannot be used is retried once if there is time left.
-  private async askJson<T>(
-    prompt: { system: string; user: string },
-    schema: z.ZodType<T, z.ZodTypeDef, unknown>,
-    model: string,
-    deadline: number,
-    usage: Usage,
-  ): Promise<T> {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const remaining = deadline - this.now();
-      if (remaining < MIN_CALL_MS) break;
-      const reply = await this.callModel({ model, system: prompt.system, user: prompt.user, timeoutMs: remaining });
-      if (reply.promptTokens !== null || reply.outputTokens !== null) usage.reported = true;
-      usage.promptTokens += reply.promptTokens ?? 0;
-      usage.outputTokens += reply.outputTokens ?? 0;
-
-      let raw: unknown;
-      try {
-        raw = parseModelJson(reply.text);
-      } catch {
-        continue;
-      }
-      const parsed = schema.safeParse(raw);
-      if (parsed.success) return parsed.data;
-    }
-    throw new SuggestionError('the model did not return a usable reply in time');
   }
 
   private async loadPools(householdId: string, projectId: string, categoryIds: string[]): Promise<Map<string, PoolProvider[]>> {
@@ -328,9 +278,7 @@ export class ProviderSuggestionService {
   }
 
   private usedInLastDay(householdId: string): Promise<number> {
-    return prisma.aiRequestLog.count({
-      where: { householdId, feature: PROVIDER_SUGGESTIONS_FEATURE, createdAt: { gte: new Date(this.now() - DAY_MS) } },
-    });
+    return asksInLastDay(householdId, this.now);
   }
 
   private async finishLog(id: string, outcome: SuggestionRunStatus, durationMs: number, usage: Usage): Promise<void> {

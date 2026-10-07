@@ -71,7 +71,7 @@ const PHONE = /(?:\+?1[\s.-]?)?(?:\(\d{3}\)|\d{3})[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)
 export const redactContactDetails = (text: string): string =>
   text.replace(EMAIL, '[email]').replace(LINK, '[link]').replace(PHONE, '[phone]');
 
-const projectPayload = (project: ProjectText) => ({
+export const projectPayload = (project: ProjectText) => ({
   title: redactContactDetails(project.title),
   location: redactContactDetails(project.location ?? ''),
   notes: redactContactDetails(project.notes ?? ''),
