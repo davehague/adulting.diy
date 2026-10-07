@@ -45,6 +45,19 @@ describe('planReplySchema with null lists', () => {
   })
 })
 
+describe('planReplySchema with a too-vague reply', () => {
+  const empty = { tooVague: true, summary: null, safety: null, steps: [], tools: [], materials: [] }
+  it('ignores a half-filled body', () => {
+    expect(planReplySchema.parse({ tooVague: true, summary: {}, steps: [{ text: '' }] })).toEqual(empty)
+  })
+  it('ignores a summary with an empty why', () => {
+    expect(planReplySchema.parse({ tooVague: true, summary: { why: '' } })).toEqual(empty)
+  })
+  it('still rejects an empty summary when the reply is not too vague', () => {
+    expect(planReplySchema.safeParse({ tooVague: false, summary: {} }).success).toBe(false)
+  })
+})
+
 describe('clampPlan', () => {
   it('returns an empty too-vague result', () => {
     expect(clampPlan(planReplySchema.parse({ tooVague: true }))).toEqual({ tooVague: true, summary: null, safety: null, steps: [], tools: [], materials: [] })

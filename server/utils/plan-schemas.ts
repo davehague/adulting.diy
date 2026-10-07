@@ -17,8 +17,14 @@ const optionalText = (max: number) => z.string().trim().max(max).nullish().trans
 // The model may send fractions or negatives; the clamp below fixes them, so the schema only asks for a number.
 const loose = z.number();
 
-// The model's reply. Lenient on numbers and on missing optional fields; strict on shape and on the difficulty word.
-export const planReplySchema = z
+const TOO_VAGUE_REPLY = { tooVague: true, summary: null, safety: null, steps: [], tools: [], materials: [] };
+
+// A too-vague reply has no plan, so whatever the model put in the rest of it is ignored rather than validated.
+const ignoreBodyWhenTooVague = (input: unknown): unknown =>
+  typeof input === 'object' && input !== null && 'tooVague' in input && input.tooVague === true ? TOO_VAGUE_REPLY : input;
+
+// The body of a plan reply. Lenient on numbers and on missing optional fields; strict on shape and on the difficulty word.
+const planReplyBody = z
   .object({
     tooVague: z.boolean(),
     summary: z
@@ -56,6 +62,9 @@ export const planReplySchema = z
   .superRefine((reply, ctx) => {
     if (!reply.tooVague && !reply.summary) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'summary is required' });
   });
+
+// The model's reply, as validated: a too-vague reply is accepted whatever its body holds.
+export const planReplySchema = z.preprocess(ignoreBodyWhenTooVague, planReplyBody);
 export type PlanReply = z.infer<typeof planReplySchema>;
 
 const whole = (value: number, max: number): number => Math.min(max, Math.max(0, Math.round(value)));

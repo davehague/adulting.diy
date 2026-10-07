@@ -26,5 +26,6 @@ describe('buildPlanPrompt', () => {
     expect(built.system).toContain('"hire"')
     expect(built.system).toContain('Reply with one JSON object and nothing else')
     expect(built.system).toContain('"tooVague"')
+    expect(built.system).toContain('set summary and safety to null')
   })
 })
