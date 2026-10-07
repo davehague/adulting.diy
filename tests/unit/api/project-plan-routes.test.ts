@@ -28,6 +28,7 @@ vi.mock('h3', async (importOriginal) => ({
 import { readBody } from 'h3'
 import { devAuthService } from '@/server/utils/dev-auth'
 import { HttpError } from '@/server/utils/api-errors'
+import { MAX_STEP_ESTIMATE_MINUTES } from '@/types/project'
 import getRoute from '@/server/api/projects/[id]/plan.get'
 import postRoute from '@/server/api/projects/[id]/plan.post'
 import batchRoute from '@/server/api/projects/[id]/steps/batch.post'
@@ -43,6 +44,7 @@ const call = (handler: unknown, userId: string | null, params: Record<string, st
 const state = { enabled: true, limitReached: false, hasSuggestions: false, plan: null }
 const ran = { status: 'ok', limitReached: false, hasSuggestions: false, plan: null }
 const batch = { steps: [], skipped: 0 }
+const ESTIMATE_MESSAGE = `Estimate must be a whole number of minutes from 1 to ${MAX_STEP_ESTIMATE_MINUTES}`
 
 describe('project plan routes', () => {
   beforeEach(() => {
@@ -103,16 +105,23 @@ describe('project plan routes', () => {
     await expect(call(postRoute, 'u1')).rejects.toMatchObject({ statusCode: 429, message: 'Daily limit reached. Try again later.' })
   })
 
-  it('POST batch adds with the parsed steps', async () => {
-    vi.mocked(readBody).mockResolvedValue({ steps: [{ text: 'Do it', estimateMinutes: 10 }, { text: 'Then this' }] })
+  it('POST batch adds the parsed steps, not the raw body', async () => {
+    vi.mocked(readBody).mockResolvedValue({ steps: [{ text: 'Do it', estimateMinutes: 10 }, { text: '  Then this  ' }] })
     expect(await call(batchRoute, 'u1')).toEqual(batch)
-    expect(stepService.addMany).toHaveBeenCalledTimes(1)
-    const args = stepService.addMany.mock.calls[0]
-    expect(args.slice(0, 3)).toEqual(['h1', 'u1', 'p1'])
-    expect(args[3]).toHaveLength(2)
-    expect(args[3][0]).toMatchObject({ text: 'Do it', estimateMinutes: 10 })
-    expect(args[3][1]).toMatchObject({ text: 'Then this' })
-    expect(args[3][1].estimateMinutes ?? null).toBeNull()
+    // The schema trims the text and leaves a missing estimate undefined; toEqual treats that as a missing key.
+    expect(stepService.addMany).toHaveBeenCalledWith('h1', 'u1', 'p1', [{ text: 'Do it', estimateMinutes: 10 }, { text: 'Then this' }])
+  })
+
+  it('POST batch rejects an estimate of 0 without calling the service', async () => {
+    vi.mocked(readBody).mockResolvedValue({ steps: [{ text: 'Do it', estimateMinutes: 0 }] })
+    await expect(call(batchRoute, 'u1')).rejects.toMatchObject({ statusCode: 400, message: ESTIMATE_MESSAGE })
+    expect(stepService.addMany).not.toHaveBeenCalled()
+  })
+
+  it('POST batch rejects an estimate over the maximum without calling the service', async () => {
+    vi.mocked(readBody).mockResolvedValue({ steps: [{ text: 'Do it', estimateMinutes: MAX_STEP_ESTIMATE_MINUTES + 1 }] })
+    await expect(call(batchRoute, 'u1')).rejects.toMatchObject({ statusCode: 400, message: ESTIMATE_MESSAGE })
+    expect(stepService.addMany).not.toHaveBeenCalled()
   })
 
   it('POST batch rejects an empty list and more than 30 steps without calling the service', async () => {
