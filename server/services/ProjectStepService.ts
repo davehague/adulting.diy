@@ -9,6 +9,7 @@ import {
   type ProjectStepDto,
   type ProjectStepUpdateInput,
 } from '@/types/project';
+import { type StepBatchResponse } from '@/types/plan';
 import { nextStepOf } from '@/utils/project-steps';
 
 // createdAt breaks the tie when two steps added at the same instant got the same position.
@@ -40,6 +41,28 @@ export class ProjectStepService {
       },
       select: stepSelect,
     });
+  }
+
+  // Appends several steps in one go (Add all from a DIY plan). Adds what fits under the cap, in the order given, and reports the rest.
+  async addMany(householdId: string, userId: string, projectId: string, inputs: ProjectStepCreateInput[]): Promise<StepBatchResponse> {
+    await this.requireProject(householdId, projectId);
+    const existing = await prisma.projectStep.findMany({ where: { projectId }, select: { position: true } });
+    const room = Math.max(0, MAX_PROJECT_STEPS - existing.length);
+    const toAdd = inputs.slice(0, room);
+    const first = existing.reduce((highest, step) => Math.max(highest, step.position), -1) + 1;
+    if (toAdd.length > 0) {
+      await prisma.projectStep.createMany({
+        data: toAdd.map((input, index) => ({
+          projectId,
+          createdById: userId,
+          text: input.text,
+          estimateMinutes: input.estimateMinutes ?? null,
+          position: first + index,
+        })),
+      });
+    }
+    const steps = await prisma.projectStep.findMany({ where: { projectId }, orderBy: stepOrder, select: stepSelect });
+    return { steps, skipped: inputs.length - toAdd.length };
   }
 
   async update(householdId: string, projectId: string, stepId: string, input: ProjectStepUpdateInput): Promise<ProjectStepDto> {

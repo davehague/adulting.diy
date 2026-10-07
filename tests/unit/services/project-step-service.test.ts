@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('@/server/utils/prisma/client', () => ({
   default: {
     project: { findFirst: vi.fn(), findMany: vi.fn(), count: vi.fn() },
-    projectStep: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    projectStep: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), createMany: vi.fn(), update: vi.fn(), delete: vi.fn() },
   },
 }))
 
@@ -184,5 +184,56 @@ describe('ProjectStepService', () => {
         { projectId: 'p-done', projectTitle: 'Patch drywall', kind: 'allDone', step: null },
       ])
     })
+  })
+})
+
+describe('ProjectStepService.addMany', () => {
+  let service: ProjectStepService
+  beforeEach(() => {
+    service = new ProjectStepService()
+    vi.clearAllMocks()
+  })
+
+  const inputs = (n: number) => Array.from({ length: n }, (_, i) => ({ text: `Plan step ${i + 1}`, estimateMinutes: i === 0 ? null : 10 * i }))
+
+  it('appends in order after the last position, mapping a missing estimate to null, and returns the whole checklist', async () => {
+    db.project.findFirst.mockResolvedValue({ id: 'p1' })
+    db.projectStep.findMany
+      .mockResolvedValueOnce([{ position: 0 }, { position: 4 }])
+      .mockResolvedValueOnce([{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }])
+    db.projectStep.createMany.mockResolvedValue({ count: 2 })
+    const result = await service.addMany('h1', 'u1', 'p1', inputs(2))
+    expect(db.projectStep.createMany.mock.calls[0][0].data).toEqual([
+      { projectId: 'p1', createdById: 'u1', text: 'Plan step 1', estimateMinutes: null, position: 5 },
+      { projectId: 'p1', createdById: 'u1', text: 'Plan step 2', estimateMinutes: 10, position: 6 },
+    ])
+    expect(result.skipped).toBe(0)
+    expect(result.steps).toHaveLength(4)
+  })
+
+  it('adds only what fits under the cap and reports the rest as skipped', async () => {
+    db.project.findFirst.mockResolvedValue({ id: 'p1' })
+    db.projectStep.findMany
+      .mockResolvedValueOnce(Array.from({ length: 95 }, (_, i) => ({ position: i })))
+      .mockResolvedValueOnce([])
+    db.projectStep.createMany.mockResolvedValue({ count: 5 })
+    const result = await service.addMany('h1', 'u1', 'p1', inputs(12))
+    expect(db.projectStep.createMany.mock.calls[0][0].data).toHaveLength(5)
+    expect(db.projectStep.createMany.mock.calls[0][0].data[0].text).toBe('Plan step 1')
+    expect(result.skipped).toBe(7)
+  })
+
+  it('writes nothing when the checklist is already full', async () => {
+    db.project.findFirst.mockResolvedValue({ id: 'p1' })
+    db.projectStep.findMany.mockResolvedValueOnce(Array.from({ length: 100 }, (_, i) => ({ position: i }))).mockResolvedValueOnce([])
+    const result = await service.addMany('h1', 'u1', 'p1', inputs(3))
+    expect(db.projectStep.createMany).not.toHaveBeenCalled()
+    expect(result.skipped).toBe(3)
+  })
+
+  it('returns 404 for a project in another household', async () => {
+    db.project.findFirst.mockResolvedValue(null)
+    await expect(service.addMany('h1', 'u1', 'p1', inputs(1))).rejects.toMatchObject({ statusCode: 404 })
+    expect(db.projectStep.createMany).not.toHaveBeenCalled()
   })
 })
