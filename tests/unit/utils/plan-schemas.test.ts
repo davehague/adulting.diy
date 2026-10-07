@@ -33,6 +33,72 @@ describe('planReplySchema', () => {
   })
 })
 
+describe('planReplySchema with the small deviations a model makes', () => {
+  const clamped = (body: unknown) => clampPlan(planReplySchema.parse(body))
+  it('accepts a numeric, null or missing quantity as text', () => {
+    const out = clamped(reply({ materials: [material({ quantity: 2 }), material({ quantity: null }), material({ quantity: undefined }), material({ quantity: '  3 sheets ' })] }))
+    expect(out.materials.map((m) => m.quantity)).toEqual(['2', '', '', '3 sheets'])
+  })
+  it('treats a null or missing pro and have as false', () => {
+    const out = clamped(reply({ steps: [step({ pro: null, proWhy: 'ignored' }), step({ pro: undefined })], tools: [tool({ have: null, priceLow: 5, priceHigh: 9 })] }))
+    expect(out.steps.map((s) => s.pro)).toEqual([false, false])
+    expect(out.steps[0].proWhy).toBeNull()
+    expect(out.tools[0]).toMatchObject({ have: false, priceLow: 5, priceHigh: 9 })
+  })
+  it('defaults a step with no minutes or cost fields to zero', () => {
+    const out = clamped(reply({ steps: [{ text: 'Sand it' }] }))
+    expect(out.steps[0]).toEqual({ text: 'Sand it', minutes: 0, costLow: 0, costHigh: 0, pro: false, proWhy: null })
+  })
+  it('accepts a difficulty in any case with spaces around it', () => {
+    expect(clamped(reply({ summary: summary({ difficulty: 'Moderate' }) })).summary?.difficulty).toBe('moderate')
+    expect(clamped(reply({ summary: summary({ difficulty: ' HIRE ' }) })).summary?.difficulty).toBe('hire')
+  })
+  it('still rejects an unknown or missing difficulty', () => {
+    expect(planReplySchema.safeParse(reply({ summary: summary({ difficulty: 'medium' }) })).success).toBe(false)
+    expect(planReplySchema.safeParse(reply({ summary: summary({ difficulty: 3 }) })).success).toBe(false)
+    expect(planReplySchema.safeParse(reply({ summary: summary({ difficulty: undefined }) })).success).toBe(false)
+  })
+  it('still rejects a plan that is not too vague and has no usable summary', () => {
+    expect(planReplySchema.safeParse(reply({ tooVague: false, summary: undefined })).success).toBe(false)
+    expect(planReplySchema.safeParse(reply({ tooVague: false, summary: summary({ why: '   ' }) })).success).toBe(false)
+  })
+  it('keeps zero minutes at zero', () => {
+    expect(clamped(reply({ steps: [step({ minutes: 0 })] })).steps[0].minutes).toBe(0)
+  })
+  it('cuts over-long text in the clamp instead of rejecting the reply', () => {
+    const out = clamped(
+      reply({
+        summary: summary({ why: 'w'.repeat(500) }),
+        safety: 's'.repeat(500),
+        steps: [step({ text: 't'.repeat(500), pro: true, proWhy: 'p'.repeat(500) })],
+        tools: [tool({ name: 'n'.repeat(500) })],
+        materials: [material({ name: 'm'.repeat(500), quantity: 'q'.repeat(500) })],
+      }),
+    )
+    expect(out.summary?.why).toHaveLength(400)
+    expect(out.safety).toHaveLength(400)
+    expect(out.steps[0].text).toHaveLength(200)
+    expect(out.steps[0].proWhy).toHaveLength(400)
+    expect(out.tools[0].name).toHaveLength(120)
+    expect(out.materials[0].name).toHaveLength(120)
+    expect(out.materials[0].quantity).toHaveLength(60)
+  })
+  it('turns a reply with every deviation into something savedPlanSchema accepts', () => {
+    const lenient = {
+      tooVague: false,
+      summary: { totalMinutes: 12.5, costLow: -4, costHigh: 99.6, difficulty: 'Hard', why: 'w'.repeat(450) },
+      safety: 's'.repeat(450),
+      steps: [{ text: 't'.repeat(450), pro: null }, { text: 'Hire it', minutes: 20, pro: true, proWhy: 'p'.repeat(450) }],
+      tools: [{ name: 'n'.repeat(450), have: null }],
+      materials: [{ name: 'm'.repeat(450), quantity: 2 }, { name: 'Screws', quantity: null }],
+    }
+    const out = clamped(lenient)
+    const saved = savedPlanSchema.safeParse(out)
+    expect(saved.success).toBe(true)
+    if (saved.success) expect(saved.data).toEqual(out)
+  })
+})
+
 describe('planReplySchema with null lists', () => {
   it('parses a too-vague reply whose lists are null and clamps it to the empty result', () => {
     const parsed = planReplySchema.parse({ tooVague: true, summary: null, safety: null, steps: null, tools: null, materials: null })

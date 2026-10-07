@@ -12,8 +12,24 @@ import {
   type SavedPlanResult,
 } from '@/types/plan';
 
-const text = (max: number) => z.string().trim().min(1).max(max);
-const optionalText = (max: number) => z.string().trim().max(max).nullish().transform((value) => value || null);
+// Length limits are not checked here: a reply that runs long is cut in clampPlan, not thrown away.
+const text = z.string().trim().min(1);
+const optionalText = z.string().trim().nullish().transform((value) => value || null);
+// The model may send null for a flag it was unsure of; that means false.
+const flag = z.boolean().nullish().transform((value) => value ?? false);
+// A quantity may arrive as a number or null; it is kept as text.
+const quantityText = z
+  .union([z.string(), z.number()])
+  .nullish()
+  .transform((value) => (value === null || value === undefined ? '' : String(value).trim()));
+// Case and spaces around the word do not matter; a word that is not a difficulty still fails.
+const difficulty = z.preprocess((value) => (typeof value === 'string' ? value.trim().toLowerCase() : value), z.enum(PLAN_DIFFICULTIES));
+
+// What clampPlan cuts text to (a step's text uses the checklist's own limit).
+const MAX_NAME_LENGTH = 120;
+const MAX_QUANTITY_LENGTH = 60;
+const MAX_EXPLANATION_LENGTH = 400;
+const cut = (value: string, max: number): string => value.slice(0, max).trim();
 // The model may send fractions or negatives; the clamp below fixes them, so the schema only asks for a number.
 const loose = z.number();
 
@@ -23,7 +39,7 @@ const TOO_VAGUE_REPLY = { tooVague: true, summary: null, safety: null, steps: []
 const ignoreBodyWhenTooVague = (input: unknown): unknown =>
   typeof input === 'object' && input !== null && 'tooVague' in input && input.tooVague === true ? TOO_VAGUE_REPLY : input;
 
-// The body of a plan reply. Lenient on numbers and on missing optional fields; strict on shape and on the difficulty word.
+// The body of a plan reply. Lenient on numbers, flags, text length and missing optional fields; strict on shape and on the difficulty word.
 const planReplyBody = z
   .object({
     tooVague: z.boolean(),
@@ -32,30 +48,30 @@ const planReplyBody = z
         totalMinutes: loose,
         costLow: loose,
         costHigh: loose,
-        difficulty: z.enum(PLAN_DIFFICULTIES),
-        why: text(400),
+        difficulty,
+        why: text,
       })
       .nullish(),
-    safety: optionalText(400),
+    safety: optionalText,
     steps: z
       .array(
         z.object({
-          text: text(400),
-          minutes: loose,
-          costLow: loose,
-          costHigh: loose,
-          pro: z.boolean().default(false),
-          proWhy: optionalText(400),
+          text,
+          minutes: loose.default(0),
+          costLow: loose.default(0),
+          costHigh: loose.default(0),
+          pro: flag,
+          proWhy: optionalText,
         }),
       )
       .nullish()
       .transform((value) => value ?? []),
     tools: z
-      .array(z.object({ name: text(120), have: z.boolean().default(false), priceLow: loose.default(0), priceHigh: loose.default(0) }))
+      .array(z.object({ name: text, have: flag, priceLow: loose.default(0), priceHigh: loose.default(0) }))
       .nullish()
       .transform((value) => value ?? []),
     materials: z
-      .array(z.object({ name: text(120), quantity: z.string().trim().max(60).default(''), priceLow: loose.default(0), priceHigh: loose.default(0) }))
+      .array(z.object({ name: text, quantity: quantityText, priceLow: loose.default(0), priceHigh: loose.default(0) }))
       .nullish()
       .transform((value) => value ?? []),
   })
@@ -82,21 +98,21 @@ export const clampPlan = (reply: PlanReply): SavedPlanResult => {
   const steps = reply.steps.slice(0, MAX_PLAN_STEPS).map((step) => {
     const [costLow, costHigh] = step.pro ? [0, 0] : range(step.costLow, step.costHigh, MAX_PLAN_DOLLARS);
     return {
-      text: step.text.slice(0, MAX_STEP_TEXT_LENGTH).trim(),
+      text: cut(step.text, MAX_STEP_TEXT_LENGTH),
       minutes: whole(step.minutes, MAX_STEP_ESTIMATE_MINUTES),
       costLow,
       costHigh,
       pro: step.pro,
-      proWhy: step.pro ? step.proWhy : null,
+      proWhy: step.pro && step.proWhy ? cut(step.proWhy, MAX_EXPLANATION_LENGTH) : null,
     };
   });
   const tools = reply.tools.slice(0, MAX_PLAN_TOOLS).map((tool) => {
     const [priceLow, priceHigh] = tool.have ? [0, 0] : range(tool.priceLow, tool.priceHigh, MAX_PLAN_DOLLARS);
-    return { name: tool.name, have: tool.have, priceLow, priceHigh };
+    return { name: cut(tool.name, MAX_NAME_LENGTH), have: tool.have, priceLow, priceHigh };
   });
   const materials = reply.materials.slice(0, MAX_PLAN_MATERIALS).map((material) => {
     const [priceLow, priceHigh] = range(material.priceLow, material.priceHigh, MAX_PLAN_DOLLARS);
-    return { name: material.name, quantity: material.quantity, priceLow, priceHigh };
+    return { name: cut(material.name, MAX_NAME_LENGTH), quantity: cut(material.quantity, MAX_QUANTITY_LENGTH), priceLow, priceHigh };
   });
   const [costLow, costHigh] = range(reply.summary.costLow, reply.summary.costHigh, MAX_PLAN_DOLLARS);
 
@@ -107,9 +123,9 @@ export const clampPlan = (reply: PlanReply): SavedPlanResult => {
       costLow,
       costHigh,
       difficulty: reply.summary.difficulty,
-      why: reply.summary.why,
+      why: cut(reply.summary.why, MAX_EXPLANATION_LENGTH),
     },
-    safety: reply.safety,
+    safety: reply.safety ? cut(reply.safety, MAX_EXPLANATION_LENGTH) : null,
     steps,
     tools,
     materials,
