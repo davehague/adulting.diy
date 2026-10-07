@@ -108,6 +108,7 @@ describe('project plan routes', () => {
   it('POST batch adds the parsed steps, not the raw body', async () => {
     vi.mocked(readBody).mockResolvedValue({ steps: [{ text: 'Do it', estimateMinutes: 10 }, { text: '  Then this  ' }] })
     expect(await call(batchRoute, 'u1')).toEqual(batch)
+    expect(stepService.addMany).toHaveBeenCalledTimes(1)
     // The schema trims the text and leaves a missing estimate undefined; toEqual treats that as a missing key.
     expect(stepService.addMany).toHaveBeenCalledWith('h1', 'u1', 'p1', [{ text: 'Do it', estimateMinutes: 10 }, { text: 'Then this' }])
   })
