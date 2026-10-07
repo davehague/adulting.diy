@@ -13,6 +13,7 @@ import {
   type ProjectStepUpdateInput,
   type ProjectUpdateInput,
 } from '@/types/project';
+import { type PlanRunResponse, type PlanStateResponse, type StepBatchResponse } from '@/types/plan';
 import { type SuggestionRunResponse, type SuggestionStateResponse } from '@/types/suggestion';
 import { type ResizedPhoto } from '@/utils/image-resize';
 
@@ -74,11 +75,19 @@ export const useProjects = () => {
   const runSuggestions = (projectId: string, extraText: string) =>
     api.post<SuggestionRunResponse>(`/api/projects/${projectId}/suggestions`, { extraText });
 
+  const getPlan = (projectId: string) => api.get<PlanStateResponse>(`/api/projects/${projectId}/plan`);
+  // Takes around 20 seconds: one model call that writes the whole plan.
+  const runPlan = (projectId: string, extraText: string) =>
+    api.post<PlanRunResponse>(`/api/projects/${projectId}/plan`, { extraText });
+  const addSteps = (projectId: string, steps: ProjectStepCreateInput[]) =>
+    api.post<StepBatchResponse>(`/api/projects/${projectId}/steps/batch`, { steps });
+
   return {
     listProjects, getProject, createProject, updateProject, deleteProject, listLocations,
     uploadPhoto, deletePhoto, fetchPhotoBlob,
     listNextSteps, addStep, updateStep, deleteStep,
     listProjectProviders, linkProvider, setProviderLinkStatus, unlinkProvider,
     getSuggestions, runSuggestions,
+    getPlan, runPlan, addSteps,
   };
 };
