@@ -795,7 +795,7 @@ Check that `projectPayload` applies `redactContactDetails` to the four project f
 
 - [ ] **Step 7: Run the tests, the full suite and the typecheck, then commit**
 
-Run: `npx vitest run tests/unit/utils/ai-ask.test.ts tests/unit/utils/plan-prompts.test.ts tests/unit/services/provider-suggestion-service.test.ts` (expected: PASS, 11 + 4 + 36), then `npx vitest run 2>&1 | tail -6` (expected: 61 files, 980 tests, all passing), then `npx nuxi typecheck 2>&1 | grep -E "ai-ask|plan-prompts|ProviderSuggestionService|suggestion-prompts"` (expected: no output).
+Run: `npx vitest run tests/unit/utils/ai-ask.test.ts tests/unit/utils/plan-prompts.test.ts tests/unit/services/provider-suggestion-service.test.ts` (expected: PASS, 7 + 4 + 36), then `npx vitest run 2>&1 | tail -6` (expected: 61 files, 976 tests, all passing), then `npx nuxi typecheck 2>&1 | grep -E "ai-ask|plan-prompts|ProviderSuggestionService|suggestion-prompts"` (expected: no output).
 
 ```bash
 git add server/utils/ai-ask.ts server/services/ProviderSuggestionService.ts server/utils/suggestion-prompts.ts server/utils/plan-prompts.ts tests/unit/utils/ai-ask.test.ts tests/unit/utils/plan-prompts.test.ts tests/unit/services/provider-suggestion-service.test.ts
@@ -1245,11 +1245,11 @@ The `readPlan` and `trades` queries key on `projectId` alone; `requireProject` h
 - [ ] **Step 6: Run the tests to verify they pass**
 
 Run: `npx vitest run tests/unit/services/project-plan-service.test.ts tests/unit/services/project-step-service.test.ts tests/unit/services/provider-suggestion-service.test.ts`
-Expected: PASS. The plan test file has 22 tests. If a test fails because the code does not do what the test says, fix the code, not the test, unless the test contradicts the spec; report any such case.
+Expected: PASS. The plan test file has 21 tests. If a test fails because the code does not do what the test says, fix the code, not the test, unless the test contradicts the spec; report any such case.
 
 - [ ] **Step 7: Run the full suite and the typecheck, then commit**
 
-Run: `npx vitest run 2>&1 | tail -6` (expected: 62 files, 1006 tests, all passing) and `npx nuxi typecheck 2>&1 | grep -E "ProjectPlanService|ProjectStepService"` (expected: no output).
+Run: `npx vitest run 2>&1 | tail -6` (expected: 62 files, 1001 tests, all passing) and `npx nuxi typecheck 2>&1 | grep -E "ProjectPlanService|ProjectStepService"` (expected: no output).
 
 ```bash
 git add server/services/ProjectStepService.ts server/services/ProjectPlanService.ts tests/unit/services/project-plan-service.test.ts tests/unit/services/project-step-service.test.ts
@@ -1391,7 +1391,7 @@ Add `getPlan, runPlan, addSteps,` as a new last line inside the returned object.
 
 - [ ] **Step 5: Run the tests, the full suite and the typecheck, then commit**
 
-Run: `npx vitest run tests/unit/api/project-plan-routes.test.ts` (expected: PASS, 10 tests), then `npx vitest run 2>&1 | tail -6` (expected: 63 files, 1016 tests), then `npx nuxi typecheck 2>&1 | grep -E "plan\.(get|post)|batch\.post|useProjects"` (expected: no output).
+Run: `npx vitest run tests/unit/api/project-plan-routes.test.ts` (expected: PASS, 10 tests), then `npx vitest run 2>&1 | tail -6` (expected: 63 files, 1011 tests), then `npx nuxi typecheck 2>&1 | grep -E "plan\.(get|post)|batch\.post|useProjects"` (expected: no output).
 
 ```bash
 git add "server/api/projects/[id]/plan.get.ts" "server/api/projects/[id]/plan.post.ts" "server/api/projects/[id]/steps/batch.post.ts" composables/useProjects.ts tests/unit/api/project-plan-routes.test.ts
@@ -1772,7 +1772,7 @@ Add `ref="providersSection"` to the existing `<ProjectProviders ...>` tag. In th
 
 Confirm in the report, each with the line that shows it: no two controls show the same value; nothing changes data on a tap without an explicit button; the error line is above the section's content; no `<select>` added; the ask button has exactly the four labels from Global Constraints; the step row wraps long text without pushing Add off a 375 px screen (`min-w-0 flex-1` plus `shrink-0`).
 
-Run: `npx vitest run 2>&1 | tail -6` (expected: 63 files, 1018 tests, all passing), `npx nuxi typecheck 2>&1 | grep -E "ProjectPlan|ProjectProviders|projects/\[id\]|project-steps"` (expected: no output), `npx nuxi typecheck 2>&1 | grep -c "error TS"` (expected: the Task 1 baseline).
+Run: `npx vitest run 2>&1 | tail -6` (expected: 63 files, 1013 tests, all passing), `npx nuxi typecheck 2>&1 | grep -E "ProjectPlan|ProjectProviders|projects/\[id\]|project-steps"` (expected: no output), `npx nuxi typecheck 2>&1 | grep -c "error TS"` (expected: the Task 1 baseline).
 
 - [ ] **Step 7: Write the hand trace in the report**
 
