@@ -110,6 +110,9 @@ The API uses these authentication levels:
 | `DELETE` | `/api/projects/[id]/providers/[providerId]` | Household | Remove the link for good. Returns the remaining list |
 | `GET` | `/api/projects/[id]/suggestions` | Household | AI provider suggestions for the project: `{ enabled, limitReached, suggestion }`. `enabled` is false for a household not on the allowed list. `suggestion` is the saved result (parts with category, search URL, pool size and picks with current provider fields and the saved reason) or null |
 | `POST` | `/api/projects/[id]/suggestions` | Household | Run an ask (`extraText` optional, up to 500 characters). Takes about 15 seconds; makes two model calls. 403 when not enabled, 429 at 20 asks in 24 hours. Otherwise 200 with `{ status, limitReached, suggestion, fallback }`, where `status` is `ok`, `too_vague` or `failed`; on `failed` the previous result is kept and `fallback` lists top providers in the project's category |
+| `GET` | `/api/projects/[id]/plan` | Household | The AI DIY plan: `{ enabled, limitReached, hasSuggestions, plan }`. `plan` is the saved result (summary, safety, steps, tools, materials) with `extraText` and `createdAt`, or null |
+| `POST` | `/api/projects/[id]/plan` | Household | Make a plan (`extraText` optional, up to 500 characters). One model call, about 20 seconds. 403 when not enabled, 429 at the shared cap of 20 asks in 24 hours. Otherwise 200 with `{ status, limitReached, hasSuggestions, plan }`; on `failed` the previous plan is kept |
+| `POST` | `/api/projects/[id]/steps/batch` | Household | Append up to 30 steps (`steps: [{ text, estimateMinutes? }]`, each under the step rules) in order up to the cap of 100. Returns `{ steps, skipped }`: the whole checklist in order and how many were left out |
 
 See [projects.md](../functionality/projects.md) for the product view.
 
@@ -200,8 +203,8 @@ Key data models handled by the API:
 - **OccurrenceHistoryLog**: Audit trail for occurrence changes
 - **FormerHouseholdMember**: Snapshot of departed users for historical display
 - **Provider**, **ProviderCategory**, **ProviderStatus**, **ProviderContact**, **ProviderEvidence**, **ProviderComment**, **TaskProvider**, **ApiKey**: Provider directory and machine ingest (see [provider-ingest.md](provider-ingest.md))
-- **Project**, **ProjectPhoto**, **ProjectStep**, **ProjectProvider**, **ProjectSuggestion**: Home project tracking with private photos, a checklist of steps, providers linked with a per-project status, and the latest AI provider suggestion (see [projects.md](../functionality/projects.md))
-- **AiRequestLog**: One row per AI ask (outcome, timing, sizes; no text), used for the daily cap
+- **Project**, **ProjectPhoto**, **ProjectStep**, **ProjectProvider**, **ProjectSuggestion**, **ProjectPlan**: Home project tracking with private photos, a checklist of steps, providers linked with a per-project status, the latest AI provider suggestion and the latest AI DIY plan (see [projects.md](../functionality/projects.md))
+- **AiRequestLog**: One row per AI ask of any feature (outcome, timing, sizes; no text), used for the shared daily cap
 
 ## Rate Limiting
 

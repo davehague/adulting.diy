@@ -75,7 +75,7 @@ This file is a signpost. The detail lives in `docs/`; read the relevant doc befo
 6. **OccurrenceHistoryLog**: Audit trail for task occurrences
 7. **FormerHouseholdMember**: Name snapshots of users who left a household
 8. **Provider**: Contractors/service providers, with **ProviderCategory**, **ProviderStatus**, **ProviderContact**, **ProviderEvidence** (neighbor sightings), **ProviderComment**, and **TaskProvider** (task link); **ApiKey** is the per-household key for machine ingest. See [docs/functionality/providers.md](docs/functionality/providers.md) and [docs/tech/provider-ingest.md](docs/tech/provider-ingest.md)
-9. **Project**: Household home-project tracking (title, location, status, path, notes), with **ProjectPhoto** (private photos in Vercel Blob), **ProjectStep** (a checklist; the dashboard shows each Active project's next undone step) and **ProjectProvider** (a provider linked to the project with its own status: considering, contacted, chosen, passed). **ProjectSuggestion** holds a project's latest AI provider suggestion, and **AiRequestLog** records each AI ask without any text (it drives the daily cap). See [docs/functionality/projects.md](docs/functionality/projects.md) and the AI Provider Suggestions section of [docs/tech/architecture.md](docs/tech/architecture.md)
+9. **Project**: Household home-project tracking (title, location, status, path, notes), with **ProjectPhoto** (private photos in Vercel Blob), **ProjectStep** (a checklist; the dashboard shows each Active project's next undone step) and **ProjectProvider** (a provider linked to the project with its own status: considering, contacted, chosen, passed). **ProjectSuggestion** holds a project's latest AI provider suggestion, **ProjectPlan** its latest AI DIY plan, and **AiRequestLog** records each AI ask without any text (it drives the shared daily cap). See [docs/functionality/projects.md](docs/functionality/projects.md) and the AI sections of [docs/tech/architecture.md](docs/tech/architecture.md)
 
 ### Task Scheduling System
 
@@ -216,7 +216,7 @@ Architectural decisions are documented in `docs/adrs/`. Consult these before pro
 - The project uses Google OAuth exclusively (no password-based auth currently)
 - CockroachDB is used but treated as PostgreSQL for most purposes
 - Notifications support email (Mailjet) and Slack (incoming webhooks)
-- Provider suggestions are the only AI integration; what may be sent to the model is decided in `server/utils/suggestion-prompts.ts` and nowhere else
+- Provider suggestions and the DIY plan are the only AI integrations; what may be sent to the model is decided in `server/utils/suggestion-prompts.ts` and `plan-prompts.ts` and nowhere else, and both go through `server/utils/ai-ask.ts`
 - All times are stored in UTC in the database
 
 ## Business Logic Details

@@ -12,6 +12,7 @@
 - Link providers from the household directory to a project and track where you stand with each: Considering, Contacted, Chosen or Passed
 - Search, filter and sort the directory from the project, and read a provider's details and what neighbors said before adding them
 - Ask for suggestions: the project is split into the trades it needs, with up to three providers from your own directory for each and a reason for every pick (on for selected households)
+- Ask for a DIY plan: the steps with a time and cost range each, the tools and materials, how hard it is and why, and a one-tap way to copy steps into the checklist (on for selected households)
 - Call a linked provider straight from the project page
 - Browse, filter and swipe through projects and their photos
 - Edit anything in place, and delete photos or whole projects
@@ -98,6 +99,20 @@ Remove takes a provider off the project for good, after a confirmation that sugg
 
 A household with no provider categories sees a note pointing to Household > Provider settings, since a category is needed before a provider can be linked.
 
+### The DIY Plan
+
+For households that have AI help turned on, the project page has a **DIY plan** card between Steps and Providers. It starts with a box reading "Anything to add? (optional)" and a **Plan it** button, and nothing is sent anywhere until the button is tapped. The box is for what the notes do not say, such as "I own a drill and a stud finder". Other households see the page as it was.
+
+Tapping the button reads the project's title, location and notes, anything typed in the box, and, when the project has saved provider suggestions, the trades they named and why. After about twenty seconds the plan appears: a line with the difficulty (Easy, Moderate, Hard, or Hire this out), the total time, and the total cost range marked as estimates; one sentence of why; a warning line when the work touches electrical, gas, structural, roofing or materials old enough to contain asbestos or lead; the steps in the order the work happens, each with minutes and, when it needs materials, a cost range; a tools list split into "You probably have" and "You may need" with rough prices; and a materials list with quantities. The plan is written for a competent beginner with a basic toolkit. Dollar figures are rounded ranges, not quotes.
+
+A step that legally or practically needs a licensed trade is marked "Pro step" with one sentence of why, and carries no cost. When the whole job is one for a professional, the plan says "Hire this out", the steps become the homeowner's steps (shut off the supply, photograph the damage, clear the area, get quotes, ask about permits), the lists shrink to what a homeowner would still buy, and two buttons appear: **Find a provider**, which opens the same window used for provider suggestions, and **Set path to Hire**, shown unless the project's path is already Hire. The plan never changes the project's path on its own.
+
+The plan is a suggestion, kept separate from the checklist. **Add** on a step copies it to the bottom of the checklist with its time estimate; **Add all** copies every step that is not there yet, in plan order, up to the checklist's limit of 100, and says how many were added or that the checklist is full. A plan step whose text is already in the checklist reads "Added" instead, so Add all never doubles up, and removing that step from the checklist brings its Add button back. Making a new plan never touches the checklist.
+
+The latest plan is saved on the project and shown again, with its date, to everyone in the household; **Plan again** replaces it. Leaving the page during a plan and coming back picks it up. On a Done project the box and button are hidden; a saved plan stays readable and its steps can still be added. If the project is too vague to plan, the card says so and asks for a sentence about what is wrong or what you want done. If the request fails, "Could not make a plan." and **Try again** appear and the previous plan, if any, stays.
+
+Plans share the same household switch and the same daily limit of 20 asks as provider suggestions, and send text only: the project's title, location and notes, the extra text, and the trade names and reasons from the saved suggestions, with phone numbers, emails and links masked. No photos, provider names or anything identifying the household is sent.
+
 ### Next Steps on the Dashboard
 
 The dashboard shows a **Project next steps** section under the stat cards, with one row for each Active project: its next undone step (the first one not checked off), the project's title beneath it, and the estimate when there is one. Only Active projects appear, newest first. Tapping the text opens the project; ticking the box checks the step off and the row moves on to that project's next step.
@@ -137,4 +152,5 @@ Deleting a project hides it everywhere but keeps the record and its photos; noth
 - Provider suggestions are on only for households switched on by hand, read no photos, and keep only the latest result per project.
 - Suggestions only look inside the category each part was matched to, so a provider filed under a different category is not considered.
 - Names of people that appear inside neighbor posts or notes are sent to the model as written; only phone numbers, emails and links are masked.
-- No AI help with steps yet: suggested next steps or time estimates.
+- The DIY plan has one skill level, reads no photos, keeps only the latest plan, and its costs stay on the plan: steps copied to the checklist carry their time but not their cost.
+- Making a new plan replaces the old one wholesale; edits to a plan are not possible, only to the checklist steps made from it.

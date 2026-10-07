@@ -74,7 +74,7 @@ Defined in `prisma/schema.prisma`. Every household-owned model carries `househol
 | Identity | `User`, `Household`, `FormerHouseholdMember` |
 | Tasks | `Category`, `TaskDefinition`, `TaskOccurrence`, `OccurrenceHistoryLog`, `TaskHistoryLog` |
 | Providers | `Provider`, `ProviderCategory`, `ProviderStatus`, `ProviderContact`, `ProviderEvidence`, `ProviderComment`, `TaskProvider`, `ApiKey` |
-| Projects | `Project`, `ProjectPhoto`, `ProjectStep`, `ProjectProvider`, `ProjectSuggestion` |
+| Projects | `Project`, `ProjectPhoto`, `ProjectStep`, `ProjectProvider`, `ProjectSuggestion`, `ProjectPlan` |
 | AI usage | `AiRequestLog` |
 
 Conventions:
@@ -110,7 +110,7 @@ The full endpoint list is in [api-endpoints.md](api-endpoints.md).
 | Notifications and reminders | `NotificationService`, `server/services/notifications/*`, `/api/scheduler/reminders` | [notification-system.md](notification-system.md) |
 | Provider directory and machine ingest | `Provider*Service`, `ApiKeyService`, `/api/ingest/providers` | [provider-ingest.md](provider-ingest.md) |
 | Projects, photos, steps and provider links | `ProjectService`, `ProjectPhotoService`, `ProjectStepService`, `ProjectProviderService` | Below |
-| AI provider suggestions | `ProviderSuggestionService`, `/api/projects/[id]/suggestions`, `server/utils/ollama.ts`, `suggestion-*.ts`, `provider-ranking.ts` | Below |
+| AI help: provider suggestions and the DIY plan | `ProviderSuggestionService`, `ProjectPlanService`, `/api/projects/[id]/suggestions`, `/api/projects/[id]/plan`, `server/utils/ai-ask.ts`, `ollama.ts`, `suggestion-*.ts`, `plan-*.ts`, `provider-ranking.ts` | Below |
 | Dashboard | `DashboardService`, `/api/dashboard`, `/api/projects/next-steps` | Below |
 
 ### Projects and Photo Storage
@@ -126,7 +126,9 @@ The full endpoint list is in [api-endpoints.md](api-endpoints.md).
 
 ### AI Provider Suggestions
 
-Design: [the slice 4a spec](../superpowers/specs/2026-10-05-projects-ai-provider-suggestions-design.md). This is the only AI integration in the app.
+Design: [the slice 4a spec](../superpowers/specs/2026-10-05-projects-ai-provider-suggestions-design.md). The DIY plan below shares its plumbing.
+
+- **Shared plumbing** lives in `server/utils/ai-ask.ts`: `askJson` (one validated model call, lenient JSON parse, one retry inside the deadline), `asksInLastDay` (the daily cap, one count per household across every AI feature), `describeError` (what a failure may log: only this code's own fixed messages, otherwise an error's name and code) and `AskError`. Each AI service keeps its own gate order, log row and save.
 
 - **Flow.** `ProviderSuggestionService.run` checks the project, the allowed-household list and the daily cap, writes an `AiRequestLog` row as `started`, then makes two model calls: routing (project text and category names in; up to four parts out, each tied to a category or to none) and picking (the parts with their candidate pools in; up to three picks per part with reasons out). It saves the result as the project's single `ProjectSuggestion` row and finishes the log row. The whole ask has one 45-second deadline.
 - **The model is injected.** The service takes a `ModelCall` function (default `callOllama` in `server/utils/ollama.ts`, a plain `fetch` to Ollama Cloud), so every test supplies canned replies. Nothing in the test suite calls a model.
@@ -136,6 +138,14 @@ Design: [the slice 4a spec](../superpowers/specs/2026-10-05-projects-ai-provider
 - **Reading.** `getState` returns the saved result refreshed against the directory as it is now (picks for removed or negative-status providers dropped, current list fields attached). A failed ask keeps the previous result and returns a fallback list from the fixed ranking.
 - **Logging.** `AiRequestLog` and the console hold outcome, timing, sizes and error type only, never prompt or reply text. The cap counts log rows from the last 24 hours.
 - **Screen.** `components/projects/ProviderSuggestions.vue` sits inside the Find a provider modal's scrolling area. An add from a suggestion emits `linked` with `keepOpen` so `ProjectProviders.vue` leaves the window open. An ask still running when the window is closed is picked up again on reopen within the same tab.
+
+### AI DIY Plan
+
+Design: [the slice 4b spec](../superpowers/specs/2026-10-06-projects-ai-diy-plan-design.md).
+
+- **Flow.** `ProjectPlanService.run` checks the project, the allowed-household list and the shared cap, writes an `AiRequestLog` row (`feature: diy_plan`) as `started`, makes one model call with `buildPlanPrompt` (project text plus the trades and whys from the project's saved `ProjectSuggestion`, never its providers), validates and clamps the reply (`server/utils/plan-schemas.ts`: counts, number bounds, step text cut to the checklist's 200 characters, pro-step rules, `totalMinutes` recomputed from the steps), saves it as the project's single `ProjectPlan` row and finishes the log row. Same 45-second deadline as suggestions; the ask log's timing is the tripwire for a background version.
+- **The checklist is never written by planning.** `POST /api/projects/[id]/steps/batch` (`ProjectStepService.addMany`) appends several steps under the cap of 100 and reports how many did not fit; `utils/project-steps.ts` `hasStepText` decides which plan steps are already present (trim, case-insensitive).
+- **Screen.** `components/projects/ProjectPlan.vue` sits between Steps and Providers on the project page, re-attaches to a running ask on remount like the suggestions panel, emits `update:steps` for adds, `find-provider` (the page calls `ProjectProviders`' exposed `openFinder`) and `set-path-hire` (the page's existing `save({ path: 'hire' })`).
 
 ### Dashboard
 

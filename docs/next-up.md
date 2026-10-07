@@ -18,9 +18,9 @@
 
 ## Projects - Planned
 
-Capture with photos (slice 1), steps with next steps on the dashboard (slice 2), providers linked to a project with a status through the Find a provider window (slice 3a), and AI provider suggestions inside that window for selected households (slice 4a, [design](superpowers/specs/2026-10-05-projects-ai-provider-suggestions-design.md)) are built. See [functionality/projects.md](functionality/projects.md).
+Capture with photos (slice 1), steps with next steps on the dashboard (slice 2), providers linked to a project with a status through the Find a provider window (slice 3a), AI provider suggestions inside that window (slice 4a, [design](superpowers/specs/2026-10-05-projects-ai-provider-suggestions-design.md)), and the AI DIY plan on a project (slice 4b, [design](superpowers/specs/2026-10-06-projects-ai-diy-plan-design.md)), both for selected households, are built. See [functionality/projects.md](functionality/projects.md).
 
-- Slice 4b: suggested next steps and time estimates on a project. Regenerating steps must keep existing ones, and planning must not run inside a single web request, so it needs a background-job mechanism first; it can read the trades saved with a project's provider suggestions. Not designed yet
+- DIY plan, next levels: a skill-level selector (beginner / handy / pro); cost on checklist steps with a total on the dashboard (schema change); photos as input (own privacy decision, slower call); a background-job mechanism if the ask log shows plans running past about 35 seconds; a merge on Plan again that keeps edits; product or video links only with a source the model cannot invent from; a separate model setting for plans if they want a different model
 - Slice 3b, on hold until the first real quote arrives: quotes recorded as numbers on a project's provider link. Not designed yet; open questions are one quote per link or several over time, and whether a quote has a date, a note and what it covers
 - A clean-up job for the stored photos of long-deleted projects
 
@@ -46,3 +46,7 @@ Capture with photos (slice 1), steps with next steps on the dashboard (slice 2),
 - Provider suggestions, tests: the tier test and the top-five fallback test are weaker than they look; route tests lack a 500 case, a null body and the 500-character boundary; fixtures lack address, website and license fields; the component checks live only in a throwaway harness, not in the repo
 - The 60-second request limit added for suggestions applies to every server route, including the two daily jobs
 - The test suite prints a sign-in plugin warning on every run
+- DIY plan, behaviour: two members planning at once can pass the daily cap by one; adding steps is not transactional, so two simultaneous Add alls could pass 100 steps (same as adding one step); an ask picked up on return that then fails hides the saved plan until reload; the "Added n steps" note can go stale after a later checklist change; an Add error shows above the card, far from a step low in the list
+- DIY plan, robustness: a reply with numbers as strings ("30") is rejected and retried; a 200-character cut can split an emoji; the failure log cannot say which validation check failed; a Prisma error from the batch add could log step text through the generic error path (every field is validated first)
+- DIY plan, screen: "0 min" shows on pro steps; dollar amounts have no thousands separators; long why, safety, pro-step and tool text lacks break-words on a narrow phone
+- DIY plan, tests: redaction test covers two of six prompt fields; the 2-second call floor and the exact-true tooVague boundary are not pinned; the plan service tests do not assert "no log row on 429", "no cap count on 403", a 404 on run, or "no upsert when the model throws"; the batch-add tests do not assert the final select and order; route tests lack the 500 path, a null body, a non-string extra and a missing id

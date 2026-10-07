@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-06
+
+### DIY plan (on for selected households)
+- A project page now has a **DIY plan** card: tap **Plan it** and get the steps in order with a time and a cost range each, the tools you probably have and may need, the materials with quantities, how hard the job is and why, and a safety line when one applies
+- **Add** copies a step into the project's checklist with its time estimate; **Add all** copies every step that is not there yet
+- When a job is really one for a professional, the plan says "Hire this out", lists the homeowner's steps instead, and offers **Find a provider** and **Set path to Hire**
+- Steps that need a licensed trade are marked "Pro step" with the reason
+- The latest plan is saved on the project and shown again when the page is reopened
+- Provider suggestions and plans now share one daily limit of 20 asks per household
+
 ## 2026-10-05
 
 ### Suggested providers (on for selected households)
