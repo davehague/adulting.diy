@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { nextStepOf, formatMinutes } from '@/utils/project-steps'
+import { nextStepOf, formatMinutes, hasStepText } from '@/utils/project-steps'
 
 const step = (id: string, doneAt: Date | string | null = null) => ({ id, doneAt })
 
@@ -41,5 +41,17 @@ describe('formatMinutes', () => {
   it('shows hours and minutes', () => {
     expect(formatMinutes(90)).toBe('1 h 30 min')
     expect(formatMinutes(9999)).toBe('166 h 39 min')
+  })
+})
+
+describe('hasStepText', () => {
+  const steps = [{ text: 'Cut out the damaged drywall' }, { text: '  Prime the patch ' }]
+  it('matches after trimming and ignoring case', () => {
+    expect(hasStepText(steps, 'cut out the damaged DRYWALL')).toBe(true)
+    expect(hasStepText(steps, 'Prime the patch')).toBe(true)
+  })
+  it('does not match a different text or an empty list', () => {
+    expect(hasStepText(steps, 'Prime the wall')).toBe(false)
+    expect(hasStepText([], 'anything')).toBe(false)
   })
 })

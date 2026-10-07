@@ -22,3 +22,11 @@ export const formatMinutes = (minutes: number): string => {
   const rest = minutes % 60;
   return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
 };
+
+const normalizeStepText = (text: string): string => text.trim().toLowerCase();
+
+// Whether a step with this text is already in the checklist; the "Added" marker on a plan step and the skip rule for Add all both use it.
+export const hasStepText = (steps: { text: string }[], text: string): boolean => {
+  const wanted = normalizeStepText(text);
+  return steps.some((step) => normalizeStepText(step.text) === wanted);
+};

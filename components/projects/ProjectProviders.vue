@@ -125,6 +125,9 @@ const pendingStatus = ref<Record<string, ProjectProviderStatus>>({});
 const pendingCategory = ref<string | null | undefined>(undefined);
 const finderOpen = ref(false);
 
+// The DIY plan section's "Find a provider" button opens this section's window.
+defineExpose({ openFinder: (): void => { finderOpen.value = true; } });
+
 // A saved category that is not in the household's list (deleted since) shows as "No category".
 const knownCategoryId = computed<string | null>(() =>
   props.categoryId && categories.value.some((category) => category.id === props.categoryId) ? props.categoryId : null,

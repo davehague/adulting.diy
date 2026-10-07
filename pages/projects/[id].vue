@@ -77,8 +77,18 @@
                     @update:steps="onStepsChange"
                     @all-done="openMarkDone" />
 
+      <!-- DIY plan (AI; households switched on only) -->
+      <ProjectPlan :project-id="project.id"
+                   :steps="project.steps ?? []"
+                   :project-status="project.status"
+                   :project-path="project.path ?? null"
+                   @update:steps="onStepsChange"
+                   @find-provider="providersSection?.openFinder()"
+                   @set-path-hire="save({ path: 'hire' })" />
+
       <!-- Providers -->
-      <ProjectProviders :project-id="project.id"
+      <ProjectProviders ref="providersSection"
+                        :project-id="project.id"
                         :category-id="project.providerCategoryId ?? null"
                         :links="project.providers ?? []"
                         @update:links="onProviderLinksChange"
@@ -198,6 +208,7 @@ import PhotoUploader from '@/components/projects/PhotoUploader.vue';
 import PhotoCarousel from '@/components/projects/PhotoCarousel.vue';
 import ProjectSteps from '@/components/projects/ProjectSteps.vue';
 import ProjectProviders from '@/components/projects/ProjectProviders.vue';
+import ProjectPlan from '@/components/projects/ProjectPlan.vue';
 import MarkDoneDialog from '@/components/projects/MarkDoneDialog.vue';
 
 const route = useRoute();
@@ -217,6 +228,7 @@ let savedIndicatorTimer: ReturnType<typeof setTimeout> | null = null;
 // The id of the photo that was tapped; the viewer opens the carousel on that one. null = closed.
 const viewing = ref<string | null>(null);
 const viewerCarousel = ref<InstanceType<typeof PhotoCarousel> | null>(null);
+const providersSection = ref<InstanceType<typeof ProjectProviders> | null>(null);
 const viewerIndex = ref(0);
 
 // Always read from the current photo list, so removing a photo while the viewer is closed, then
