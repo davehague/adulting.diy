@@ -133,13 +133,14 @@ describe('run', () => {
     const response = await service.run('h1', 'u1', 'p1', null)
     expect(response.plan?.summary?.totalMinutes).toBe(75)
   })
-  it('sends the project text and the saved trades, never the provider names or picks', async () => {
+  it('sends the project text and the saved trade names, never the whys, provider names or picks', async () => {
     db.projectSuggestion.findUnique.mockResolvedValue({ result: savedSuggestion })
     model.mockResolvedValueOnce(reply(okPlan))
     await service.run('h1', 'u1', 'p1', 'extra words')
     const sent = `${model.mock.calls[0][0].system}\n${model.mock.calls[0][0].user}`
     expect(sent).toContain('Fix the leak')
-    expect(sent).toContain('It leaks.')
+    // Only the trade's name goes; its why reads like a hiring decision.
+    expect(sent).not.toContain('It leaks.')
     expect(sent).toContain('extra words')
     expect(sent).not.toContain('prov-alpha')
     expect(sent).not.toContain('Alpha Plumbing is great.')
