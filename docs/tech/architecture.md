@@ -37,7 +37,7 @@ Neighborhood watcher (external) ──→ /api/ingest/providers  (household API 
 | `types/` | Shared TypeScript types, one file per domain |
 | `server/api/` | HTTP endpoints, one file per route and method |
 | `server/services/` | Business logic and all database access, one class per domain |
-| `server/utils/` | Auth wrappers, Zod schemas, scheduling maths, blob storage, the model call and prompts for provider suggestions, error helpers, the Prisma client |
+| `server/utils/` | Auth wrappers, Zod schemas, scheduling maths, blob storage, the model calls and prompts for the AI features, error helpers, the Prisma client |
 | `prisma/` | `schema.prisma` and migrations |
 | `scripts/` | Database setup, seed, and maintenance scripts |
 | `tests/` | Vitest suites (see [testing.md](testing.md)) |
@@ -97,6 +97,7 @@ Conventions:
 | `/occurrences`, `/occurrences/[id]` | Occurrence list and detail |
 | `/providers`, `/providers/[id]` | Provider directory and detail |
 | `/projects`, `/projects/new`, `/projects/[id]` | Project list, capture form, detail |
+| `/projects/chat/[id]` | Project chat (sets the `hideFooter` page meta, which `layouts/default.vue` reads to drop its footer) |
 | `/household`, `/household/providers-settings` | Household settings; provider categories, statuses and API keys |
 | `/profile` | Profile and notification preferences |
 
@@ -110,7 +111,7 @@ The full endpoint list is in [api-endpoints.md](api-endpoints.md).
 | Notifications and reminders | `NotificationService`, `server/services/notifications/*`, `/api/scheduler/reminders` | [notification-system.md](notification-system.md) |
 | Provider directory and machine ingest | `Provider*Service`, `ApiKeyService`, `/api/ingest/providers` | [provider-ingest.md](provider-ingest.md) |
 | Projects, photos, steps and provider links | `ProjectService`, `ProjectPhotoService`, `ProjectStepService`, `ProjectProviderService` | Below |
-| AI help: provider suggestions and the DIY plan | `ProviderSuggestionService`, `ProjectPlanService`, `/api/projects/[id]/suggestions`, `/api/projects/[id]/plan`, `server/utils/ai-ask.ts`, `ollama.ts`, `suggestion-*.ts`, `plan-*.ts`, `provider-ranking.ts` | Below |
+| AI help: provider suggestions, the DIY plan and the project chat | `ProviderSuggestionService`, `ProjectPlanService`, `ProjectChatService`, `/api/projects/[id]/suggestions`, `/api/projects/[id]/plan`, `/api/projects/[id]/chat`, `server/utils/ai-ask.ts`, `ollama.ts`, `suggestion-*.ts`, `plan-*.ts`, `chat-*.ts`, `provider-ranking.ts`, `utils/chat-markdown.ts` | Below |
 | Dashboard | `DashboardService`, `/api/dashboard`, `/api/projects/next-steps` | Below |
 
 ### Projects and Photo Storage
@@ -128,7 +129,7 @@ The full endpoint list is in [api-endpoints.md](api-endpoints.md).
 
 Design: [the slice 4a spec](../superpowers/specs/2026-10-05-projects-ai-provider-suggestions-design.md). The DIY plan below shares its plumbing.
 
-- **Shared plumbing** lives in `server/utils/ai-ask.ts`: `askJson` (one validated model call, lenient JSON parse, one retry inside the deadline), `asksInLastDay` (the daily cap, one count per household across every AI feature), `describeError` (what a failure may log: only this code's own fixed messages, otherwise an error's name and code) and `AskError`. Each AI service keeps its own gate order, log row and save.
+- **Shared plumbing** lives in `server/utils/ai-ask.ts`: `askJson` (one validated model call, lenient JSON parse, one retry inside the deadline), `askChat` (a multi-turn call that runs the `web_search` tool calls the model asks for, at most three per reply, inside the deadline), `asksInLastDay` (the daily cap: one count per household over the features in `CAPPED_AI_FEATURES`, which are suggestions and plans; chat rows are logged but never counted), `describeError` (what a failure may log: only this code's own fixed messages, otherwise an error's name and code) and `AskError`. `server/utils/ollama.ts` holds the three HTTP calls: `callOllama` (single turn, JSON replies), `callOllamaChat` (messages and tools, may return tool calls) and `searchOllama` (`POST /api/web_search` on the same key). Each AI service keeps its own gate order, log row and save.
 
 - **Flow.** `ProviderSuggestionService.run` checks the project, the allowed-household list and the daily cap, writes an `AiRequestLog` row as `started`, then makes two model calls: routing (project text and category names in; up to four parts out, each tied to a category or to none) and picking (the parts with their candidate pools in; up to three picks per part with reasons out). It saves the result as the project's single `ProjectSuggestion` row and finishes the log row. The whole ask has one 45-second deadline.
 - **The model is injected.** The service takes a `ModelCall` function (default `callOllama` in `server/utils/ollama.ts`, a plain `fetch` to Ollama Cloud), so every test supplies canned replies. Nothing in the test suite calls a model.
@@ -145,7 +146,18 @@ Design: [the slice 4b spec](../superpowers/specs/2026-10-06-projects-ai-diy-plan
 
 - **Flow.** `ProjectPlanService.run` checks the project, the allowed-household list and the shared cap, writes an `AiRequestLog` row (`feature: diy_plan`) as `started`, makes one model call with `buildPlanPrompt` (project text plus the trade names from the project's saved `ProjectSuggestion`, never its whys or providers), validates and clamps the reply (`server/utils/plan-schemas.ts`: counts, number bounds, step text cut to the checklist's 200 characters, pro-step rules, `totalMinutes` recomputed from the steps), saves it as the project's single `ProjectPlan` row and finishes the log row. Same 45-second deadline as suggestions; the ask log's timing is the tripwire for a background version.
 - **The checklist is never written by planning.** `POST /api/projects/[id]/steps/batch` (`ProjectStepService.addMany`) appends several steps under the cap of 100 and reports how many did not fit; `utils/project-steps.ts` `hasStepText` decides which plan steps are already present (trim, case-insensitive).
-- **Screen.** `components/projects/ProjectPlan.vue` sits between Steps and Providers on the project page, re-attaches to a running ask on remount like the suggestions panel, emits `update:steps` for adds, `find-provider` (the page calls `ProjectProviders`' exposed `openFinder`) and `set-path-hire` (the page's existing `save({ path: 'hire' })`).
+- **Screen.** `components/projects/ProjectPlan.vue` sits between Steps and Providers on the project page, re-attaches to a running ask on remount like the suggestions panel, emits `update:steps` for adds, `find-provider` (the page calls `ProjectProviders`' exposed `openFinder`), `set-path-hire` (the page's existing `save({ path: 'hire' })`) and `enabled` (the page shows the Chat button from it).
+
+### AI Project Chat
+
+Design: [the slice 5 spec](../superpowers/specs/2026-10-08-projects-ai-chat-design.md); the plan's "Deviations" section records the route path and the `failedAt` column.
+
+- **Data.** `ProjectChatMessage` is one row per message (`role` user or assistant, `content`, `createdById`, `searches` JSON, `failedAt` on a user row whose reply failed, timing and token counts on assistant rows). Never edited or deleted; cascades with the project.
+- **Flow.** `ProjectChatService.send` checks the project and the allowed-household list, refuses with 409 while the last row is a fresh unanswered user row (younger than `CHAT_PENDING_MS`, 75 s, which outlasts the 60 s ask deadline), saves the user row BEFORE the model call (or, on `{ retry: true }`, refreshes the last unanswered row's `createdAt` and clears `failedAt`), writes an `AiRequestLog` row (`feature: project_chat`), reads the context fresh (project, steps, saved plan, suggestion trades, linked providers by name/category/status) and the newest 200 rows, builds the prompt with `buildChatPrompt`, runs `askChat` with `callOllamaChat` and `searchOllama`, saves the assistant row (reply cut to 8,000 characters, the queries it searched), and finishes the log. A failure marks the user row `failedAt`, logs `failed` and answers 502; `getState` returns the newest 500 rows oldest first with `mine`, `failed` and `pending`.
+- **What may leave the household is decided in one place.** `server/utils/chat-prompts.ts` renders the project block and the history; every household-typed field goes through `redactContactDetails`, assistant rows go back verbatim, members are never named (the other member's rows are prefixed "(another household member)"), and the one tool is `web_search(query)`. Search queries are masked and cut before they reach Ollama. The thinking text is neither shown nor stored.
+- **No cap.** Chat has no daily limit (the household's decision); the ask log is the tripwire, and the per-reply search cap and the deadline are enforced in code.
+- **Screen.** `pages/projects/chat/[id].vue` owns the state: an optimistic row on send, a 1 s ticker for "Thinking… n s", polling every 3 s while the server says pending, Retry on a failed or expired row, rows matched by id (reactive arrays hand back proxies), a sequence counter and an unmount flag so a late poll or a navigation away cannot clobber the thread, a client timeout on the send, and a one-shot refetch when a send fails without a status so a question the server took is not shown as lost. `ChatThread.vue` renders replies through `utils/chat-markdown.ts` (escapes first; paragraphs, lists, bold, code, links only) with `v-html`; `ChatComposer.vue` grows with the text up to five lines and sends on Enter only with a fine pointer.
+- **Tests.** Everything server-side is unit-tested with canned replies and searches. The page's state machine is exercised only in the reviewer's throwaway jsdom harness outside the repo; the repo has no component tests.
 
 ### Dashboard
 
@@ -158,7 +170,7 @@ Design: [the slice 4b spec](../superpowers/specs/2026-10-06-projects-ai-diy-plan
 | Google Sign-In | Authentication (ID token as bearer) | `NUXT_PUBLIC_GOOGLE_CLIENT_ID` |
 | CockroachDB | All application data | `DATABASE_URL` |
 | Vercel Blob (private store) | Project photos | On Vercel, the project's OIDC token (no variable). Locally, `BLOB_READ_WRITE_TOKEN`, which `server/utils/blob-storage.ts` passes to the SDK explicitly. Never set `BLOB_STORE_ID` locally: with a linked repo (`.vercel/`) it makes the SDK prefer a development OIDC token, which the store refuses with a 403 |
-| Ollama Cloud | AI provider suggestions | `OLLAMA_API_KEY`; `AI_SUGGESTIONS_MODEL` (optional, defaults to `glm-5.3-flash`); `AI_SUGGESTIONS_HOUSEHOLD_IDS` (comma-separated household ids allowed to use it; unset means nobody). Read from `process.env` at call time in `server/utils/ai-config.ts` |
+| Ollama Cloud | AI provider suggestions, the DIY plan and the project chat (chat also uses its `web_search` endpoint on the same key) | `OLLAMA_API_KEY`; `AI_SUGGESTIONS_MODEL` (optional, defaults to `glm-5.3-flash`; suggestions and plans); `AI_CHAT_MODEL` (optional, defaults to `glm-5.3`; the chat); `AI_SUGGESTIONS_HOUSEHOLD_IDS` (comma-separated household ids allowed to use all three; unset means nobody). Read from `process.env` at call time in `server/utils/ai-config.ts` |
 | Mailjet | Email notifications | `MJ_APIKEY_PUBLIC`, `MJ_APIKEY_PRIVATE` |
 | Slack incoming webhooks | Slack notifications | Per-user webhook URL stored in notification preferences |
 | Vercel Cron | Daily occurrence generation and reminders | `vercel.json`, `CRON_SECRET` |
@@ -167,7 +179,7 @@ Other environment variables: `APP_URL` (base URL used in notification links; def
 
 Local development and production share one blob store, so a local photo upload is a real upload.
 
-`nuxt.config.ts` sets `nitro.vercel.functions.maxDuration` to 60 seconds so a provider-suggestions ask can finish. Nitro deploys the server as one function, so the limit applies to every route, including the scheduled jobs below.
+`nuxt.config.ts` sets `nitro.vercel.functions.maxDuration` to 300 seconds (Fluid compute is on, which allows 300 on every plan) so a chat reply with searches (up to 60 s) or a plan (45 s) can finish. Nitro deploys the server as one function, so the limit applies to every route, including the scheduled jobs below.
 
 ## Scheduled Jobs
 

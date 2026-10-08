@@ -21,7 +21,7 @@ Adulting.DIY is a household task management system designed to help families and
 - **Validation**: Zod (schema validation)
 - **Dates**: date-fns (date manipulation)
 - **Storage**: Vercel Blob (private store, project photos)
-- **AI**: Ollama Cloud over plain `fetch` (provider suggestions; no SDK)
+- **AI**: Ollama Cloud over plain `fetch` (provider suggestions, the DIY plan and the project chat; no SDK)
 
 ### Development & Deployment
 - **Hosting**: Vercel
@@ -75,7 +75,7 @@ This file is a signpost. The detail lives in `docs/`; read the relevant doc befo
 6. **OccurrenceHistoryLog**: Audit trail for task occurrences
 7. **FormerHouseholdMember**: Name snapshots of users who left a household
 8. **Provider**: Contractors/service providers, with **ProviderCategory**, **ProviderStatus**, **ProviderContact**, **ProviderEvidence** (neighbor sightings), **ProviderComment**, and **TaskProvider** (task link); **ApiKey** is the per-household key for machine ingest. See [docs/functionality/providers.md](docs/functionality/providers.md) and [docs/tech/provider-ingest.md](docs/tech/provider-ingest.md)
-9. **Project**: Household home-project tracking (title, location, status, path, notes), with **ProjectPhoto** (private photos in Vercel Blob), **ProjectStep** (a checklist; the dashboard shows each Active project's next undone step) and **ProjectProvider** (a provider linked to the project with its own status: considering, contacted, chosen, passed). **ProjectSuggestion** holds a project's latest AI provider suggestion, **ProjectPlan** its latest AI DIY plan, and **AiRequestLog** records each AI ask without any text (it drives the shared daily cap). See [docs/functionality/projects.md](docs/functionality/projects.md) and the AI sections of [docs/tech/architecture.md](docs/tech/architecture.md)
+9. **Project**: Household home-project tracking (title, location, status, path, notes), with **ProjectPhoto** (private photos in Vercel Blob), **ProjectStep** (a checklist; the dashboard shows each Active project's next undone step) and **ProjectProvider** (a provider linked to the project with its own status: considering, contacted, chosen, passed). **ProjectSuggestion** holds a project's latest AI provider suggestion, **ProjectPlan** its latest AI DIY plan, **ProjectChatMessage** one message of its shared chat, and **AiRequestLog** records each AI ask without any text (the daily cap counts the suggestion and plan rows; chat is uncapped). See [docs/functionality/projects.md](docs/functionality/projects.md) and the AI sections of [docs/tech/architecture.md](docs/tech/architecture.md)
 
 ### Task Scheduling System
 
@@ -145,7 +145,7 @@ const tasks = await taskService.findForHousehold(householdId, filters);
 
 `BLOB_READ_WRITE_TOKEN` in `.env` authenticates `server/utils/blob-storage.ts` against the project's private Vercel Blob store (project photos). Local dev and production share the one store, so a local upload is a real upload. Do not add `BLOB_STORE_ID` to `.env`: once the repo is linked to Vercel (`.vercel/`), that variable makes the `@vercel/blob` SDK prefer a development OIDC token over the read-write token, and the store answers 403.
 
-`OLLAMA_API_KEY` and `AI_SUGGESTIONS_HOUSEHOLD_IDS` (comma-separated household ids) turn on AI provider suggestions; `AI_SUGGESTIONS_MODEL` is optional. A real ask from local dev is a real model call that sends household data to Ollama Cloud; tests never call it.
+`OLLAMA_API_KEY` and `AI_SUGGESTIONS_HOUSEHOLD_IDS` (comma-separated household ids) turn on the AI features (provider suggestions, the DIY plan and the project chat); `AI_SUGGESTIONS_MODEL` and `AI_CHAT_MODEL` are optional. A real ask from local dev is a real model call that sends household data to Ollama Cloud; tests never call it.
 
 ### Development Login Bypass
 
@@ -216,7 +216,7 @@ Architectural decisions are documented in `docs/adrs/`. Consult these before pro
 - The project uses Google OAuth exclusively (no password-based auth currently)
 - CockroachDB is used but treated as PostgreSQL for most purposes
 - Notifications support email (Mailjet) and Slack (incoming webhooks)
-- Provider suggestions and the DIY plan are the only AI integrations; what may be sent to the model is decided in `server/utils/suggestion-prompts.ts` and `plan-prompts.ts` and nowhere else, and both go through `server/utils/ai-ask.ts`
+- Provider suggestions, the DIY plan and the project chat are the only AI integrations; what may be sent to the model is decided in `server/utils/suggestion-prompts.ts`, `plan-prompts.ts` and `chat-prompts.ts` and nowhere else, and all three go through `server/utils/ai-ask.ts`
 - All times are stored in UTC in the database
 
 ## Business Logic Details

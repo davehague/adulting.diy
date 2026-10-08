@@ -13,6 +13,7 @@
 - Search, filter and sort the directory from the project, and read a provider's details and what neighbors said before adding them
 - Ask for suggestions: the project is split into the trades it needs, with up to three providers from your own directory for each and a reason for every pick (on for selected households)
 - Ask for a DIY plan: the steps with a time and cost range each, the tools and materials, how hard it is and why, and a one-tap way to copy steps into the checklist (on for selected households)
+- Chat about a project with an advisor that already knows its notes, steps, plan and providers, remembers the whole conversation, and can look things up on the web when a question needs current facts (on for selected households)
 - Call a linked provider straight from the project page
 - Browse, filter and swipe through projects and their photos
 - Edit anything in place, and delete photos or whole projects
@@ -113,6 +114,20 @@ The latest plan is saved on the project and shown again, with its date, to every
 
 Plans share the same household switch and the same daily limit of 20 asks as provider suggestions, and send text only: the project's title, location and notes, the extra text, and the trade names from the saved suggestions, with phone numbers, emails and links masked. No photos, provider names or anything identifying the household is sent.
 
+### Project Chat
+
+For households that have AI help turned on, the project page shows a small **Chat** button beside the Title. It opens a full-screen chat for that project: a back link, the project's title, "Shared with your household", the conversation so far, and a text box with **Send** pinned at the bottom. On a phone the Return key adds a line and Send is the button; with a keyboard and mouse, Enter sends and Shift+Enter adds a line.
+
+Every question is answered by an advisor that starts out knowing the project as it is right now: the title, location, notes, status and path; the checklist with what is done and each step's estimate; the saved DIY plan when there is one; the kinds of contractor from the saved provider suggestions; and the linked providers by business name, category and where you stand with each. It also gets the whole conversation so far, so "what have I already done?" or "the cartridge won't budge" is answered in context. Edits to the project between messages show up in the next reply. The advisor is asked to be concise, to give numbered steps when it gives steps, to say plainly when the sensible answer is to stop and call a professional, to ask one clarifying question instead of guessing, and never to invent part numbers, prices or links.
+
+When a question needs current facts, such as a manufacturer's instructions, a part number, a price or a local code question, the advisor can run a web search and is asked to name the page it used. It decides when to search; at most three searches go into one reply, and a muted "Searched: …" line under the reply shows what it looked up. Replies may carry simple formatting: paragraphs, numbered and bulleted lists, bold, short code and links, which open in a new tab.
+
+The thread is one shared conversation per project: both members see the same messages, and a message from the other member carries a "Household member" caption. The message you send appears at once, with a "Thinking… n s" row counting under it until the reply lands, usually within five to twenty seconds. Leaving the page mid-reply and coming back shows the same row and the reply when it arrives; the other member's new messages appear while you are waiting or when the page is reopened. Only one reply at a time is made per project: a send while another member's reply is on its way shows "A reply is on its way", keeps your text in the box, and goes through once the reply lands.
+
+If a reply cannot be made, your question stays in the thread with "Couldn't get a reply." and a **Retry** button, which asks the same question again rather than adding it twice. A question left unanswered for over a minute, by a lost connection for example, gets the same Retry. Messages cannot be edited or deleted, and the thread cannot be cleared; deleting the project removes its chat. Chat messages are not limited by the daily cap of 20 that suggestions and plans share; every message is still recorded as an ask (count, timing and size only, never the text).
+
+The chat sends text only: the project fields above, the checklist and plan text, the trade names, the linked providers' business names and categories, and the conversation. Phone numbers, emails and links inside anything a member typed are masked before they leave, which also means a link pasted into a question reaches the advisor as "[link]". No photos, provider contact details, member names or household names are sent.
+
 ### Next Steps on the Dashboard
 
 The dashboard shows a **Project next steps** section under the stat cards, with one row for each Active project: its next undone step (the first one not checked off), the project's title beneath it, and the estimate when there is one. Only Active projects appear, newest first. Tapping the text opens the project; ticking the box checks the step off and the row moves on to that project's next step.
@@ -123,7 +138,7 @@ An Active project with no steps, or with every step done, appears as itself, lab
 
 Photos are private: only a signed-in member of the owning household can load one. A photo link opened by anyone else, or in a browser that is not signed in, returns an error, not the image.
 
-Deleting a project hides it everywhere but keeps the record and its photos; nothing can load them afterward. Deleting a single photo removes it for good.
+Deleting a project hides it everywhere but keeps the record and its photos; nothing can load them afterward. Deleting a single photo removes it for good. A project's chat is deleted with the project.
 
 ## Connections
 
@@ -135,7 +150,8 @@ Deleting a project hides it everywhere but keeps the record and its photos; noth
 
 - **Projects page**: the list, reached from the main navigation beside Providers on desktop and mobile
 - **New project form**: capture with photos
-- **Project page**: details, steps, linked providers, photos and the full-size viewer
+- **Project page**: details, steps, the DIY plan, linked providers, photos and the full-size viewer, and the Chat button
+- **Project chat**: its own full-screen page, reached from the Chat button
 - **Dashboard**: the Project next steps section
 
 ## Current Limitations
@@ -154,3 +170,6 @@ Deleting a project hides it everywhere but keeps the record and its photos; noth
 - Names of people that appear inside neighbor posts or notes are sent to the model as written; only phone numbers, emails and links are masked.
 - The DIY plan has one skill level, reads no photos, keeps only the latest plan, and its costs stay on the plan: steps copied to the checklist carry their time but not their cost.
 - Making a new plan replaces the old one wholesale; edits to a plan are not possible, only to the checklist steps made from it.
+- The chat answers in one piece after a wait rather than word by word, reads no photos, and cannot change the project (add or tick steps, change the path); messages cannot be edited, deleted or cleared.
+- A link pasted into a chat question is masked before it is sent, and a run of ten digits that looks like a phone number is masked even when it is a model or part number.
+- The other member's chat messages appear only while a reply is being waited for or when the page is reopened; there is no live update otherwise, and no notification when a reply lands.

@@ -2,6 +2,13 @@
 
 ## 2026-10-08
 
+### Project chat (on for selected households)
+- A project page now has a **Chat** button beside the Title that opens a full-screen chat about that project; the advisor already knows the project's notes, steps, plan, trades and linked providers, and remembers the whole conversation
+- When a question needs current facts, the advisor can search the web and names the page it used; a "Searched: …" line under the reply shows what it looked up
+- The thread is shared by the household; a message from the other member carries a "Household member" caption, and only one reply at a time is made per project
+- A question that gets no reply stays in the thread with a **Retry** button; the text box keeps what you typed when a send does not go through
+- Chat messages do not count against the daily limit of 20 that provider suggestions and DIY plans share
+
 ### DIY plan
 - A project with saved provider suggestions no longer gets a "Hire this out" plan just because a trade is listed; the plan judges the work itself
 

@@ -1,6 +1,6 @@
 # Home projects, slice 5: project chat (design spec)
 
-Status: written 2026-10-08 from the brainstorm with David. Awaiting his review. No code is written until he approves this spec and then a written implementation plan.
+Status: written 2026-10-08 from the brainstorm with David and approved the same day; built from `../plans/2026-10-08-projects-ai-chat.md`, whose "Deviations" section records what differs (the route is `/projects/chat/:id`, user rows carry `failedAt`, retry refreshes the row, assistant rows go back verbatim).
 
 Slices 4a (provider suggestions, `2026-10-05-projects-ai-provider-suggestions-design.md`) and 4b (DIY plan, `2026-10-06-projects-ai-diy-plan-design.md`) are live. This slice reuses their gate, log, redaction and error handling, and adds the first multi-turn and tool-using model call in the codebase.
 

@@ -112,6 +112,8 @@ The API uses these authentication levels:
 | `POST` | `/api/projects/[id]/suggestions` | Household | Run an ask (`extraText` optional, up to 500 characters). Takes about 15 seconds; makes two model calls. 403 when not enabled, 429 at 20 asks in 24 hours. Otherwise 200 with `{ status, limitReached, suggestion, fallback }`, where `status` is `ok`, `too_vague` or `failed`; on `failed` the previous result is kept and `fallback` lists top providers in the project's category |
 | `GET` | `/api/projects/[id]/plan` | Household | The AI DIY plan: `{ enabled, limitReached, hasSuggestions, plan }`. `plan` is the saved result (summary, safety, steps, tools, materials) with `extraText` and `createdAt`, or null |
 | `POST` | `/api/projects/[id]/plan` | Household | Make a plan (`extraText` optional, up to 500 characters). One model call, about 20 seconds. 403 when not enabled, 429 at the shared cap of 20 asks in 24 hours. Otherwise 200 with `{ status, limitReached, hasSuggestions, plan }`; on `failed` the previous plan is kept |
+| `GET` | `/api/projects/[id]/chat` | Household | The project chat: `{ enabled, messages, pending }`. `messages` is the newest 500 rows oldest first, each `{ id, role, content, mine, failed, searches, createdAt }`; `pending` is true while the last row is an unanswered user message younger than 75 s |
+| `POST` | `/api/projects/[id]/chat` | Household | Send `{ text }` (1 to 2000 characters) or `{ retry: true }` to answer the last unanswered message again. Saves the question first, then one or more model calls with up to three web searches, 5 to 60 seconds. 403 when not enabled, 400 on a bad body or nothing to retry, 409 "A reply is on its way" while a reply is in flight, 502 when the model fails (the question stays saved and marked failed). Otherwise 200 with `{ userMessage, assistantMessage }`. No daily cap |
 | `POST` | `/api/projects/[id]/steps/batch` | Household | Append up to 30 steps (`steps: [{ text, estimateMinutes? }]`, each under the step rules) in order up to the cap of 100. Returns `{ steps, skipped }`: the whole checklist in order and how many were left out |
 
 See [projects.md](../functionality/projects.md) for the product view.
@@ -203,8 +205,8 @@ Key data models handled by the API:
 - **OccurrenceHistoryLog**: Audit trail for occurrence changes
 - **FormerHouseholdMember**: Snapshot of departed users for historical display
 - **Provider**, **ProviderCategory**, **ProviderStatus**, **ProviderContact**, **ProviderEvidence**, **ProviderComment**, **TaskProvider**, **ApiKey**: Provider directory and machine ingest (see [provider-ingest.md](provider-ingest.md))
-- **Project**, **ProjectPhoto**, **ProjectStep**, **ProjectProvider**, **ProjectSuggestion**, **ProjectPlan**: Home project tracking with private photos, a checklist of steps, providers linked with a per-project status, the latest AI provider suggestion and the latest AI DIY plan (see [projects.md](../functionality/projects.md))
-- **AiRequestLog**: One row per AI ask of any feature (outcome, timing, sizes; no text), used for the shared daily cap
+- **Project**, **ProjectPhoto**, **ProjectStep**, **ProjectProvider**, **ProjectSuggestion**, **ProjectPlan**, **ProjectChatMessage**: Home project tracking with private photos, a checklist of steps, providers linked with a per-project status, the latest AI provider suggestion, the latest AI DIY plan and the project's chat messages (see [projects.md](../functionality/projects.md))
+- **AiRequestLog**: One row per AI ask of any feature (outcome, timing, sizes; no text); the shared daily cap counts the suggestion and plan rows only
 
 ## Rate Limiting
 
