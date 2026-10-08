@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('@vercel/blob', () => ({ put: vi.fn(), get: vi.fn(), del: vi.fn() }))
 
@@ -42,9 +42,39 @@ describe('blob-storage', () => {
 
   it('removes several blobs in one call and skips an empty list', async () => {
     await removeBlobs(['a.jpg', 'b.jpg'])
-    expect(sdk.del).toHaveBeenCalledWith(['a.jpg', 'b.jpg'])
+    expect(sdk.del.mock.calls[0][0]).toEqual(['a.jpg', 'b.jpg'])
     sdk.del.mockClear()
     await removeBlobs([])
     expect(sdk.del).not.toHaveBeenCalled()
+  })
+  describe('credentials', () => {
+    const saved = process.env.BLOB_READ_WRITE_TOKEN
+    afterEach(() => {
+      if (saved === undefined) delete process.env.BLOB_READ_WRITE_TOKEN
+      else process.env.BLOB_READ_WRITE_TOKEN = saved
+    })
+
+    it('passes the read-write token explicitly to put, get and del when it is set', async () => {
+      // Explicit beats the SDK's OIDC lookup, which a linked repo plus BLOB_STORE_ID would otherwise win locally.
+      process.env.BLOB_READ_WRITE_TOKEN = 'vercel_blob_rw_store1_secret'
+      sdk.get.mockResolvedValue(null)
+      await putPrivate('a.jpg', Buffer.from([0xff, 0xd8, 0xff]))
+      await getPrivate('a.jpg')
+      await removeBlobs(['a.jpg'])
+      expect(sdk.put.mock.calls[0][2]).toMatchObject({ token: 'vercel_blob_rw_store1_secret' })
+      expect(sdk.get.mock.calls[0][1]).toMatchObject({ token: 'vercel_blob_rw_store1_secret' })
+      expect(sdk.del.mock.calls[0][1]).toMatchObject({ token: 'vercel_blob_rw_store1_secret' })
+    })
+
+    it('passes no token when the variable is unset so the SDK uses OIDC on Vercel', async () => {
+      delete process.env.BLOB_READ_WRITE_TOKEN
+      sdk.get.mockResolvedValue(null)
+      await putPrivate('a.jpg', Buffer.from([0xff, 0xd8, 0xff]))
+      await getPrivate('a.jpg')
+      await removeBlobs(['a.jpg'])
+      expect(sdk.put.mock.calls[0][2]).not.toHaveProperty('token')
+      expect(sdk.get.mock.calls[0][1]).not.toHaveProperty('token')
+      expect(sdk.del.mock.calls[0][1] ?? {}).not.toHaveProperty('token')
+    })
   })
 })

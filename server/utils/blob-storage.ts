@@ -8,12 +8,20 @@ export interface PrivateBlobRead {
   etag: string;
 }
 
+// Local dev authenticates with BLOB_READ_WRITE_TOKEN. On Vercel the variable is unset and the SDK uses the
+// project's OIDC token. Passing the token explicitly stops a linked repo (.vercel/) plus BLOB_STORE_ID from
+// switching local dev onto a development OIDC token, which the store refuses with a 403.
+const authOptions = (): { token?: string } => {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  return token ? { token } : {};
+};
+
 export const putPrivate = async (pathname: string, data: Buffer): Promise<void> => {
-  await put(pathname, data, { access: 'private', contentType: 'image/jpeg', addRandomSuffix: false });
+  await put(pathname, data, { access: 'private', contentType: 'image/jpeg', addRandomSuffix: false, ...authOptions() });
 };
 
 export const getPrivate = async (pathname: string, ifNoneMatch?: string): Promise<PrivateBlobRead | null> => {
-  const result = await get(pathname, { access: 'private', ifNoneMatch });
+  const result = await get(pathname, { access: 'private', ifNoneMatch, ...authOptions() });
   if (!result) return null;
   if (result.statusCode === 304) return { statusCode: 304, stream: null, etag: result.blob.etag };
   if (result.statusCode !== 200) return null;
@@ -22,5 +30,5 @@ export const getPrivate = async (pathname: string, ifNoneMatch?: string): Promis
 
 export const removeBlobs = async (pathnames: string[]): Promise<void> => {
   if (pathnames.length === 0) return;
-  await del(pathnames);
+  await del(pathnames, authOptions());
 };

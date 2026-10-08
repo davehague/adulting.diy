@@ -157,7 +157,7 @@ Design: [the slice 4b spec](../superpowers/specs/2026-10-06-projects-ai-diy-plan
 |---------|----------|---------------|
 | Google Sign-In | Authentication (ID token as bearer) | `NUXT_PUBLIC_GOOGLE_CLIENT_ID` |
 | CockroachDB | All application data | `DATABASE_URL` |
-| Vercel Blob (private store) | Project photos | `BLOB_READ_WRITE_TOKEN` (read by the `@vercel/blob` SDK) |
+| Vercel Blob (private store) | Project photos | On Vercel, the project's OIDC token (no variable). Locally, `BLOB_READ_WRITE_TOKEN`, which `server/utils/blob-storage.ts` passes to the SDK explicitly. Never set `BLOB_STORE_ID` locally: with a linked repo (`.vercel/`) it makes the SDK prefer a development OIDC token, which the store refuses with a 403 |
 | Ollama Cloud | AI provider suggestions | `OLLAMA_API_KEY`; `AI_SUGGESTIONS_MODEL` (optional, defaults to `glm-5.3-flash`); `AI_SUGGESTIONS_HOUSEHOLD_IDS` (comma-separated household ids allowed to use it; unset means nobody). Read from `process.env` at call time in `server/utils/ai-config.ts` |
 | Mailjet | Email notifications | `MJ_APIKEY_PUBLIC`, `MJ_APIKEY_PRIVATE` |
 | Slack incoming webhooks | Slack notifications | Per-user webhook URL stored in notification preferences |

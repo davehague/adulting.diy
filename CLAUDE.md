@@ -143,7 +143,7 @@ const tasks = await taskService.findForHousehold(householdId, filters);
 5. Generate local SSL certificates (if needed)
 6. Start development server: `npm run dev`
 
-`BLOB_READ_WRITE_TOKEN` in `.env` authenticates `server/utils/blob-storage.ts` against the project's private Vercel Blob store (project photos). Local dev and production share the one store, so a local upload is a real upload.
+`BLOB_READ_WRITE_TOKEN` in `.env` authenticates `server/utils/blob-storage.ts` against the project's private Vercel Blob store (project photos). Local dev and production share the one store, so a local upload is a real upload. Do not add `BLOB_STORE_ID` to `.env`: once the repo is linked to Vercel (`.vercel/`), that variable makes the `@vercel/blob` SDK prefer a development OIDC token over the read-write token, and the store answers 403.
 
 `OLLAMA_API_KEY` and `AI_SUGGESTIONS_HOUSEHOLD_IDS` (comma-separated household ids) turn on AI provider suggestions; `AI_SUGGESTIONS_MODEL` is optional. A real ask from local dev is a real model call that sends household data to Ollama Cloud; tests never call it.
 
