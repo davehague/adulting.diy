@@ -2,7 +2,7 @@ import { type Prisma } from '@prisma/client';
 import prisma from '@/server/utils/prisma/client';
 import { HttpError } from '@/server/utils/api-errors';
 import { suggestionModel, suggestionsEnabledFor } from '@/server/utils/ai-config';
-import { askJson, asksInLastDay, describeError, LIMIT_MESSAGE, promptChars, type AskUsage } from '@/server/utils/ai-ask';
+import { askJson, asksInLastDay, CAPPED_AI_FEATURES, describeError, LIMIT_MESSAGE, promptChars, type AskUsage } from '@/server/utils/ai-ask';
 import { callOllama, type ModelCall } from '@/server/utils/ollama';
 import { fallbackProviders, rankProviders } from '@/server/utils/provider-ranking';
 import { checkPicks, cleanParts } from '@/server/utils/suggestion-checks';
@@ -278,7 +278,7 @@ export class ProviderSuggestionService {
   }
 
   private usedInLastDay(householdId: string): Promise<number> {
-    return asksInLastDay(householdId, this.now);
+    return asksInLastDay(householdId, CAPPED_AI_FEATURES, this.now);
   }
 
   private async finishLog(id: string, outcome: SuggestionRunStatus, durationMs: number, usage: Usage): Promise<void> {

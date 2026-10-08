@@ -4,7 +4,7 @@ import { z } from 'zod'
 vi.mock('@/server/utils/prisma/client', () => ({ default: { aiRequestLog: { count: vi.fn() } } }))
 
 import prisma from '@/server/utils/prisma/client'
-import { askJson, asksInLastDay, describeError, AskError } from '@/server/utils/ai-ask'
+import { askJson, asksInLastDay, CAPPED_AI_FEATURES, describeError, AskError } from '@/server/utils/ai-ask'
 import { ModelCallError } from '@/server/utils/ollama'
 
 const db = prisma as unknown as { aiRequestLog: { count: ReturnType<typeof vi.fn> } }
@@ -45,11 +45,16 @@ describe('askJson', () => {
 })
 
 describe('asksInLastDay', () => {
-  it('counts every feature for the household in the last 24 hours', async () => {
+  it('counts only the named features for the household in the last 24 hours', async () => {
     db.aiRequestLog.count.mockResolvedValue(7)
     const clock = Date.UTC(2026, 9, 6, 12)
-    expect(await asksInLastDay('h1', () => clock)).toBe(7)
-    expect(db.aiRequestLog.count.mock.calls[0][0]).toEqual({ where: { householdId: 'h1', createdAt: { gte: new Date(clock - 24 * 60 * 60 * 1000) } } })
+    expect(await asksInLastDay('h1', ['provider_suggestions', 'diy_plan'], () => clock)).toBe(7)
+    expect(db.aiRequestLog.count.mock.calls[0][0]).toEqual({
+      where: { householdId: 'h1', feature: { in: ['provider_suggestions', 'diy_plan'] }, createdAt: { gte: new Date(clock - 24 * 60 * 60 * 1000) } },
+    })
+  })
+  it('CAPPED_AI_FEATURES names suggestions and plans and not chat', () => {
+    expect(CAPPED_AI_FEATURES).toEqual(['provider_suggestions', 'diy_plan'])
   })
 })
 

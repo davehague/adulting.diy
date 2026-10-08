@@ -2,6 +2,8 @@ import { type z } from 'zod';
 import prisma from '@/server/utils/prisma/client';
 import { ModelCallError, type ModelCall } from '@/server/utils/ollama';
 import { parseModelJson } from '@/server/utils/suggestion-schemas';
+import { PROVIDER_SUGGESTIONS_FEATURE } from '@/types/suggestion';
+import { DIY_PLAN_FEATURE } from '@/types/plan';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 // A model call given less time than this cannot finish, so it is not started.
@@ -57,6 +59,9 @@ export const askJson = async <T>(
   throw new AskError('the model did not return a usable reply in time');
 };
 
-// The daily cap is one number for the household, shared by every AI feature.
-export const asksInLastDay = (householdId: string, now: () => number): Promise<number> =>
-  prisma.aiRequestLog.count({ where: { householdId, createdAt: { gte: new Date(now() - DAY_MS) } } });
+// The features that share the daily cap. Chat is logged like the others but never counted.
+export const CAPPED_AI_FEATURES: readonly string[] = [PROVIDER_SUGGESTIONS_FEATURE, DIY_PLAN_FEATURE];
+
+// The daily cap is one number for the household, shared by the named features.
+export const asksInLastDay = (householdId: string, features: readonly string[], now: () => number): Promise<number> =>
+  prisma.aiRequestLog.count({ where: { householdId, feature: { in: [...features] }, createdAt: { gte: new Date(now() - DAY_MS) } } });

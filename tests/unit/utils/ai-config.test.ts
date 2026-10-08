@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { suggestionModel, suggestionsEnabledFor } from '@/server/utils/ai-config'
+import { chatModel, suggestionModel, suggestionsEnabledFor } from '@/server/utils/ai-config'
 
 afterEach(() => vi.unstubAllEnvs())
 
@@ -11,6 +11,17 @@ describe('suggestionModel', () => {
   it('uses the setting when present', () => {
     vi.stubEnv('AI_SUGGESTIONS_MODEL', ' deepseek-v4.1-flash ')
     expect(suggestionModel()).toBe('deepseek-v4.1-flash')
+  })
+})
+
+describe('chatModel', () => {
+  it('defaults to glm-5.3', () => {
+    vi.stubEnv('AI_CHAT_MODEL', '')
+    expect(chatModel()).toBe('glm-5.3')
+  })
+  it('uses the setting when present, trimmed', () => {
+    vi.stubEnv('AI_CHAT_MODEL', ' glm-5.4 ')
+    expect(chatModel()).toBe('glm-5.4')
   })
 })
 

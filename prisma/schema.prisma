@@ -33,6 +33,7 @@ model User {
   projectProviders       ProjectProvider[]       @relation("ProjectProviderCreatedBy")
   projectSuggestions     ProjectSuggestion[]     @relation("ProjectSuggestionCreatedBy")
   projectPlans           ProjectPlan[]           @relation("ProjectPlanCreatedBy")
+  projectChatMessages    ProjectChatMessage[]    @relation("ProjectChatMessageCreatedBy")
 
   @@map("users")
 }
@@ -326,6 +327,7 @@ model Project {
   providers   ProjectProvider[]
   suggestion  ProjectSuggestion?
   plan        ProjectPlan?
+  chatMessages ProjectChatMessage[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -413,6 +415,29 @@ model ProjectPlan {
   createdAt   DateTime @default(now())
 
   @@map("project_plans")
+}
+
+// One message in a project's shared chat. Never edited or deleted; goes with the project.
+model ProjectChatMessage {
+  id           String   @id @default(uuid())
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    String
+  role         String   // user, assistant
+  content      String
+  // the member who sent a user message; for an assistant message, the member whose message it answers
+  createdBy    User     @relation("ProjectChatMessageCreatedBy", fields: [createdById], references: [id])
+  createdById  String
+  searches     Json     @default("[]") // string[]: the queries the model ran for this reply; [] on user rows
+  failedAt     DateTime? // set on a user row when its reply failed; cleared by a retry
+  thinkingMs   Int?     // time to the first answer token, when known; null until replies stream
+  durationMs   Int?     // whole reply, assistant rows only
+  model        String?  // assistant rows only
+  promptTokens Int?     // summed over the rounds, when the service reports them
+  outputTokens Int?
+  createdAt    DateTime @default(now())
+
+  @@index([projectId, createdAt])
+  @@map("project_chat_messages")
 }
 
 // One row per AI ask. Holds no project or provider text; the daily cap counts these rows.

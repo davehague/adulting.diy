@@ -2,7 +2,7 @@ import { type Prisma } from '@prisma/client';
 import prisma from '@/server/utils/prisma/client';
 import { HttpError } from '@/server/utils/api-errors';
 import { suggestionModel, suggestionsEnabledFor } from '@/server/utils/ai-config';
-import { askJson, asksInLastDay, describeError, LIMIT_MESSAGE, promptChars, type AskUsage } from '@/server/utils/ai-ask';
+import { askJson, asksInLastDay, CAPPED_AI_FEATURES, describeError, LIMIT_MESSAGE, promptChars, type AskUsage } from '@/server/utils/ai-ask';
 import { callOllama, type ModelCall } from '@/server/utils/ollama';
 import { buildPlanPrompt, type PlanTrade } from '@/server/utils/plan-prompts';
 import { clampPlan, planReplySchema, savedPlanSchema } from '@/server/utils/plan-schemas';
@@ -23,7 +23,7 @@ export class ProjectPlanService {
   async getState(householdId: string, projectId: string): Promise<PlanStateResponse> {
     await this.requireProject(householdId, projectId);
     if (!suggestionsEnabledFor(householdId)) return { enabled: false, limitReached: false, hasSuggestions: false, plan: null };
-    const [used, trades, plan] = await Promise.all([asksInLastDay(householdId, this.now), this.trades(projectId), this.readPlan(projectId)]);
+    const [used, trades, plan] = await Promise.all([asksInLastDay(householdId, CAPPED_AI_FEATURES, this.now), this.trades(projectId), this.readPlan(projectId)]);
     return { enabled: true, limitReached: used >= DAILY_SUGGESTION_LIMIT, hasSuggestions: trades.length > 0, plan };
   }
 
@@ -31,7 +31,7 @@ export class ProjectPlanService {
     const project = await this.requireProject(householdId, projectId);
     // The same switch as provider suggestions; the message is shared so the screen shows one thing for both.
     if (!suggestionsEnabledFor(householdId)) throw new HttpError('Suggestions are not available', 403);
-    const used = await asksInLastDay(householdId, this.now);
+    const used = await asksInLastDay(householdId, CAPPED_AI_FEATURES, this.now);
     if (used >= DAILY_SUGGESTION_LIMIT) throw new HttpError(LIMIT_MESSAGE, 429);
 
     const model = suggestionModel();

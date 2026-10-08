@@ -96,7 +96,7 @@ describe('getState', () => {
   it('reports the limit reached at 20 asks of any feature in the last 24 hours', async () => {
     db.aiRequestLog.count.mockResolvedValue(20)
     expect((await service.getState('h1', 'p1')).limitReached).toBe(true)
-    expect(db.aiRequestLog.count.mock.calls[0][0]).toEqual({ where: { householdId: 'h1', createdAt: { gte: new Date(clock - 24 * 60 * 60 * 1000) } } })
+    expect(db.aiRequestLog.count.mock.calls[0][0]).toEqual({ where: { householdId: 'h1', feature: { in: ['provider_suggestions', 'diy_plan'] }, createdAt: { gte: new Date(clock - 24 * 60 * 60 * 1000) } } })
   })
 })
 

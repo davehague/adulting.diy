@@ -13,11 +13,11 @@ export default defineNuxtConfig({
       devBypassEnabled: process.env.NODE_ENV === 'development' && process.env.DEV_LOGIN_BYPASS === 'true'
     }
   },
-  // Provider suggestions make two model calls inside one request (up to 45 seconds). Nitro deploys the
-  // server as a single function, so this applies to every route; 60 is allowed on every Vercel plan.
+  // AI replies run inside the request: a chat reply with searches can take up to 60 seconds and the plan up to 45. Nitro deploys the
+  // server as a single function, so this applies to every route. Fluid compute (on since 2026-10-08) allows 300 on every Vercel plan.
   nitro: {
     vercel: {
-      functions: { maxDuration: 60 },
+      functions: { maxDuration: 300 },
     },
   },
   devServer: {
