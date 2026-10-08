@@ -114,7 +114,7 @@ const without = (rowId: string | null): ChatMessageDto[] => messages.value.filte
 const withFailed = (rowId: string | null, failed: boolean): ChatMessageDto[] =>
   messages.value.map((message) => (message.id === rowId ? { ...message, failed, createdAt: failed ? message.createdAt : new Date().toISOString() } : message));
 
-// After a failure that carries no status (a dropped connection, a timeout, a 500), the server may still have taken the question. Read the thread once and say whether it did: a new row with the text that was sent, a thread that grew, or on a retry a reply on its way. Null when the read fails or this send is no longer the current one.
+// After a failure that carries no status (a dropped connection, a timeout, a 500), the server may still have taken the question. Read the thread once and say whether it did: a new row with the text that was sent, or on a retry a thread that grew or a reply on its way. Null when the read fails or this send is no longer the current one.
 const tookQuestion = async (input: ChatSendInput, knownIds: Set<string>, rowsBefore: number, mine: number): Promise<ChatStateResponse | null> => {
   try {
     const state = await getChat(id.value);
@@ -122,7 +122,8 @@ const tookQuestion = async (input: ChatSendInput, knownIds: Set<string>, rowsBef
     const rows = state.messages ?? [];
     const newest = [...rows].reverse().find((message) => message.role === 'user');
     const sameText = 'text' in input && newest !== undefined && !knownIds.has(newest.id) && newest.content === input.text;
-    const grew = rows.length > rowsBefore;
+    // Only a retry can tell by the row count: on a plain send, rows another member added would look the same.
+    const grew = 'retry' in input && rows.length > rowsBefore;
     const retryTaken = 'retry' in input && state.pending === true;
     return sameText || grew || retryTaken ? state : null;
   } catch {
