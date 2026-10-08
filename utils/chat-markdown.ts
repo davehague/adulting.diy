@@ -21,11 +21,12 @@ const inline = (raw: string): string => {
   return text.replace(/\u0000(\d+)\u0000/g, (_match, index: string) => parked[Number(index)]);
 };
 
-const ORDERED = /^\s*\d+[.)]\s+(.*)$/;
+const ORDERED = /^\s*(\d+)[.)]\s+(.*)$/;
 const BULLET = /^\s*[-*•]\s+(.*)$/;
 const HEADING = /^\s*#{1,6}\s+(.*)$/;
 
-type Block = { kind: 'p'; lines: string[] } | { kind: 'ol' | 'ul'; items: string[] };
+// An ordered block remembers its first number, so a list the model interrupts keeps counting.
+type Block = { kind: 'p'; lines: string[] } | { kind: 'ol'; start: number; items: string[] } | { kind: 'ul'; items: string[] };
 
 const toBlocks = (text: string): Block[] => {
   const blocks: Block[] = [];
@@ -37,12 +38,16 @@ const toBlocks = (text: string): Block[] => {
     }
     const ordered = ORDERED.exec(line);
     const bullet = BULLET.exec(line);
-    if (ordered || bullet) {
-      const kind = ordered ? 'ol' : 'ul';
-      const item = (ordered ?? bullet)?.[1] ?? '';
+    if (ordered) {
       const current = last();
-      if (current && current.kind === kind) current.items.push(item);
-      else blocks.push({ kind, items: [item] });
+      if (current && current.kind === 'ol') current.items.push(ordered[2]);
+      else blocks.push({ kind: 'ol', start: Number(ordered[1]), items: [ordered[2]] });
+      continue;
+    }
+    if (bullet) {
+      const current = last();
+      if (current && current.kind === 'ul') current.items.push(bullet[1]);
+      else blocks.push({ kind: 'ul', items: [bullet[1]] });
       continue;
     }
     const heading = HEADING.exec(line);
@@ -58,6 +63,8 @@ export const renderChatMarkdown = (text: string): string =>
   toBlocks(text)
     .map((block) => {
       if (block.kind === 'p') return block.lines.length > 0 ? `<p>${block.lines.map(inline).join('<br>')}</p>` : '';
-      return `<${block.kind}>${block.items.map((item) => `<li>${inline(item)}</li>`).join('')}</${block.kind}>`;
+      const items = block.items.map((item) => `<li>${inline(item)}</li>`).join('');
+      if (block.kind === 'ul') return `<ul>${items}</ul>`;
+      return block.start === 1 ? `<ol>${items}</ol>` : `<ol start="${block.start}">${items}</ol>`;
     })
     .join('');

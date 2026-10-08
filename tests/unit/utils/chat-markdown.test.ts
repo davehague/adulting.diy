@@ -8,6 +8,10 @@ describe('renderChatMarkdown', () => {
   it('renders numbered and bulleted lists', () => {
     expect(renderChatMarkdown('Do this:\n1. One\n2. Two\n\n- a\n* b')).toBe('<p>Do this:</p><ol><li>One</li><li>Two</li></ol><ul><li>a</li><li>b</li></ul>')
   })
+  it('keeps the numbering of an ordered list that a bullet interrupts, and of one that starts above 1', () => {
+    expect(renderChatMarkdown('1. One\n- note\n2. Two')).toBe('<ol><li>One</li></ol><ul><li>note</li></ul><ol start="2"><li>Two</li></ol>')
+    expect(renderChatMarkdown('3. Three\n4. Four')).toBe('<ol start="3"><li>Three</li><li>Four</li></ol>')
+  })
   it('renders bold, inline code and markdown links that open in a new tab', () => {
     expect(renderChatMarkdown('Use **the puller** and `1225` from [Moen](https://moen.com/a?b=1&c=2)')).toBe(
       '<p>Use <strong>the puller</strong> and <code>1225</code> from <a href="https://moen.com/a?b=1&amp;c=2" target="_blank" rel="noopener noreferrer">Moen</a></p>',
