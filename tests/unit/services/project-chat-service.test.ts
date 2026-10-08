@@ -110,7 +110,7 @@ describe('send', () => {
     // The query returns newest first; the service reverses it.
     db.projectChatMessage.findMany.mockResolvedValue([assistantRow({ createdAt: at(-4000) }), userRow({ id: 'old', content: 'Handle is off', createdAt: at(-5000) })])
     const result = await service.send('h1', 'u1', 'p1', { text: 'It spins' })
-    expect(created('user')).toEqual({ projectId: 'p1', role: 'user', content: 'It spins', createdById: 'u1' })
+    expect(created('user')).toEqual({ projectId: 'p1', role: 'user', content: 'It spins', createdById: 'u1', createdAt: at(0) })
     const order = [db.projectChatMessage.create.mock.invocationCallOrder[0], db.aiRequestLog.create.mock.invocationCallOrder[0], chat.mock.invocationCallOrder[0]]
     expect(order).toEqual([...order].sort((a, b) => a - b))
     expect(db.aiRequestLog.create.mock.calls[0][0].data).toEqual({ householdId: 'h1', userId: 'u1', feature: 'project_chat', model: 'glm-5.3', outcome: 'started' })
@@ -124,6 +124,14 @@ describe('send', () => {
     expect(result.userMessage).toMatchObject({ id: 'new-user', role: 'user', content: 'It spins', mine: true, failed: false })
     expect(result.assistantMessage).toMatchObject({ id: 'new-assistant', role: 'assistant', content: 'Use the puller.', mine: false, searches: [] })
   })
+  it('reads linked providers by name, category and status only', async () => {
+    await service.send('h1', 'u1', 'p1', { text: 'hi' })
+    expect(db.projectProvider.findMany.mock.calls[0][0]).toEqual({
+      where: { projectId: 'p1', provider: { metaStatus: 'active' } },
+      orderBy: { createdAt: 'asc' },
+      select: { status: true, provider: { select: { name: true, category: { select: { name: true } } } } },
+    })
+  })
   it('reads the history after saving the user row so the new message is the last turn', async () => {
     let saved = false
     db.projectChatMessage.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => { if (data.role === 'user') saved = true; return { id: 'x', failedAt: null, createdAt: at(0), ...data } })
@@ -135,7 +143,7 @@ describe('send', () => {
     chat.mockResolvedValueOnce({ text: '', toolCalls: [{ function: { name: 'web_search', arguments: { query: 'moen 1225 stuck' } } }], promptTokens: 100, outputTokens: 10 })
       .mockImplementationOnce(async () => { clock += 6000; return textReply('Use the puller; see Moen.') })
     await service.send('h1', 'u1', 'p1', { text: 'It spins' })
-    expect(created('assistant')).toEqual({ projectId: 'p1', role: 'assistant', content: 'Use the puller; see Moen.', createdById: 'u1', searches: ['moen 1225 stuck'], model: 'glm-5.3', durationMs: 6000, promptTokens: 200, outputTokens: 60 })
+    expect(created('assistant')).toEqual({ projectId: 'p1', role: 'assistant', content: 'Use the puller; see Moen.', createdById: 'u1', searches: ['moen 1225 stuck'], model: 'glm-5.3', durationMs: 6000, promptTokens: 200, outputTokens: 60, createdAt: at(6000) })
     expect(db.aiRequestLog.update.mock.calls[0][0]).toEqual({ where: { id: 'log1' }, data: { outcome: 'ok', durationMs: 6000, promptTokens: 200, outputTokens: 60 } })
   })
   it('cuts a reply over 8000 characters before saving', async () => {
@@ -175,7 +183,7 @@ describe('send', () => {
     const result = await service.send('h1', 'u2', 'p1', { retry: true })
     expect(created('user')).toBeUndefined()
     expect(db.projectChatMessage.update.mock.calls[0][0]).toMatchObject({ where: { id: 'm1' }, data: { failedAt: null, createdAt: at(0) } })
-    expect(result.userMessage).toMatchObject({ id: 'm1', content: 'It will not budge', mine: false })
+    expect(result.userMessage).toMatchObject({ id: 'm1', content: 'It will not budge', mine: false, createdAt: at(0).toISOString(), failed: false })
     expect(created('assistant')).toMatchObject({ createdById: 'u1' })
   })
   it('retry also answers an unanswered row older than 75 s, and refuses a fresh one or none', async () => {

@@ -103,4 +103,19 @@ describe('project chat routes', () => {
     await expect(call(postRoute, 'u1')).rejects.toMatchObject({ statusCode: 500 })
     expect(chatService.send).toHaveBeenCalledTimes(1)
   })
+
+  it('POST wraps an unknown error as 500 without its message', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    chatService.send.mockRejectedValue(new Error('secret boom'))
+    const error = await call(postRoute, 'u1').catch((e: Error) => e)
+    expect(error).toMatchObject({ statusCode: 500, message: 'Server error' })
+    expect((error as Error).message).not.toContain('secret')
+  })
+
+  it('GET and POST reject a missing project id with 400', async () => {
+    await expect(call(getRoute, 'u1', {})).rejects.toMatchObject({ statusCode: 400 })
+    await expect(call(postRoute, 'u1', {})).rejects.toMatchObject({ statusCode: 400 })
+    expect(chatService.getState).not.toHaveBeenCalled()
+    expect(chatService.send).not.toHaveBeenCalled()
+  })
 })

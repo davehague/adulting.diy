@@ -78,8 +78,8 @@ export class ProjectChatService {
       // The same row is asked again; refreshing it makes the lock and the pending window work as for a new message.
       userRow = await prisma.projectChatMessage.update({ where: { id: last.id }, data: { failedAt: null, createdAt: new Date(this.now()) }, select: messageSelect });
     } else {
-      // Saved before the model is called, so a reply the platform kills still leaves the question in the thread.
-      userRow = await prisma.projectChatMessage.create({ data: { projectId, role: 'user', content: input.text, createdById: userId }, select: messageSelect });
+      // Saved before the model is called, so a reply the platform kills still leaves the question in the thread. Rows are stamped with the app clock, the same one that ages them, so one clock orders every row.
+      userRow = await prisma.projectChatMessage.create({ data: { projectId, role: 'user', content: input.text, createdById: userId, createdAt: new Date(this.now()) }, select: messageSelect });
     }
 
     const model = chatModel();
@@ -113,6 +113,7 @@ export class ProjectChatService {
           durationMs,
           promptTokens: usage.reported ? usage.promptTokens : null,
           outputTokens: usage.reported ? usage.outputTokens : null,
+          createdAt: new Date(this.now()),
         },
         select: messageSelect,
       });
