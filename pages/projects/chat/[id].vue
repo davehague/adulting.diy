@@ -25,7 +25,7 @@
 definePageMeta({ hideFooter: true });
 
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { CHAT_BUSY_MESSAGE, CHAT_PENDING_MS, CHAT_POLL_MS, type ChatMessageDto, type ChatSendInput } from '@/types/chat';
+import { CHAT_BUSY_MESSAGE, CHAT_PENDING_MS, CHAT_POLL_MS, type ChatMessageDto, type ChatSendInput, type ChatStateResponse } from '@/types/chat';
 import { useProjects } from '@/composables/useProjects';
 import { hasApiStatus } from '@/utils/api-error';
 import ChatThread from '@/components/projects/ChatThread.vue';
@@ -49,6 +49,10 @@ const composer = ref<InstanceType<typeof ChatComposer> | null>(null);
 const nowMs = ref(Date.now());
 let ticker: ReturnType<typeof setInterval> | null = null;
 let poller: ReturnType<typeof setInterval> | null = null;
+// Counts the sends. A read that began before a send and lands after it is older than the send's own answer, so it is dropped.
+let sequence = 0;
+// Set when the page is left, so nothing started earlier touches the screen afterwards or starts polling again.
+let gone = false;
 
 const last = computed((): ChatMessageDto | undefined => messages.value[messages.value.length - 1]);
 const lastAgeMs = computed((): number => (last.value ? nowMs.value - new Date(last.value.createdAt).getTime() : 0));
@@ -64,11 +68,12 @@ const stopPolling = (): void => {
 
 // While the server says a reply is on its way, ask again every few seconds so the reply appears when it lands, even if another member or another tab asked.
 const poll = async (): Promise<void> => {
-  if (sending.value) return;
+  if (gone || sending.value) return;
+  const seen = sequence;
   try {
     const state = await getChat(id.value);
-    // A send that started while this poll was in flight owns the list now.
-    if (sending.value) return;
+    // A send that started while this poll was in flight owns the list now, and one that finished meanwhile has already shown its answer.
+    if (gone || sequence !== seen || sending.value) return;
     messages.value = state.messages ?? [];
     serverPending.value = state.pending === true;
     if (!serverPending.value) {
@@ -81,7 +86,7 @@ const poll = async (): Promise<void> => {
 };
 
 const startPolling = (): void => {
-  if (poller) return;
+  if (gone || poller) return;
   // Ask once at once, so the composer does not sit open for a whole interval after a busy reply.
   void poll();
   poller = setInterval(poll, CHAT_POLL_MS);
@@ -91,6 +96,7 @@ const load = async (): Promise<void> => {
   loadError.value = null;
   try {
     const [project, state] = await Promise.all([getProject(id.value), getChat(id.value)]);
+    if (gone) return;
     title.value = project.title;
     enabled.value = state.enabled === true;
     messages.value = state.messages ?? [];
@@ -98,6 +104,7 @@ const load = async (): Promise<void> => {
     loaded.value = true;
     if (serverPending.value) startPolling();
   } catch (e) {
+    if (gone) return;
     loadError.value = hasApiStatus(e, 404) ? 'Project not found.' : 'Could not load the chat.';
   }
 };
@@ -107,43 +114,78 @@ const without = (rowId: string | null): ChatMessageDto[] => messages.value.filte
 const withFailed = (rowId: string | null, failed: boolean): ChatMessageDto[] =>
   messages.value.map((message) => (message.id === rowId ? { ...message, failed, createdAt: failed ? message.createdAt : new Date().toISOString() } : message));
 
+// After a failure that carries no status (a dropped connection, a timeout, a 500), the server may still have taken the question. Read the thread once and say whether it did: a new row with the text that was sent, a thread that grew, or on a retry a reply on its way. Null when the read fails or this send is no longer the current one.
+const tookQuestion = async (input: ChatSendInput, knownIds: Set<string>, rowsBefore: number, mine: number): Promise<ChatStateResponse | null> => {
+  try {
+    const state = await getChat(id.value);
+    if (gone || sequence !== mine) return null;
+    const rows = state.messages ?? [];
+    const newest = [...rows].reverse().find((message) => message.role === 'user');
+    const sameText = 'text' in input && newest !== undefined && !knownIds.has(newest.id) && newest.content === input.text;
+    const grew = rows.length > rowsBefore;
+    const retryTaken = 'retry' in input && state.pending === true;
+    return sameText || grew || retryTaken ? state : null;
+  } catch {
+    return null;
+  }
+};
+
 const ask = async (input: ChatSendInput, optimistic: ChatMessageDto | null): Promise<void> => {
   if (pending.value) return;
+  const mine = ++sequence;
   sending.value = true;
   error.value = null;
   stopPolling();
   // The row being answered: the one just added, or on a retry the last row.
   const askedId = optimistic ? optimistic.id : (last.value?.id ?? null);
+  // What this tab had before the send, so a thread read after a failure can be told apart from it.
+  const knownIds = new Set(messages.value.map((message) => message.id));
+  const rowsBefore = messages.value.length;
   if (optimistic) messages.value = [...messages.value, optimistic];
   let sent = false;
-  let busy = false;
+  let follow = false;
   try {
     const response = await sendChat(id.value, input);
+    if (gone || sequence !== mine) return;
     messages.value = [...without(askedId).filter((message) => message.id !== response.userMessage.id), response.userMessage, response.assistantMessage];
     serverPending.value = false;
     sent = true;
   } catch (e) {
+    if (gone || sequence !== mine) return;
     if (hasApiStatus(e, 409)) {
       // Someone else's question is being answered; keep the text and follow that reply.
       if (optimistic) messages.value = without(askedId);
       error.value = CHAT_BUSY_MESSAGE;
       serverPending.value = true;
-      busy = true;
+      follow = true;
     } else if (hasApiStatus(e, 403)) {
       enabled.value = false;
     } else if (hasApiStatus(e, 502)) {
-      // The question was saved and the server marked it failed too, so Retry shows at once.
+      // The question was saved and the server marked it failed too, so Retry shows at once. On a plain send the box is cleared, as the question is in the thread; a retry leaves any separate draft alone.
       messages.value = withFailed(askedId, true);
+      if (optimistic) sent = true;
     } else {
-      if (optimistic) messages.value = without(askedId);
-      error.value = e instanceof Error && e.message ? e.message : 'Could not send the message.';
+      const state = await tookQuestion(input, knownIds, rowsBefore, mine);
+      if (gone || sequence !== mine) return;
+      if (state) {
+        // The connection failed but the server has the question: show its thread, follow the reply if it is still coming, and clear the box as for a send that worked.
+        messages.value = state.messages ?? [];
+        serverPending.value = state.pending === true;
+        follow = serverPending.value;
+        sent = true;
+      } else {
+        if (optimistic) messages.value = without(askedId);
+        error.value = e instanceof Error && e.message ? e.message : 'Could not send the message.';
+      }
     }
   } finally {
-    sending.value = false;
-    // Polling starts only now: a poll skips itself while this tab is sending, so the first one would be wasted.
-    if (busy) startPolling();
-    // After sending is false, so the box is enabled again when it takes focus.
-    if (sent) void composer.value?.clear();
+    if (!gone) {
+      sending.value = false;
+      // Polling starts only now: a poll skips itself while this tab is sending, so the first one would be wasted.
+      if (follow) startPolling();
+      // After sending is false, so the box is enabled again when it takes focus.
+      if (sent) void composer.value?.clear();
+    }
   }
 };
 
@@ -165,6 +207,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  gone = true;
   if (ticker) clearInterval(ticker);
   stopPolling();
 });

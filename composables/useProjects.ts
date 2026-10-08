@@ -13,7 +13,7 @@ import {
   type ProjectStepUpdateInput,
   type ProjectUpdateInput,
 } from '@/types/project';
-import { type ChatSendInput, type ChatSendResponse, type ChatStateResponse } from '@/types/chat';
+import { CHAT_DEADLINE_MS, type ChatSendInput, type ChatSendResponse, type ChatStateResponse } from '@/types/chat';
 import { type PlanRunResponse, type PlanStateResponse, type StepBatchResponse } from '@/types/plan';
 import { type SuggestionRunResponse, type SuggestionStateResponse } from '@/types/suggestion';
 import { type ResizedPhoto } from '@/utils/image-resize';
@@ -84,9 +84,9 @@ export const useProjects = () => {
     api.post<StepBatchResponse>(`/api/projects/${projectId}/steps/batch`, { steps });
 
   const getChat = (projectId: string) => api.get<ChatStateResponse>(`/api/projects/${projectId}/chat`);
-  // Takes 5 to 60 seconds: one or more model calls, plus the searches the model asks for.
+  // Takes 5 to 60 seconds: one or more model calls, plus the searches the model asks for. The timeout sits past the server's own deadline, so a dropped connection ends instead of hanging.
   const sendChat = (projectId: string, input: ChatSendInput) =>
-    api.post<ChatSendResponse>(`/api/projects/${projectId}/chat`, input);
+    api.post<ChatSendResponse>(`/api/projects/${projectId}/chat`, input, { signal: AbortSignal.timeout(CHAT_DEADLINE_MS + 30_000) });
 
   return {
     listProjects, getProject, createProject, updateProject, deleteProject, listLocations,

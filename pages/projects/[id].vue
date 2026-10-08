@@ -232,10 +232,10 @@ const saveError = ref<string | null>(null);
 const photoError = ref<string | null>(null);
 const saving = ref(false);
 const savedAt = ref<number | null>(null);
+const chatEnabled = ref(false);
 // Restarted on every successful save, so the "Saved" text clears ~2s after the latest save settles.
 let savedIndicatorTimer: ReturnType<typeof setTimeout> | null = null;
 // The id of the photo that was tapped; the viewer opens the carousel on that one. null = closed.
-const chatEnabled = ref(false);
 const viewing = ref<string | null>(null);
 const viewerCarousel = ref<InstanceType<typeof PhotoCarousel> | null>(null);
 const providersSection = ref<InstanceType<typeof ProjectProviders> | null>(null);
