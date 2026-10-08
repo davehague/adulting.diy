@@ -11,7 +11,15 @@
       <!-- Details -->
       <section class="bg-white rounded-xl shadow-sm border border-stone-200 p-4 sm:p-6 space-y-4">
         <div>
-          <label for="project-title" class="block text-sm font-medium text-stone-700">Title</label>
+          <div class="flex items-center justify-between gap-3">
+            <label for="project-title" class="block text-sm font-medium text-stone-700">Title</label>
+            <NuxtLink v-if="chatEnabled"
+                      :to="`/projects/chat/${project.id}`"
+                      class="inline-flex items-center gap-1 rounded-lg border border-amber-600 px-2.5 py-1 text-sm font-medium text-amber-700 hover:bg-amber-50 transition-colors">
+              <MessageCircle :size="16" aria-hidden="true" />
+              Chat
+            </NuxtLink>
+          </div>
           <input id="project-title"
                  v-model="form.title"
                  type="text"
@@ -84,7 +92,8 @@
                    :project-path="project.path ?? null"
                    @update:steps="onStepsChange"
                    @find-provider="providersSection?.openFinder()"
-                   @set-path-hire="save({ path: 'hire' })" />
+                   @set-path-hire="save({ path: 'hire' })"
+                   @enabled="chatEnabled = $event" />
 
       <!-- Providers -->
       <ProjectProviders ref="providersSection"
@@ -188,7 +197,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue';
-import { ChevronLeft, ChevronRight, X } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, MessageCircle, X } from 'lucide-vue-next';
 import {
   MAX_PROJECT_PHOTOS,
   PROJECT_PATHS,
@@ -226,6 +235,7 @@ const savedAt = ref<number | null>(null);
 // Restarted on every successful save, so the "Saved" text clears ~2s after the latest save settles.
 let savedIndicatorTimer: ReturnType<typeof setTimeout> | null = null;
 // The id of the photo that was tapped; the viewer opens the carousel on that one. null = closed.
+const chatEnabled = ref(false);
 const viewing = ref<string | null>(null);
 const viewerCarousel = ref<InstanceType<typeof PhotoCarousel> | null>(null);
 const providersSection = ref<InstanceType<typeof ProjectProviders> | null>(null);

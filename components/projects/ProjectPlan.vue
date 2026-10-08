@@ -142,6 +142,7 @@ const emit = defineEmits<{
   (e: 'update:steps', steps: ProjectStepDto[]): void;
   (e: 'find-provider'): void;
   (e: 'set-path-hire'): void;
+  (e: 'enabled', value: boolean): void;
 }>();
 
 const { getPlan, runPlan, addStep, addSteps } = useProjects();
@@ -267,6 +268,7 @@ onMounted(async () => {
   if (pending) {
     // The page was left during an ask and opened again before the answer came: pick that ask up.
     enabled.value = true;
+    emit('enabled', true);
     extraText.value = pending.extraText;
     running.value = true;
     await follow(pending.promise);
@@ -275,6 +277,7 @@ onMounted(async () => {
   try {
     const state = await getPlan(props.projectId);
     enabled.value = state.enabled === true;
+    emit('enabled', enabled.value);
     limitReached.value = state.limitReached === true;
     hasSuggestions.value = state.hasSuggestions === true;
     plan.value = state.plan ?? null;
