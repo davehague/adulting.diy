@@ -65,6 +65,21 @@ describe('buildChatPrompt', () => {
     expect(system).not.toContain('555-123-4567')
     expect(system).not.toContain('moen.com/x')
   })
+  it('masks contact details in every typed field', () => {
+    const dirty = (label: string) => `${label} 555-123-4567 a@b.co https://x.y`
+    const system = systemOf(buildChatPrompt(
+      context({
+        project: { title: dirty('Title'), location: dirty('Place'), notes: null, status: 'active', path: 'diy' },
+        trades: [dirty('Trade')],
+        links: [{ name: dirty('Link'), categoryName: dirty('Category'), status: 'contacted' }],
+      }),
+      [],
+      'u1',
+      today,
+    ))
+    for (const raw of ['555-123-4567', 'a@b.co', 'https://x.y']) expect(system).not.toContain(raw)
+    for (const label of ['Title', 'Place', 'Trade', 'Link', 'Category']) expect(system).toContain(`${label} [phone] [email] [link]`)
+  })
   it('says what is missing when the project is bare', () => {
     const system = systemOf(buildChatPrompt(context({ project: { title: 'Stuff', location: null, notes: null, status: 'planning', path: null }, steps: [], plan: null, trades: [], links: [] }), [], 'u1', today))
     expect(system).toContain('Location: not given')

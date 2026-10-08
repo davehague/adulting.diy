@@ -27,8 +27,24 @@ describe('renderChatMarkdown', () => {
     expect(renderChatMarkdown('<script>alert(1)</script> **<b>x</b>** `<i>`')).toBe(
       '<p>&lt;script&gt;alert(1)&lt;/script&gt; <strong>&lt;b&gt;x&lt;/b&gt;</strong> <code>&lt;i&gt;</code></p>',
     )
-    // A quote breaks the link syntax, and a bare address only links after whitespace, so nothing here becomes an attribute.
+    // The space ends the address, so the link pattern finds no closing bracket after it; the bare-address pass needs the start of the text or whitespace before https, and here a bracket precedes it. Nothing becomes an attribute.
     expect(renderChatMarkdown('[x](https://a.b" onclick="alert(1))')).toBe('<p>[x](https://a.b&quot; onclick=&quot;alert(1))</p>')
+    // With no space the escaped quote is an ordinary address character, so a link is made, but the quote stays inside the double-quoted href and can never close it.
+    const html = renderChatMarkdown('[x](https://a.b"onclick=alert(1))')
+    expect(html).toBe('<p><a href="https://a.b&quot;onclick=alert(1" target="_blank" rel="noopener noreferrer">x</a>)</p>')
+    expect(html).not.toMatch(/<a [^>]*\sonclick=/)
+  })
+  it('strips NUL bytes so model text cannot collide with the placeholder marker', () => {
+    expect(renderChatMarkdown('a\u0000b **c**')).toBe('<p>ab <strong>c</strong></p>')
+    expect(renderChatMarkdown('x \u00000\u0000 [l](https://a.b)')).toBe('<p>x 0 <a href="https://a.b" target="_blank" rel="noopener noreferrer">l</a></p>')
+  })
+  it('keeps an address inside a code span literal', () => {
+    expect(renderChatMarkdown('`https://a.b/x`')).toBe('<p><code>https://a.b/x</code></p>')
+    expect(renderChatMarkdown('`[a](https://b.c)`')).toBe('<p><code>[a](https://b.c)</code></p>')
+  })
+  it('accepts CRLF line endings', () => {
+    expect(renderChatMarkdown('1. One\r\n2. Two')).toBe('<ol><li>One</li><li>Two</li></ol>')
+    expect(renderChatMarkdown('First\r\nsecond\r\n\r\nNext')).toBe('<p>First<br>second</p><p>Next</p>')
   })
   it('renders headings as bold text and images as their alt text', () => {
     expect(renderChatMarkdown('## Steps\n![a photo](https://x.y/p.png)')).toBe('<p><strong>Steps</strong><br>a photo</p>')

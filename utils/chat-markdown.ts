@@ -5,18 +5,18 @@ const escapeHtml = (text: string): string =>
 
 const anchor = (href: string, label: string): string => `<a href="${href}" target="_blank" rel="noopener noreferrer">${label}</a>`;
 
-// Links are built on already-escaped text and parked in placeholders so the bare-address pass cannot link them twice.
+// Code spans and links are built on already-escaped text and parked in placeholders so no later pass can touch them: an address inside a code span stays literal and a link is not linked twice. The marker is a NUL, which is stripped from the model's text first and kept out of every pattern that parks, so the text can never collide with it.
 const inline = (raw: string): string => {
   const parked: string[] = [];
   const park = (html: string): string => {
     parked.push(html);
     return `\u0000${parked.length - 1}\u0000`;
   };
-  let text = escapeHtml(raw);
+  let text = escapeHtml(raw.replace(/\u0000/g, ''));
   text = text.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1');
-  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_match, label: string, href: string) => park(anchor(href, label)));
-  text = text.replace(/(^|\s)(https?:\/\/[^\s<]+?)([.,;:!?)]*)(?=\s|$)/g, (_match, before: string, href: string, trailing: string) => `${before}${park(anchor(href, href))}${trailing}`);
   text = text.replace(/`([^`]+)`/g, (_match, code: string) => park(`<code>${code}</code>`));
+  text = text.replace(/\[([^\]\u0000]+)\]\((https?:\/\/[^\s)\u0000]+)\)/g, (_match, label: string, href: string) => park(anchor(href, label)));
+  text = text.replace(/(^|\s)(https?:\/\/[^\s<\u0000]+?)([.,;:!?)]*)(?=\s|$)/g, (_match, before: string, href: string, trailing: string) => `${before}${park(anchor(href, href))}${trailing}`);
   text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   return text.replace(/\u0000(\d+)\u0000/g, (_match, index: string) => parked[Number(index)]);
 };
@@ -31,7 +31,7 @@ type Block = { kind: 'p'; lines: string[] } | { kind: 'ol'; start: number; items
 const toBlocks = (text: string): Block[] => {
   const blocks: Block[] = [];
   const last = (): Block | undefined => blocks[blocks.length - 1];
-  for (const line of text.split('\n')) {
+  for (const line of text.split(/\r?\n/)) {
     if (!line.trim()) {
       if (last() && last()?.kind === 'p') blocks.push({ kind: 'p', lines: [] });
       continue;
