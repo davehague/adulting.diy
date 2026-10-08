@@ -22,8 +22,10 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({ hideFooter: true });
+
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { CHAT_PENDING_MS, CHAT_POLL_MS, type ChatMessageDto, type ChatSendInput } from '@/types/chat';
+import { CHAT_BUSY_MESSAGE, CHAT_PENDING_MS, CHAT_POLL_MS, type ChatMessageDto, type ChatSendInput } from '@/types/chat';
 import { useProjects } from '@/composables/useProjects';
 import { hasApiStatus } from '@/utils/api-error';
 import ChatThread from '@/components/projects/ChatThread.vue';
@@ -65,9 +67,14 @@ const poll = async (): Promise<void> => {
   if (sending.value) return;
   try {
     const state = await getChat(id.value);
+    // A send that started while this poll was in flight owns the list now.
+    if (sending.value) return;
     messages.value = state.messages ?? [];
     serverPending.value = state.pending === true;
-    if (!serverPending.value) stopPolling();
+    if (!serverPending.value) {
+      stopPolling();
+      if (error.value === CHAT_BUSY_MESSAGE) error.value = null;
+    }
   } catch {
     // Keep polling; the next tick may succeed.
   }
@@ -75,6 +82,8 @@ const poll = async (): Promise<void> => {
 
 const startPolling = (): void => {
   if (poller) return;
+  // Ask once at once, so the composer does not sit open for a whole interval after a busy reply.
+  void poll();
   poller = setInterval(poll, CHAT_POLL_MS);
 };
 
@@ -106,18 +115,20 @@ const ask = async (input: ChatSendInput, optimistic: ChatMessageDto | null): Pro
   // The row being answered: the one just added, or on a retry the last row.
   const askedId = optimistic ? optimistic.id : (last.value?.id ?? null);
   if (optimistic) messages.value = [...messages.value, optimistic];
+  let sent = false;
+  let busy = false;
   try {
     const response = await sendChat(id.value, input);
     messages.value = [...without(askedId).filter((message) => message.id !== response.userMessage.id), response.userMessage, response.assistantMessage];
     serverPending.value = false;
-    composer.value?.clear();
+    sent = true;
   } catch (e) {
     if (hasApiStatus(e, 409)) {
       // Someone else's question is being answered; keep the text and follow that reply.
       if (optimistic) messages.value = without(askedId);
-      error.value = 'A reply is on its way';
+      error.value = CHAT_BUSY_MESSAGE;
       serverPending.value = true;
-      startPolling();
+      busy = true;
     } else if (hasApiStatus(e, 403)) {
       enabled.value = false;
     } else if (hasApiStatus(e, 502)) {
@@ -129,6 +140,10 @@ const ask = async (input: ChatSendInput, optimistic: ChatMessageDto | null): Pro
     }
   } finally {
     sending.value = false;
+    // Polling starts only now: a poll skips itself while this tab is sending, so the first one would be wasted.
+    if (busy) startPolling();
+    // After sending is false, so the box is enabled again when it takes focus.
+    if (sent) void composer.value?.clear();
   }
 };
 

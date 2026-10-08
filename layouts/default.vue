@@ -190,7 +190,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-stone-200 py-4">
+    <footer v-if="!route.meta.hideFooter" class="bg-white border-t border-stone-200 py-4">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <p class="text-center text-stone-500 text-sm">
           © {{ new Date().getFullYear() }} Adulting.DIY - Keep up with your home, your dog, and your life.
