@@ -13,6 +13,7 @@ import {
   type ProjectStepUpdateInput,
   type ProjectUpdateInput,
 } from '@/types/project';
+import { type ChatSendInput, type ChatSendResponse, type ChatStateResponse } from '@/types/chat';
 import { type PlanRunResponse, type PlanStateResponse, type StepBatchResponse } from '@/types/plan';
 import { type SuggestionRunResponse, type SuggestionStateResponse } from '@/types/suggestion';
 import { type ResizedPhoto } from '@/utils/image-resize';
@@ -82,6 +83,11 @@ export const useProjects = () => {
   const addSteps = (projectId: string, steps: ProjectStepCreateInput[]) =>
     api.post<StepBatchResponse>(`/api/projects/${projectId}/steps/batch`, { steps });
 
+  const getChat = (projectId: string) => api.get<ChatStateResponse>(`/api/projects/${projectId}/chat`);
+  // Takes 5 to 60 seconds: one or more model calls, plus the searches the model asks for.
+  const sendChat = (projectId: string, input: ChatSendInput) =>
+    api.post<ChatSendResponse>(`/api/projects/${projectId}/chat`, input);
+
   return {
     listProjects, getProject, createProject, updateProject, deleteProject, listLocations,
     uploadPhoto, deletePhoto, fetchPhotoBlob,
@@ -89,5 +95,6 @@ export const useProjects = () => {
     listProjectProviders, linkProvider, setProviderLinkStatus, unlinkProvider,
     getSuggestions, runSuggestions,
     getPlan, runPlan, addSteps,
+    getChat, sendChat,
   };
 };
