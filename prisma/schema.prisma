@@ -440,13 +440,13 @@ model ProjectChatMessage {
   @@map("project_chat_messages")
 }
 
-// One row per AI ask. Holds no project or provider text; the daily cap counts these rows.
+// One row per AI ask. Holds no project, provider or chat text. The daily cap counts only the provider_suggestions and diy_plan rows; project_chat rows are logged but never counted.
 model AiRequestLog {
   id           String    @id @default(uuid())
   household    Household @relation(fields: [householdId], references: [id])
   householdId  String
   userId       String
-  feature      String    // provider_suggestions
+  feature      String    // provider_suggestions, diy_plan or project_chat
   model        String
   outcome      String    // started, ok, too_vague, failed
   durationMs   Int?
