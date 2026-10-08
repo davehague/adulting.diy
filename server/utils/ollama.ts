@@ -175,5 +175,5 @@ export const searchOllama: WebSearch = async (query, timeoutMs) => {
   } catch {
     throw new ModelCallError('Ollama search reply was not JSON');
   }
-  return Array.isArray(body.results) ? body.results.map(toSearchResult).filter((row): row is SearchResult => row !== null) : [];
+  return Array.isArray(body.results) ? body.results.map(toSearchResult).filter((row): row is SearchResult => row !== null).slice(0, CHAT_SEARCH_RESULTS) : [];
 };

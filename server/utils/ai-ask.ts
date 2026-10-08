@@ -63,6 +63,8 @@ export const askJson = async <T>(
 
 export const SEARCH_LIMIT_MESSAGE = 'Search limit reached for this reply; answer with what you have.';
 const SEARCH_TOOL = 'web_search';
+// A search started with less time than this could not come back, so it is not sent.
+const MIN_SEARCH_MS = 1000;
 // Enough calls for three searches, one more answer, and one answer after the limit message.
 const MAX_CHAT_ROUNDS = MAX_CHAT_SEARCHES + 2;
 
@@ -84,6 +86,7 @@ export const askChat = async (
 ): Promise<ChatAskResult> => {
   const messages = [...context.messages];
   const searches: string[] = [];
+  let limitSent = false;
 
   for (let round = 0; round < MAX_CHAT_ROUNDS; round++) {
     const remaining = deadline - now();
@@ -98,6 +101,9 @@ export const askChat = async (
       return { text: reply.text, searches };
     }
 
+    // Tools are never run on the last round, and a model that asks again after the limit message is not asked again.
+    if (limitSent || round === MAX_CHAT_ROUNDS - 1) throw new AskError('the model kept asking for tools');
+
     messages.push({ role: 'assistant', content: reply.text, tool_calls: reply.toolCalls });
     for (const call of reply.toolCalls) {
       const rawQuery = call.function.arguments.query;
@@ -107,6 +113,9 @@ export const askChat = async (
         content = JSON.stringify({ error: 'unknown tool or missing query' });
       } else if (searches.length >= MAX_CHAT_SEARCHES) {
         content = SEARCH_LIMIT_MESSAGE;
+        limitSent = true;
+      } else if (deadline - now() < MIN_SEARCH_MS) {
+        content = JSON.stringify({ error: 'search failed' });
       } else {
         searches.push(query);
         try {
@@ -120,7 +129,7 @@ export const askChat = async (
       messages.push({ role: 'tool', tool_name: call.function.name, content });
     }
   }
-  throw new AskError('the model kept asking for searches');
+  throw new AskError('the model kept asking for tools');
 };
 
 // The features that share the daily cap. Chat is logged like the others but never counted.

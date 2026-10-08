@@ -162,6 +162,12 @@ describe('searchOllama', () => {
     respond({ results: [] })
     expect(await searchOllama('q', 4000)).toEqual([])
   })
+  it('returns at most five results', async () => {
+    respond({ results: Array.from({ length: 7 }, (_, i) => ({ title: `T${i}`, url: `https://x.y/${i}`, content: 'c' })) })
+    const results = await searchOllama('q', 4000)
+    expect(results).toHaveLength(5)
+    expect(results.map((r) => r.title)).toEqual(['T0', 'T1', 'T2', 'T3', 'T4'])
+  })
   it('throws fixed text on a non-2xx, on non-JSON and without the key', async () => {
     respond({ error: 'the query was: secret' }, false, 429)
     await expect(searchOllama('q', 4000)).rejects.toThrow('Ollama search returned HTTP 429')
