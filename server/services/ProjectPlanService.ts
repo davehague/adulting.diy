@@ -78,7 +78,7 @@ export class ProjectPlanService {
     };
   }
 
-  // The outline for the plan: the trades from the project's saved provider suggestion, as name and why only. Never the providers.
+  // The trades from the project's saved provider suggestion. Only the names reach the model (the prompt builder drops the whys); never the providers.
   private async trades(projectId: string): Promise<PlanTrade[]> {
     const row = await prisma.projectSuggestion.findUnique({ where: { projectId }, select: { result: true } });
     if (!row) return [];

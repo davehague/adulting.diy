@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-08
+
+### DIY plan
+- A project with saved provider suggestions no longer gets a "Hire this out" plan just because a trade is listed; the plan judges the work itself
+
 ## 2026-10-06
 
 ### DIY plan (on for selected households)
