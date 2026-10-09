@@ -14,9 +14,9 @@
     <p v-else-if="!enabled" class="m-3 text-sm text-stone-600">Chat is not available for this household.</p>
 
     <template v-else>
-      <ChatThread :messages="messages" :pending="pending" :pending-seconds="pendingSeconds" :retryable="retryable" @retry="retry" />
+      <ChatThread :project-id="id" :messages="messages" :pending="pending" :pending-seconds="pendingSeconds" :retryable="retryable" @retry="retry" />
       <p v-if="error" class="px-3 pb-1 text-sm text-red-700" aria-live="polite">{{ error }}</p>
-      <ChatComposer ref="composer" :disabled="pending" @send="send" />
+      <ChatComposer ref="composer" :project-id="id" :disabled="pending" @send="send" />
     </template>
   </div>
 </template>
@@ -121,7 +121,9 @@ const tookQuestion = async (input: ChatSendInput, knownIds: Set<string>, rowsBef
     if (gone || sequence !== mine) return null;
     const rows = state.messages ?? [];
     const newest = [...rows].reverse().find((message) => message.role === 'user');
-    const sameText = 'text' in input && newest !== undefined && !knownIds.has(newest.id) && newest.content === input.text;
+    // A photo-only message has no text to compare, so it is matched by its photos.
+    const sameText = 'text' in input && newest !== undefined && !knownIds.has(newest.id) && newest.content === input.text
+      && (input.text !== '' || (newest.photoIds.length === input.photoIds.length && newest.photoIds.every((photoId, i) => photoId === input.photoIds[i])));
     // Only a retry can tell by the row count: on a plain send, rows another member added would look the same.
     const grew = 'retry' in input && rows.length > rowsBefore;
     const retryTaken = 'retry' in input && state.pending === true;
@@ -159,7 +161,7 @@ const ask = async (input: ChatSendInput, optimistic: ChatMessageDto | null): Pro
       // Someone else's question is being answered; the text goes back in the box and this tab follows that reply.
       if (optimistic) {
         messages.value = without(askedId);
-        void composer.value?.restore(optimistic.content);
+        void composer.value?.restore(optimistic.content, optimistic.photoIds);
       }
       error.value = CHAT_BUSY_MESSAGE;
       serverPending.value = true;
@@ -180,7 +182,7 @@ const ask = async (input: ChatSendInput, optimistic: ChatMessageDto | null): Pro
       } else {
         if (optimistic) {
           messages.value = without(askedId);
-          void composer.value?.restore(optimistic.content);
+          void composer.value?.restore(optimistic.content, optimistic.photoIds);
         }
         error.value = e instanceof Error && e.message ? e.message : 'Could not send the message.';
       }
@@ -196,9 +198,9 @@ const ask = async (input: ChatSendInput, optimistic: ChatMessageDto | null): Pro
   }
 };
 
-const send = (text: string): void => {
-  const optimistic: ChatMessageDto = { id: `local-${Date.now()}`, role: 'user', content: text, mine: true, failed: false, searches: [], createdAt: new Date().toISOString() };
-  void ask({ text }, optimistic);
+const send = (text: string, photoIds: string[]): void => {
+  const optimistic: ChatMessageDto = { id: `local-${Date.now()}`, role: 'user', content: text, mine: true, failed: false, searches: [], photoIds, createdAt: new Date().toISOString() };
+  void ask({ text, photoIds }, optimistic);
 };
 
 const retry = (): void => {

@@ -7,7 +7,12 @@
     <template v-for="(message, index) in messages" :key="message.id">
       <div v-if="message.role === 'user'" class="flex flex-col items-stretch sm:items-end">
         <span v-if="!message.mine" class="mb-0.5 text-xs text-stone-500">Household member</span>
-        <p class="w-full sm:w-auto sm:max-w-[85%] whitespace-pre-wrap break-words rounded-xl bg-amber-50 px-3 py-2 text-sm text-stone-900">{{ message.content }}</p>
+        <ul v-if="message.photoIds.length > 0" class="mb-1 flex w-full gap-2 sm:w-auto sm:justify-end" aria-label="Photos">
+          <li v-for="photoId in message.photoIds" :key="photoId" class="h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-stone-200 bg-stone-100">
+            <AuthedImage :project-id="projectId" :photo-id="photoId" variant="thumb" alt="Photo sent with this message" />
+          </li>
+        </ul>
+        <p v-if="message.content" class="w-full sm:w-auto sm:max-w-[85%] whitespace-pre-wrap break-words rounded-xl bg-amber-50 px-3 py-2 text-sm text-stone-900">{{ message.content }}</p>
         <div v-if="index === messages.length - 1 && retryable" class="mt-1 flex items-center gap-2 text-sm text-stone-600" aria-live="polite">
           <span>Couldn't get a reply.</span>
           <button type="button"
@@ -33,8 +38,11 @@
 import { ref, watch, nextTick } from 'vue';
 import { type ChatMessageDto } from '@/types/chat';
 import { renderChatMarkdown } from '@/utils/chat-markdown';
+import AuthedImage from '@/components/projects/AuthedImage.vue';
 
 const props = defineProps<{
+  // the project the photos belong to
+  projectId: string;
   messages: ChatMessageDto[];
   // a reply is on its way for the last message
   pending: boolean;
