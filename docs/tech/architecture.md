@@ -33,7 +33,7 @@ Neighborhood watcher (external) ──→ /api/ingest/providers  (household API 
 | `stores/` | Pinia stores: `auth` (persisted), `tasks`, `dev-auth` |
 | `middleware/auth.global.ts` | Client route guard: login redirect, household setup redirect |
 | `plugins/` | `auth-ready.client.ts` (waits for the persisted auth store), `dev-auth.client.ts` |
-| `utils/` | Shared client helpers: `api.ts` (authenticated fetch), `api-error.ts`, `image-resize.ts`, `project-labels.ts`, `project-steps.ts`, `project-providers.ts`, `google-search.ts` and `schedule-type.ts` (both shared with the server) |
+| `utils/` | Shared client helpers: `api.ts` (authenticated fetch), `api-error.ts`, `image-resize.ts`, `project-labels.ts`, `project-steps.ts`, `project-providers.ts`, `chat-markdown.ts` (the chat's reply renderer), `google-search.ts` and `schedule-type.ts` (both shared with the server) |
 | `types/` | Shared TypeScript types, one file per domain |
 | `server/api/` | HTTP endpoints, one file per route and method |
 | `server/services/` | Business logic and all database access, one class per domain |

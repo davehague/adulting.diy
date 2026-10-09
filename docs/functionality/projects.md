@@ -13,7 +13,7 @@
 - Search, filter and sort the directory from the project, and read a provider's details and what neighbors said before adding them
 - Ask for suggestions: the project is split into the trades it needs, with up to three providers from your own directory for each and a reason for every pick (on for selected households)
 - Ask for a DIY plan: the steps with a time and cost range each, the tools and materials, how hard it is and why, and a one-tap way to copy steps into the checklist (on for selected households)
-- Chat about a project with an advisor that already knows its notes, steps, plan and providers, remembers the whole conversation, and can look things up on the web when a question needs current facts (on for selected households)
+- Chat about a project with an advisor that already knows its notes, steps, plan, providers and photos, remembers the whole conversation, can look things up on the web when a question needs current facts, and can be sent new photos straight from the chat (on for selected households)
 - Call a linked provider straight from the project page
 - Browse, filter and swipe through projects and their photos
 - Edit anything in place, and delete photos or whole projects

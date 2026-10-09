@@ -47,7 +47,7 @@ This file is a signpost. The detail lives in `docs/`; read the relevant doc befo
 | [docs/functionality/notifications-and-reminders.md](docs/functionality/notifications-and-reminders.md) | Product | Notification events, preferences, channels, reminder rules |
 | [docs/functionality/household-management.md](docs/functionality/household-management.md) | Product | Households, roles, invite codes, former members, task categories |
 | [docs/functionality/providers.md](docs/functionality/providers.md) | Product | Contractor directory, neighbor evidence, task and project links |
-| [docs/functionality/projects.md](docs/functionality/projects.md) | Product | Home projects, photos, steps, linked providers, AI provider suggestions, dashboard next steps |
+| [docs/functionality/projects.md](docs/functionality/projects.md) | Product | Home projects, photos, steps, linked providers, AI provider suggestions, the AI DIY plan, the project chat (with photos), dashboard next steps |
 | [docs/functionality/changelog.md](docs/functionality/changelog.md) | Product | What changed, from the user's point of view |
 | [docs/tech/architecture.md](docs/tech/architecture.md) | Developers | System map: directory map, request flow, auth wrappers, data model, pages, integrations, cron |
 | [docs/tech/api-endpoints.md](docs/tech/api-endpoints.md) | Developers | Full API reference |
