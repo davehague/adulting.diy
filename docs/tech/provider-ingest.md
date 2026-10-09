@@ -39,7 +39,7 @@ Missing or invalid keys return 401. Key management endpoints use the admin-only 
 
 ## Ingest Endpoint
 
-`GET /api/ingest/categories` returns `{ "categories": ["Roofing, Siding & Gutters", ...] }` for the key's household. The Worthington watcher uses it as the category vocabulary so new finds land in existing, admin-managed categories.
+`GET /api/ingest/categories` returns `{ "categories": ["Roofing, Siding & Gutters", ...], "taskCategories": [...] }` for the key's household. The Worthington watcher uses it as the category vocabulary so new finds land in existing, admin-managed categories.
 
 `POST /api/ingest/providers`
 
@@ -110,7 +110,7 @@ Re-running the same payload is safe.
 
 - New provider field: add it to `prisma/schema.prisma`, `providerInputSchema` and `ingestItemSchema` in `provider-schemas.ts`, and to `FILLABLE_FIELDS` plus the create call in `ProviderIngestService` if the watcher should be able to fill it.
 - New evidence kind: extend the enum in `ingestItemSchema` and the counting in `provider-evidence.ts`.
-- New machine endpoint: wrap it in `defineApiKeyProtectedEventHandler`, which supplies `{ householdId, apiKeyId }`.
+- New machine endpoint: wrap it in `defineApiKeyProtectedEventHandler`, which supplies `{ householdId, apiKeyId, userId }` (`userId` is the key's creator). Projects and tasks are ingested the same way: see [project-task-ingest.md](project-task-ingest.md).
 
 ## Loader and Watcher
 

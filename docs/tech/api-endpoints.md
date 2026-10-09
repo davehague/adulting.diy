@@ -133,7 +133,7 @@ See [projects.md](../functionality/projects.md) for the product view.
 | `DELETE` | `/api/provider-statuses/[id]` | Household Admin | Delete status; 409 if in use unless `moveToId` is given |
 | `PUT` | `/api/provider-statuses/reorder` | Household Admin | Reorder statuses (`{ orderedIds }`) |
 
-## API Keys and Provider Ingest
+## API Keys and Machine Ingest
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
@@ -141,9 +141,11 @@ See [projects.md](../functionality/projects.md) for the product view.
 | `POST` | `/api/api-keys` | Household Admin | Create key; plaintext key is returned once |
 | `DELETE` | `/api/api-keys/[id]` | Household Admin | Revoke key |
 | `POST` | `/api/ingest/providers` | Household API Key | Bulk upsert providers and evidence (max 500 per request) |
-| `GET` | `/api/ingest/categories` | Household API Key | List the household's provider category names, so machine callers file finds under existing categories |
+| `POST` | `/api/ingest/projects` | Household API Key | Create projects with their steps (max 100 per request); skips one that is already open |
+| `POST` | `/api/ingest/tasks` | Household API Key | Create recurring or one-time tasks (max 100 per request); skips a name that already exists |
+| `GET` | `/api/ingest/categories` | Household API Key | List the household's provider category names (`categories`) and task category names (`taskCategories`), so machine callers use existing categories |
 
-See [provider-ingest.md](provider-ingest.md) for the ingest contract.
+See [provider-ingest.md](provider-ingest.md) for the provider ingest contract and [project-task-ingest.md](project-task-ingest.md) for projects and tasks.
 
 ## User Management
 

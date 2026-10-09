@@ -227,3 +227,10 @@ export interface TaskHistoryLog {
   createdAt: Date;
   user?: User;
 }
+
+// Result of POST /api/ingest/tasks. Index is the item's position in the request.
+export interface TaskIngestResult {
+  created: { index: number; id: string; name: string; firstDueDate: string | null }[];
+  skipped: { index: number; id: string; name: string; reason: string }[];
+  errors: { index: number; name: string; message: string }[];
+}

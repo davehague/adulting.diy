@@ -4,6 +4,8 @@ import { ApiKeyService } from '@/server/services/ApiKeyService';
 export interface ApiKeyContext {
   householdId: string;
   apiKeyId: string;
+  /** The user who created the key. */
+  userId: string;
 }
 
 export const defineApiKeyProtectedEventHandler = (

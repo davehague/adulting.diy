@@ -165,7 +165,9 @@ export class TaskService {
       Prisma.TaskDefinitionUncheckedCreateInput,
       "id" | "createdAt" | "updatedAt" // Omit audit fields
       // defaultAssigneeIds is part of this type if in schema
-    >
+    >,
+    // firstDueDate places the first occurrence instead of the schedule's own first date
+    options: { firstDueDate?: Date } = {}
   ): Promise<TaskDefinition> {
     try {
       // Ensure data matches Prisma's expected input structure (camelCase)
@@ -201,7 +203,8 @@ export class TaskService {
         const initialOccurrence =
           await occurrenceService.createInitialOccurrence(
             taskDefinition,
-            taskDefinition.createdByUserId // Pass the creator's ID
+            taskDefinition.createdByUserId, // Pass the creator's ID
+            options.firstDueDate
           );
         if (initialOccurrence) {
           console.log(

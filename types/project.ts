@@ -129,3 +129,10 @@ export interface ProjectListFilters {
   statuses?: ProjectStatus[];
   path?: ProjectPathFilter;
 }
+
+// Result of POST /api/ingest/projects. Index is the item's position in the request.
+export interface ProjectIngestResult {
+  created: { index: number; id: string; title: string; steps: number }[];
+  skipped: { index: number; id: string; title: string; reason: string }[];
+  errors: { index: number; title: string; message: string }[];
+}

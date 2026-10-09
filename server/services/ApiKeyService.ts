@@ -28,7 +28,13 @@ export class ApiKeyService {
     await prisma.apiKey.update({ where: { id }, data: { revokedAt: new Date() } });
   }
 
-  async authenticate(key: string): Promise<{ householdId: string; apiKeyId: string } | null> {
+  /** Records written through a key are attributed to its creator, who must still belong to the household. */
+  async requireOwnerInHousehold(householdId: string, userId: string): Promise<void> {
+    const owner = await prisma.user.findFirst({ where: { id: userId, householdId }, select: { id: true } });
+    if (!owner) throw new HttpError('The API key owner is no longer a member of this household', 403);
+  }
+
+  async authenticate(key: string): Promise<{ householdId: string; apiKeyId: string; userId: string } | null> {
     const record = await prisma.apiKey.findFirst({
       where: { hashedKey: hashApiKey(key), revokedAt: null },
     });
@@ -39,6 +45,6 @@ export class ApiKeyService {
     } catch (error) {
       console.error('[ApiKeyService] failed to update lastUsedAt', error);
     }
-    return { householdId: record.householdId, apiKeyId: record.id };
+    return { householdId: record.householdId, apiKeyId: record.id, userId: record.createdByUserId };
   }
 }

@@ -54,6 +54,7 @@ This file is a signpost. The detail lives in `docs/`; read the relevant doc befo
 | [docs/tech/task-scheduling.md](docs/tech/task-scheduling.md) | Developers | Recurrence algorithms, occurrence generation, catch-up |
 | [docs/tech/notification-system.md](docs/tech/notification-system.md) | Developers | Channel provider pattern, reminder flow, preference logic |
 | [docs/tech/provider-ingest.md](docs/tech/provider-ingest.md) | Developers | Provider data model, API keys, machine ingest |
+| [docs/tech/project-task-ingest.md](docs/tech/project-task-ingest.md) | Developers | Creating projects (with steps) and tasks with the household API key |
 | [docs/tech/testing.md](docs/tech/testing.md) | Developers | Test framework, structure, commands |
 | [docs/tech/dev-login-bypass.md](docs/tech/dev-login-bypass.md) | Developers | Development login bypass |
 | [docs/adrs/](docs/adrs/) | Developers | Architectural Decision Records |

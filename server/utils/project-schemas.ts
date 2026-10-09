@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { HttpError } from '@/server/utils/api-errors';
 import {
   DEFAULT_LIST_STATUSES,
+  MAX_PROJECT_STEPS,
   MAX_STEP_ESTIMATE_MINUTES,
   MAX_STEP_TEXT_LENGTH,
   PROJECT_PATHS,
@@ -72,6 +73,23 @@ export const stepUpdateSchema = z.object({
   text: stepText.optional(),
   estimateMinutes,
   done: z.boolean({ invalid_type_error: 'Done must be true or false' }).optional(),
+});
+
+export const MAX_PROJECT_INGEST_BATCH = 100;
+
+// Items are validated one at a time inside ProjectIngestService so a single bad item
+// cannot fail the whole batch; the envelope only checks shape and size.
+export const projectIngestBatchSchema = z.object({
+  projects: z.array(z.unknown()).min(1).max(MAX_PROJECT_INGEST_BATCH),
+});
+
+export const projectIngestItemSchema = projectCreateSchema.extend({
+  status: z.enum(PROJECT_STATUSES, { message: 'Unknown status' }).default('planning'),
+  path: z.enum(PROJECT_PATHS, { message: 'Unknown path' }).nullable().default(null),
+  steps: z
+    .array(stepCreateSchema)
+    .max(MAX_PROJECT_STEPS, `A project can have at most ${MAX_PROJECT_STEPS} steps`)
+    .default([]),
 });
 
 export const projectProviderLinkSchema = z.object(

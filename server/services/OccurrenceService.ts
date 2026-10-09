@@ -210,10 +210,11 @@ export class OccurrenceService {
    */
   async createInitialOccurrence(
     task: TaskDefinition,
-    userId: string // User who created the task
+    userId: string, // User who created the task
+    dueDateOverride?: Date // Used instead of the schedule's first date when given
   ): Promise<TaskOccurrence | null> {
     try {
-      const initialDueDate = calculateNextDueDate(task.scheduleConfig);
+      const initialDueDate = dueDateOverride ?? calculateNextDueDate(task.scheduleConfig);
 
       if (!initialDueDate) {
         console.warn(

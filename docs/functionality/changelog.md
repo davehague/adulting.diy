@@ -2,6 +2,10 @@
 
 ## 2026-10-09
 
+### Moving lists in from other tools
+- Scripts holding the household's API key can now create projects (with their steps) and tasks, so a list kept in another app can be moved in at once; running the same move twice does not create duplicates
+- A recurring task created this way gets its first due date straight away, including a "variable" one (counted from completion) that would otherwise wait for a first completion
+
 ### Photos in the project chat (on for selected households)
 - A camera button in the chat takes or picks up to three photos, adds them to the project's Photos at once, and sends them with your question; the advisor sees them at full size and every other project photo as a thumbnail
 - A message can be photos alone; the thread shows a message's photos above its text

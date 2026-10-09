@@ -20,6 +20,7 @@ Service layer (server/services/**)
 
 Vercel Cron ──→ /api/scheduler/run, /api/scheduler/reminders
 Neighborhood watcher (external) ──→ /api/ingest/providers  (household API key)
+Scripts (external)              ──→ /api/ingest/projects, /api/ingest/tasks  (household API key)
 ```
 
 ## Directory Map
@@ -59,7 +60,7 @@ All wrappers are in `server/utils/auth.ts` unless noted.
 | `defineHouseholdProtectedEventHandler` | The above, plus the user belongs to a household | Almost everything |
 | `defineHouseholdAdminEventHandler` | The above, plus the admin role | Household settings, invite code, member removal and admin promotion; provider categories and statuses; API keys |
 | `defineSchedulerProtectedEventHandler` | Bearer token equal to `CRON_SECRET` | Cron endpoints and `sendEmail` |
-| `defineApiKeyProtectedEventHandler` (`server/utils/api-key-auth.ts`) | A household API key (`adk_...`) | Provider ingest |
+| `defineApiKeyProtectedEventHandler` (`server/utils/api-key-auth.ts`) | A household API key (`adk_...`) | Provider, project and task ingest; also supplies the key creator's `userId` |
 
 Google ID tokens are verified server-side with `google-auth-library` on every request. Two routes are called during sign-in before a user row is known to exist, `/api/user/profile` and `/api/user/register`; they use `verifyIdentity`, which checks the token and takes the email from it without requiring a `User` row. In development, the login bypass short-circuits token verification with a chosen user; see [dev-login-bypass.md](dev-login-bypass.md).
 
@@ -110,6 +111,7 @@ The full endpoint list is in [api-endpoints.md](api-endpoints.md).
 | Task scheduling and occurrence generation | `server/utils/schedule.ts`, `TaskService`, `OccurrenceService`, `/api/scheduler/run` | [task-scheduling.md](task-scheduling.md) |
 | Notifications and reminders | `NotificationService`, `server/services/notifications/*`, `/api/scheduler/reminders` | [notification-system.md](notification-system.md) |
 | Provider directory and machine ingest | `Provider*Service`, `ApiKeyService`, `/api/ingest/providers` | [provider-ingest.md](provider-ingest.md) |
+| Project and task ingest | `ProjectIngestService`, `TaskIngestService`, `/api/ingest/projects`, `/api/ingest/tasks` | [project-task-ingest.md](project-task-ingest.md) |
 | Projects, photos, steps and provider links | `ProjectService`, `ProjectPhotoService`, `ProjectStepService`, `ProjectProviderService` | Below |
 | AI help: provider suggestions, the DIY plan and the project chat | `ProviderSuggestionService`, `ProjectPlanService`, `ProjectChatService`, `/api/projects/[id]/suggestions`, `/api/projects/[id]/plan`, `/api/projects/[id]/chat`, `server/utils/ai-ask.ts`, `ollama.ts`, `suggestion-*.ts`, `plan-*.ts`, `chat-*.ts`, `provider-ranking.ts`, `utils/chat-markdown.ts` | Below |
 | Dashboard | `DashboardService`, `/api/dashboard`, `/api/projects/next-steps` | Below |

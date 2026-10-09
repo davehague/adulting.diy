@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('@/server/utils/prisma/client', () => ({
   default: {
     apiKey: { create: vi.fn(), findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+    user: { findFirst: vi.fn() },
   },
 }))
 
@@ -10,7 +11,7 @@ import prisma from '@/server/utils/prisma/client'
 import { ApiKeyService } from '@/server/services/ApiKeyService'
 import { hashApiKey } from '@/server/utils/api-key'
 
-const db = prisma as unknown as { apiKey: Record<string, ReturnType<typeof vi.fn>> }
+const db = prisma as unknown as Record<'apiKey' | 'user', Record<string, ReturnType<typeof vi.fn>>>
 
 describe('ApiKeyService', () => {
   let service: ApiKeyService
@@ -26,12 +27,12 @@ describe('ApiKeyService', () => {
   })
 
   it('authenticate looks up by hash and ignores revoked keys', async () => {
-    db.apiKey.findFirst.mockResolvedValue({ id: 'k1', householdId: 'h1' })
+    db.apiKey.findFirst.mockResolvedValue({ id: 'k1', householdId: 'h1', createdByUserId: 'u1' })
     const result = await service.authenticate('adk_abc')
     expect(db.apiKey.findFirst).toHaveBeenCalledWith({
       where: { hashedKey: hashApiKey('adk_abc'), revokedAt: null },
     })
-    expect(result).toEqual({ householdId: 'h1', apiKeyId: 'k1' })
+    expect(result).toEqual({ householdId: 'h1', apiKeyId: 'k1', userId: 'u1' })
   })
 
   it('authenticate returns null for an unknown key', async () => {
@@ -49,8 +50,16 @@ describe('ApiKeyService', () => {
 
   it('authenticate still succeeds when the lastUsedAt update fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
-    db.apiKey.findFirst.mockResolvedValue({ id: 'k1', householdId: 'h1' })
+    db.apiKey.findFirst.mockResolvedValue({ id: 'k1', householdId: 'h1', createdByUserId: 'u1' })
     db.apiKey.update.mockRejectedValue(new Error('write failed'))
-    await expect(service.authenticate('adk_abc')).resolves.toEqual({ householdId: 'h1', apiKeyId: 'k1' })
+    await expect(service.authenticate('adk_abc')).resolves.toEqual({ householdId: 'h1', apiKeyId: 'k1', userId: 'u1' })
+  })
+
+  it('requireOwnerInHousehold passes for a current member and refuses one who left', async () => {
+    db.user.findFirst.mockResolvedValueOnce({ id: 'u1' })
+    await expect(service.requireOwnerInHousehold('h1', 'u1')).resolves.toBeUndefined()
+    expect(db.user.findFirst.mock.calls[0][0].where).toEqual({ id: 'u1', householdId: 'h1' })
+    db.user.findFirst.mockResolvedValueOnce(null)
+    await expect(service.requireOwnerInHousehold('h1', 'u1')).rejects.toMatchObject({ statusCode: 403 })
   })
 })

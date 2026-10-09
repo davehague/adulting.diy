@@ -231,4 +231,15 @@ describe('OccurrenceService - Occurrence Generation', () => {
       })
     })
   })
+
+  describe('createInitialOccurrence', () => {
+    it('uses the due date override instead of the schedule when one is given', async () => {
+      vi.mocked(prisma.taskOccurrence.count).mockResolvedValue(0)
+      vi.mocked(prisma.taskOccurrence.create).mockImplementation(async (args: any) => ({ id: 'occ-1', ...args.data }))
+      const override = new Date('2026-03-20T12:00:00.000Z')
+      await service.createInitialOccurrence(mockTask() as any, 'user-1', override)
+      expect(vi.mocked(prisma.taskOccurrence.create).mock.calls[0][0].data.dueDate).toEqual(override)
+    })
+  })
 })
+
