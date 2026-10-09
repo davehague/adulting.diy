@@ -105,4 +105,4 @@ Branch `feat/chat-photos` from `main`. Migration applied on David's yes, then me
 
 ## Later (not designed here)
 
-Tap a chat thumbnail to open the project's viewer; the advisor pointing at a region of a photo; photos on the DIY plan ask; a smaller "model" variant to cut tokens further if usage shows it matters.
+Tap a chat thumbnail to open the project's viewer; the advisor pointing at a region of a photo; photos on the DIY plan ask; a smaller "model" variant to cut tokens further if usage shows it matters; descriptions written by the model at upload time (David's idea, 2026-10-08), which would let the DIY plan and provider suggestions see photos cheaply, give Photos a readable caption, and bound cost if projects ever carry many more pictures. Measured today, thumbnails cost about as much as a description and keep the detail, so this waits for the ask log to show tokens matter; the cheaper first lever would be sending only the newest N thumbnails.
