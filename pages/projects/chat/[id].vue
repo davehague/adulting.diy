@@ -142,40 +142,46 @@ const ask = async (input: ChatSendInput, optimistic: ChatMessageDto | null): Pro
   // What this tab had before the send, so a thread read after a failure can be told apart from it.
   const knownIds = new Set(messages.value.map((message) => message.id));
   const rowsBefore = messages.value.length;
-  if (optimistic) messages.value = [...messages.value, optimistic];
-  let sent = false;
+  if (optimistic) {
+    messages.value = [...messages.value, optimistic];
+    // The question is in the thread, so the box empties now; it is restored below if the send never reached the server.
+    void composer.value?.clear();
+  }
   let follow = false;
   try {
     const response = await sendChat(id.value, input);
     if (gone || sequence !== mine) return;
     messages.value = [...without(askedId).filter((message) => message.id !== response.userMessage.id), response.userMessage, response.assistantMessage];
     serverPending.value = false;
-    sent = true;
   } catch (e) {
     if (gone || sequence !== mine) return;
     if (hasApiStatus(e, 409)) {
-      // Someone else's question is being answered; keep the text and follow that reply.
-      if (optimistic) messages.value = without(askedId);
+      // Someone else's question is being answered; the text goes back in the box and this tab follows that reply.
+      if (optimistic) {
+        messages.value = without(askedId);
+        void composer.value?.restore(optimistic.content);
+      }
       error.value = CHAT_BUSY_MESSAGE;
       serverPending.value = true;
       follow = true;
     } else if (hasApiStatus(e, 403)) {
       enabled.value = false;
     } else if (hasApiStatus(e, 502)) {
-      // The question was saved and the server marked it failed too, so Retry shows at once. On a plain send the box is cleared, as the question is in the thread; a retry leaves any separate draft alone.
+      // The question was saved and the server marked it failed too, so Retry shows at once. On a plain send the box was already cleared when the message was placed, as the question is in the thread; a retry leaves any separate draft alone.
       messages.value = withFailed(askedId, true);
-      if (optimistic) sent = true;
     } else {
       const state = await tookQuestion(input, knownIds, rowsBefore, mine);
       if (gone || sequence !== mine) return;
       if (state) {
-        // The connection failed but the server has the question: show its thread, follow the reply if it is still coming, and clear the box as for a send that worked.
+        // The connection failed but the server has the question: show its thread and follow the reply if it is still coming. The box was cleared when the message was placed and stays empty.
         messages.value = state.messages ?? [];
         serverPending.value = state.pending === true;
         follow = serverPending.value;
-        sent = true;
       } else {
-        if (optimistic) messages.value = without(askedId);
+        if (optimistic) {
+          messages.value = without(askedId);
+          void composer.value?.restore(optimistic.content);
+        }
         error.value = e instanceof Error && e.message ? e.message : 'Could not send the message.';
       }
     }
@@ -185,7 +191,7 @@ const ask = async (input: ChatSendInput, optimistic: ChatMessageDto | null): Pro
       // Polling starts only now: a poll skips itself while this tab is sending, so the first one would be wasted.
       if (follow) startPolling();
       // After sending is false, so the box is enabled again when it takes focus.
-      if (sent) void composer.value?.clear();
+      void composer.value?.focus();
     }
   }
 };

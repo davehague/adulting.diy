@@ -1,5 +1,5 @@
 <template>
-  <form class="flex items-end gap-2 border-t border-stone-200 bg-white px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]" @submit.prevent="submit">
+  <form class="flex items-end gap-2 border-t border-stone-200 bg-white px-3 py-2 pb-[max(1.5rem,env(safe-area-inset-bottom))]" @submit.prevent="submit">
     <label for="chat-text" class="sr-only">Your message</label>
     <textarea id="chat-text"
               ref="box"
@@ -64,12 +64,25 @@ const submit = (): void => {
   emit('send', text.value.trim());
 };
 
-// The page clears the box only after the server took the message, so a failed send keeps what was typed.
+// The page clears the box as soon as the message is in the thread, and puts the text back if the send never reached the server.
 const clear = async (): Promise<void> => {
   text.value = '';
   // Wait for the box to be enabled again before focusing it.
   await nextTick();
   resize();
+  box.value?.focus();
+};
+
+const restore = async (value: string): Promise<void> => {
+  text.value = value;
+  await nextTick();
+  resize();
+  box.value?.focus();
+};
+
+// The box is disabled while a reply is on its way, which drops focus, so the page asks for it back once the box is enabled again.
+const focus = async (): Promise<void> => {
+  await nextTick();
   box.value?.focus();
 };
 
@@ -89,5 +102,5 @@ onMounted(() => {
   touch.value = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
 });
 
-defineExpose({ clear });
+defineExpose({ clear, restore, focus });
 </script>

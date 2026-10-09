@@ -1,13 +1,13 @@
 <template>
-  <div ref="list" class="flex-1 overflow-y-auto px-3 py-4 space-y-3" aria-label="Messages">
+  <div ref="list" class="min-h-0 flex-1 overflow-y-auto px-3 py-4 space-y-3" aria-label="Messages">
     <p v-if="messages.length === 0 && !pending" class="text-sm text-stone-600">
       Ask anything about this project. I know its notes, steps, plan and providers, and I can look things up.
     </p>
 
     <template v-for="(message, index) in messages" :key="message.id">
-      <div v-if="message.role === 'user'" class="flex flex-col items-end">
+      <div v-if="message.role === 'user'" class="flex flex-col items-stretch sm:items-end">
         <span v-if="!message.mine" class="mb-0.5 text-xs text-stone-500">Household member</span>
-        <p class="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-amber-50 px-3 py-2 text-sm text-stone-900">{{ message.content }}</p>
+        <p class="w-full sm:w-auto sm:max-w-[85%] whitespace-pre-wrap break-words rounded-xl bg-amber-50 px-3 py-2 text-sm text-stone-900">{{ message.content }}</p>
         <div v-if="index === messages.length - 1 && retryable" class="mt-1 flex items-center gap-2 text-sm text-stone-600" aria-live="polite">
           <span>Couldn't get a reply.</span>
           <button type="button"
@@ -18,10 +18,10 @@
           </button>
         </div>
       </div>
-      <div v-else class="flex flex-col items-start">
+      <div v-else class="flex flex-col items-stretch sm:items-start">
         <!-- Rendered by utils/chat-markdown.ts, which escapes everything before it links or bolds. -->
-        <div class="chat-reply max-w-[85%] break-words rounded-2xl rounded-bl-sm border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900" v-html="renderChatMarkdown(message.content)" />
-        <p v-if="message.searches.length > 0" class="mt-0.5 max-w-[85%] break-words text-xs text-stone-500">Searched: {{ message.searches.join(' · ') }}</p>
+        <div class="chat-reply w-full sm:w-auto sm:max-w-[85%] break-words rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900" v-html="renderChatMarkdown(message.content)" />
+        <p v-if="message.searches.length > 0" class="mt-0.5 w-full sm:w-auto sm:max-w-[85%] break-words text-xs text-stone-500">Searched: {{ message.searches.join(' · ') }}</p>
       </div>
     </template>
 
