@@ -113,7 +113,7 @@ describe('send', () => {
     expect(created('user')).toEqual({ projectId: 'p1', role: 'user', content: 'It spins', createdById: 'u1', createdAt: at(0) })
     const order = [db.projectChatMessage.create.mock.invocationCallOrder[0], db.aiRequestLog.create.mock.invocationCallOrder[0], chat.mock.invocationCallOrder[0]]
     expect(order).toEqual([...order].sort((a, b) => a - b))
-    expect(db.aiRequestLog.create.mock.calls[0][0].data).toEqual({ householdId: 'h1', userId: 'u1', feature: 'project_chat', model: 'glm-5.3', outcome: 'started' })
+    expect(db.aiRequestLog.create.mock.calls[0][0].data).toEqual({ householdId: 'h1', userId: 'u1', feature: 'project_chat', model: 'glm-5.3-flash', outcome: 'started' })
     const sent = sentMessages()
     expect(sent[0].role).toBe('system')
     expect(sent[0].content).toContain('Title: Faucet drips')
@@ -143,7 +143,7 @@ describe('send', () => {
     chat.mockResolvedValueOnce({ text: '', toolCalls: [{ function: { name: 'web_search', arguments: { query: 'moen 1225 stuck' } } }], promptTokens: 100, outputTokens: 10 })
       .mockImplementationOnce(async () => { clock += 6000; return textReply('Use the puller; see Moen.') })
     await service.send('h1', 'u1', 'p1', { text: 'It spins' })
-    expect(created('assistant')).toEqual({ projectId: 'p1', role: 'assistant', content: 'Use the puller; see Moen.', createdById: 'u1', searches: ['moen 1225 stuck'], model: 'glm-5.3', durationMs: 6000, promptTokens: 200, outputTokens: 60, createdAt: at(6000) })
+    expect(created('assistant')).toEqual({ projectId: 'p1', role: 'assistant', content: 'Use the puller; see Moen.', createdById: 'u1', searches: ['moen 1225 stuck'], model: 'glm-5.3-flash', durationMs: 6000, promptTokens: 200, outputTokens: 60, createdAt: at(6000) })
     expect(db.aiRequestLog.update.mock.calls[0][0]).toEqual({ where: { id: 'log1' }, data: { outcome: 'ok', durationMs: 6000, promptTokens: 200, outputTokens: 60 } })
   })
   it('cuts a reply over 8000 characters before saving', async () => {

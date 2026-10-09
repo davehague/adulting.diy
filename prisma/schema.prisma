@@ -428,6 +428,7 @@ model ProjectChatMessage {
   createdBy    User     @relation("ProjectChatMessageCreatedBy", fields: [createdById], references: [id])
   createdById  String
   searches     Json     @default("[]") // string[]: the queries the model ran for this reply; [] on user rows
+  photoIds     Json     @default("[]") // string[]: ProjectPhoto ids attached to a user row, in order; [] on assistant rows
   failedAt     DateTime? // set on a user row when its reply failed; cleared by a retry
   thinkingMs   Int?     // time to the first answer token, when known; null until replies stream
   durationMs   Int?     // whole reply, assistant rows only

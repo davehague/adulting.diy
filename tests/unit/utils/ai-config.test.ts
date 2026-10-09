@@ -15,9 +15,9 @@ describe('suggestionModel', () => {
 })
 
 describe('chatModel', () => {
-  it('defaults to glm-5.3', () => {
+  it('defaults to glm-5.3-flash', () => {
     vi.stubEnv('AI_CHAT_MODEL', '')
-    expect(chatModel()).toBe('glm-5.3')
+    expect(chatModel()).toBe('glm-5.3-flash')
   })
   it('uses the setting when present, trimmed', () => {
     vi.stubEnv('AI_CHAT_MODEL', ' glm-5.4 ')

@@ -13,6 +13,7 @@ vi.mock('@/server/utils/blob-storage', () => ({
   removeBlobs: vi.fn(),
 }))
 
+import { MAX_PROJECT_PHOTOS } from '@/types/project'
 import prisma from '@/server/utils/prisma/client'
 import { putPrivate, getPrivate, removeBlobs } from '@/server/utils/blob-storage'
 import { ProjectPhotoService } from '@/server/services/ProjectPhotoService'
@@ -49,11 +50,11 @@ describe('ProjectPhotoService', () => {
       expect(blob.put).not.toHaveBeenCalled()
     })
 
-    it('rejects the 11th photo', async () => {
+    it('rejects a photo past the cap', async () => {
       db.project.findFirst.mockResolvedValue({ id: 'p1' })
-      db.projectPhoto.findMany.mockResolvedValue(Array.from({ length: 10 }, (_, i) => ({ position: i })))
+      db.projectPhoto.findMany.mockResolvedValue(Array.from({ length: MAX_PROJECT_PHOTOS }, (_, i) => ({ position: i })))
       await expect(service.add('h1', 'p1', 'u1', upload())).rejects.toMatchObject({
-        statusCode: 409, message: 'This project already has 10 photos',
+        statusCode: 409, message: 'This project already has 25 photos',
       })
       expect(blob.put).not.toHaveBeenCalled()
     })
@@ -114,10 +115,10 @@ describe('ProjectPhotoService', () => {
       db.project.findFirst.mockResolvedValue({ id: 'p1' })
       db.projectPhoto.findMany.mockResolvedValue([])
       db.projectPhoto.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => data)
-      db.projectPhoto.count.mockResolvedValue(11)
+      db.projectPhoto.count.mockResolvedValue(MAX_PROJECT_PHOTOS + 1)
       const result = service.add('h1', 'p1', 'u1', upload())
       await expect(result).rejects.toMatchObject({
-        statusCode: 409, message: 'This project already has 10 photos',
+        statusCode: 409, message: 'This project already has 25 photos',
       })
       const createdId = db.projectPhoto.create.mock.calls[0][0].data.id
       expect(db.projectPhoto.delete).toHaveBeenCalledWith({ where: { id: createdId } })
@@ -131,7 +132,7 @@ describe('ProjectPhotoService', () => {
       db.project.findFirst.mockResolvedValue({ id: 'p1' })
       db.projectPhoto.findMany.mockResolvedValue([])
       db.projectPhoto.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => data)
-      db.projectPhoto.count.mockResolvedValue(10)
+      db.projectPhoto.count.mockResolvedValue(MAX_PROJECT_PHOTOS)
       await expect(service.add('h1', 'p1', 'u1', upload())).resolves.toBeTruthy()
       expect(db.projectPhoto.delete).not.toHaveBeenCalled()
       expect(blob.remove).not.toHaveBeenCalled()

@@ -115,6 +115,12 @@ describe('callOllamaChat', () => {
     expect('format' in body).toBe(false)
     expect('think' in body).toBe(false)
   })
+  it('passes images on a message through untouched', async () => {
+    respond({ message: { role: 'assistant', content: 'A red square.' } })
+    const messages = [{ role: 'system' as const, content: 'sys' }, { role: 'user' as const, content: 'what is this', images: ['AAAA', 'BBBB'] }]
+    await callOllamaChat({ ...chatInput, messages })
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).messages).toEqual(messages)
+  })
   it('returns tool calls in the service shape and allows empty content with them', async () => {
     respond({ message: { role: 'assistant', content: '', tool_calls: [{ function: { name: 'web_search', arguments: { query: 'moen 1225' } } }] } })
     expect(await callOllamaChat(chatInput)).toEqual({

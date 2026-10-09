@@ -38,6 +38,7 @@ const call = (handler: unknown, userId: string | null, params: Record<string, st
 const state = { enabled: true, messages: [], pending: false }
 const sent = { userMessage: { id: 'a' }, assistantMessage: { id: 'b' } }
 const LENGTH_MESSAGE = 'A message must be 1 to 2000 characters'
+const EMPTY_MESSAGE = 'Add a message or a photo'
 
 describe('project chat routes', () => {
   beforeEach(() => {
@@ -72,7 +73,13 @@ describe('project chat routes', () => {
   it('POST sends the trimmed text', async () => {
     vi.mocked(readBody).mockResolvedValue({ text: '  hello ' })
     expect(await call(postRoute, 'u1')).toEqual(sent)
-    expect(chatService.send).toHaveBeenCalledWith('h1', 'u1', 'p1', { text: 'hello' })
+    expect(chatService.send).toHaveBeenCalledWith('h1', 'u1', 'p1', { text: 'hello', photoIds: [] })
+  })
+
+  it('POST sends photo ids', async () => {
+    vi.mocked(readBody).mockResolvedValue({ text: 'look', photoIds: ['ph1'] })
+    await call(postRoute, 'u1')
+    expect(chatService.send).toHaveBeenCalledWith('h1', 'u1', 'p1', { text: 'look', photoIds: ['ph1'] })
   })
 
   it('POST sends a retry', async () => {
@@ -82,9 +89,9 @@ describe('project chat routes', () => {
   })
 
   it('POST rejects a null body, an empty object, whitespace text and 2001 characters without calling the service', async () => {
-    for (const body of [null, {}, { text: '   ' }, { text: 'x'.repeat(2001) }]) {
+    for (const [body, message] of [[null, EMPTY_MESSAGE], [{}, EMPTY_MESSAGE], [{ text: '   ' }, EMPTY_MESSAGE], [{ text: 'x'.repeat(2001) }, LENGTH_MESSAGE]]) {
       vi.mocked(readBody).mockResolvedValue(body)
-      await expect(call(postRoute, 'u1')).rejects.toMatchObject({ statusCode: 400, message: LENGTH_MESSAGE })
+      await expect(call(postRoute, 'u1')).rejects.toMatchObject({ statusCode: 400, message })
     }
     expect(chatService.send).not.toHaveBeenCalled()
   })

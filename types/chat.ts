@@ -1,7 +1,10 @@
+import { MAX_PROJECT_PHOTOS } from '@/types/project';
+
 export const CHAT_FEATURE = 'project_chat';
-export const DEFAULT_CHAT_MODEL = 'glm-5.3';
+export const DEFAULT_CHAT_MODEL = 'glm-5.3-flash';
 
 export const MAX_CHAT_MESSAGE_CHARS = 2000;
+export const MAX_CHAT_PHOTOS = 3;
 export const MAX_CHAT_REPLY_CHARS = 8000;
 export const MAX_CHAT_SEARCHES = 3;
 export const CHAT_SEARCH_RESULTS = 5;
@@ -19,6 +22,10 @@ export const CHAT_MESSAGE_LENGTH_MESSAGE = `A message must be 1 to ${MAX_CHAT_ME
 export const CHAT_NOTHING_TO_RETRY_MESSAGE = 'Nothing to retry';
 export const CHAT_BUSY_MESSAGE = 'A reply is on its way';
 export const CHAT_FAILED_MESSAGE = "Couldn't get a reply. Try again.";
+export const CHAT_PHOTO_COUNT_MESSAGE = `At most ${MAX_CHAT_PHOTOS} photos per message`;
+export const CHAT_EMPTY_MESSAGE = 'Add a message or a photo';
+export const CHAT_PHOTOS_FULL_MESSAGE = `This project has all ${MAX_PROJECT_PHOTOS} photos.`;
+export const CHAT_PHOTO_FAILED_MESSAGE = "Couldn't add the photo.";
 
 export type ChatRole = 'user' | 'assistant';
 
@@ -32,6 +39,8 @@ export interface ChatMessageDto {
   failed: boolean;
   // the queries the model ran for this reply; [] on user rows
   searches: string[];
+  // photos attached to a user row, in order; [] on assistant rows
+  photoIds: string[];
   createdAt: string;
 }
 
@@ -42,7 +51,7 @@ export interface ChatStateResponse {
   pending: boolean;
 }
 
-export type ChatSendInput = { text: string } | { retry: true };
+export type ChatSendInput = { text: string; photoIds: string[] } | { retry: true };
 
 export interface ChatSendResponse {
   userMessage: ChatMessageDto;

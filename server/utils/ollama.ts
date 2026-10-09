@@ -78,6 +78,8 @@ export interface ChatMessage {
   content: string;
   tool_calls?: ChatToolCall[];
   tool_name?: string;
+  // base64 JPEG/PNG bytes; the model reads them with the message
+  images?: string[];
 }
 
 export interface ChatTool {
