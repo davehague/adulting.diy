@@ -17,11 +17,10 @@
     </ul>
     <p v-if="photoError" class="mb-1 text-sm text-red-700" aria-live="polite">{{ photoError }}</p>
     <div class="flex items-end gap-2">
-      <label class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-stone-300 text-stone-700 hover:bg-stone-50"
-             :class="{ 'pointer-events-none opacity-50': disabled || chips.length >= MAX_CHAT_PHOTOS }"
-             aria-label="Add photo">
+      <label class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-stone-300 text-stone-700 hover:bg-stone-50 focus-within:ring-2 focus-within:ring-amber-500"
+             :class="{ 'pointer-events-none opacity-50': disabled || chips.length >= MAX_CHAT_PHOTOS }">
         <Camera :size="18" aria-hidden="true" />
-        <input type="file" accept="image/*" multiple class="sr-only" :disabled="disabled || chips.length >= MAX_CHAT_PHOTOS" @change="onPick">
+        <input type="file" accept="image/*" multiple class="sr-only" aria-label="Add photo" :disabled="disabled || chips.length >= MAX_CHAT_PHOTOS" @change="onPick">
       </label>
       <label for="chat-text" class="sr-only">Your message</label>
       <textarea id="chat-text"
