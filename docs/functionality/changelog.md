@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-09
+
+### Photos in the project chat (on for selected households)
+- A camera button in the chat takes or picks up to three photos, adds them to the project's Photos at once, and sends them with your question; the advisor sees them at full size and every other project photo as a thumbnail
+- A message can be photos alone; the thread shows a message's photos above its text
+- Projects can now hold 25 photos instead of 10
+- The chat now runs on a faster model that can read pictures, so replies may read a little differently
+
 ## 2026-10-08
 
 ### Project chat (on for selected households)

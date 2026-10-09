@@ -162,7 +162,7 @@ BLOB_READ_WRITE_TOKEN="your-vercel-blob-token"
 OLLAMA_API_KEY="your-ollama-cloud-key"
 AI_SUGGESTIONS_HOUSEHOLD_IDS="household-id-1,household-id-2"  # Households allowed to use the AI features
 AI_SUGGESTIONS_MODEL="glm-5.3-flash"   # Optional; this is the default for suggestions and plans
-AI_CHAT_MODEL="glm-5.3"                # Optional; this is the default for the chat
+AI_CHAT_MODEL="glm-5.3-flash"          # Optional; this is the default for the chat (must read images)
 
 # Base URL used in notification links (defaults to https://adulting.diy)
 APP_URL="https://localhost:3000"

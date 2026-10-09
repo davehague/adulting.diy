@@ -5,7 +5,7 @@
 ## What You Can Do
 
 - Capture a project with just a title, from a phone or a desktop
-- Add a location, notes and up to 10 photos
+- Add a location, notes and up to 25 photos
 - Set a status (Planning, Active, Future, Done) and a path (DIY, Hire, Not sure)
 - Break a project into a checklist of steps, each with an optional time estimate
 - Check off each Active project's next step from the dashboard
@@ -22,7 +22,7 @@
 
 ### What a Project Is
 
-Each project has a title, an optional location (free text, such as "Master bathroom", with suggestions from locations the household has already used), a status, a path, optional notes, up to 10 photos, a checklist of steps, and a list of linked providers. The list is shared by the whole household: there is no owner or assignee, and any member can create, edit and delete any project.
+Each project has a title, an optional location (free text, such as "Master bathroom", with suggestions from locations the household has already used), a status, a path, optional notes, up to 25 photos, a checklist of steps, and a list of linked providers. The list is shared by the whole household: there is no owner or assignee, and any member can create, edit and delete any project.
 
 ### Status and Path
 
@@ -36,7 +36,7 @@ A new project only requires a title. Location, multi-line notes and photos are a
 
 Photos are added from a phone's camera or photo library, or a desktop file picker, and start uploading the moment they are picked rather than waiting for Save. The first photo picked creates the project immediately, using whatever title has been typed so far, or "Untitled project" if the title is still blank; the current location and notes are saved with it too. Title, location and notes stay editable while photos upload in the background, so typing can continue after the camera closes.
 
-Each photo is shrunk before it is uploaded, so uploads over a cellular connection stay small and fast. A large copy and a thumbnail are both kept (not the untouched original), and photos upload one at a time, in order. Each photo shows its own state (ready, uploading, uploaded, failed), and a photo that has not been sent yet can be removed. The 10-photo cap counts uploaded, uploading, waiting and failed photos together.
+Each photo is shrunk before it is uploaded, so uploads over a cellular connection stay small and fast. A large copy and a thumbnail are both kept (not the untouched original), and photos upload one at a time, in order. Each photo shows its own state (ready, uploading, uploaded, failed), and a photo that has not been sent yet can be removed. The 25-photo cap counts uploaded, uploading, waiting and failed photos together.
 
 **Save** needs a title; with a blank one it says so and does nothing, even if a photo has already created an "Untitled project". Otherwise it writes the current title, location and notes to the project (creating it first if no photo has been picked yet), waits for the picked photos to finish, and opens the project page if they all uploaded. If a photo failed, including because the project itself could not be created yet (for example, with no signal), the project is still saved, the project page is not shown, and a **Retry** button appears on that photo. Tapping it, or tapping Save again, tries again. A link also lets you move on to the project page without the failed photos.
 
@@ -126,7 +126,9 @@ The thread is one shared conversation per project: both members see the same mes
 
 If a reply cannot be made, your question stays in the thread with "Couldn't get a reply." and a **Retry** button, which asks the same question again rather than adding it twice. A question left unanswered for over a minute, by a lost connection for example, gets the same Retry. Messages cannot be edited or deleted, and the thread cannot be cleared; deleting the project removes its chat. Chat messages are not limited by the daily cap of 20 that suggestions and plans share; every message is still recorded as an ask (count, timing and size only, never the text).
 
-The chat sends text only: the project fields above, the checklist and plan text, the trade names, the linked providers' business names and categories, and the conversation. Phone numbers, emails and links inside anything a member typed are masked before they leave, which also means a link pasted into a question reaches the advisor as "[link]". No photos, provider contact details, member names or household names are sent.
+**Photos in the chat.** A camera button beside the text box opens the phone's camera or library. Each photo you pick is shrunk on the phone and added to the project's Photos straight away: a grey chip with a spinner sits above the box while it uploads and becomes the thumbnail when it lands; tap × to leave it off the message (it stays in the project). Send waits until every chip has landed. Up to three photos go with one message, and a message can be photos alone. The thread shows them above your text. The advisor sees the photos attached to the message at full size, and every other photo of the project as a thumbnail with every message, so "is this the same faucet?" works without re-attaching anything. It is asked to say what it sees, to say when a picture is too small or unclear to tell, and never to guess a brand or model it cannot read. When the project already has 25 photos the chat says so and nothing uploads.
+
+The chat sends text and pictures only: the project fields above, the checklist and plan text, the trade names, the linked providers' business names and categories, the conversation, and the project's photos as described. Phone numbers, emails and links inside anything a member typed are masked before they leave, which also means a link pasted into a question reaches the advisor as "[link]". No provider contact details, member names, household names, file names or who took a photo are sent.
 
 ### Next Steps on the Dashboard
 
@@ -156,7 +158,7 @@ Deleting a project hides it everywhere but keeps the record and its photos; noth
 
 ## Current Limitations
 
-- At most 10 photos, 100 steps and 25 linked providers per project.
+- At most 25 photos, 100 steps and 25 linked providers per project.
 - Steps cannot be reordered.
 - No step count on project cards, and no total of the time remaining.
 - No assignees, due dates or reminders on steps or projects.
@@ -170,6 +172,7 @@ Deleting a project hides it everywhere but keeps the record and its photos; noth
 - Names of people that appear inside neighbor posts or notes are sent to the model as written; only phone numbers, emails and links are masked.
 - The DIY plan has one skill level, reads no photos, keeps only the latest plan, and its costs stay on the plan: steps copied to the checklist carry their time but not their cost.
 - Making a new plan replaces the old one wholesale; edits to a plan are not possible, only to the checklist steps made from it.
-- The chat answers in one piece after a wait rather than word by word, reads no photos, and cannot change the project (add or tick steps, change the path); messages cannot be edited, deleted or cleared.
+- The chat answers in one piece after a wait rather than word by word, and cannot change the project (add or tick steps, change the path); messages cannot be edited, deleted or cleared.
+- A photo picked in the chat is in the project from the moment it uploads, even if the message is never sent; tapping a chat thumbnail does not open the viewer (the project page does); a photo deleted later shows as "Photo unavailable" on the message that sent it.
 - A link pasted into a chat question is masked before it is sent, and a run of ten digits that looks like a phone number is masked even when it is a model or part number.
 - The other member's chat messages appear only while a reply is being waited for or when the page is reopened; there is no live update otherwise, and no notification when a reply lands.
