@@ -3,7 +3,10 @@
     <ul v-if="chips.length > 0" class="mb-2 flex gap-2" aria-label="Photos to send">
       <li v-for="chip in chips" :key="chip.key" class="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-stone-200 bg-stone-100">
         <AuthedImage v-if="chip.photoId" :project-id="projectId" :photo-id="chip.photoId" variant="thumb" alt="" />
-        <span v-else class="flex h-full w-full items-center justify-center text-xs text-stone-500" aria-live="polite">…</span>
+        <span v-else class="flex h-full w-full items-center justify-center text-stone-500">
+          <Loader2 :size="18" class="animate-spin" aria-hidden="true" />
+          <span class="sr-only">Uploading</span>
+        </span>
         <button type="button"
                 class="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-sm leading-none text-stone-700 hover:bg-white"
                 :aria-label="chip.photoId ? 'Remove photo from message' : 'Cancel upload'"
@@ -45,7 +48,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted } from 'vue';
-import { Camera } from 'lucide-vue-next';
+import { Camera, Loader2 } from 'lucide-vue-next';
 import { CHAT_PHOTO_COUNT_MESSAGE, CHAT_PHOTO_FAILED_MESSAGE, CHAT_PHOTOS_FULL_MESSAGE, MAX_CHAT_MESSAGE_CHARS, MAX_CHAT_PHOTOS } from '@/types/chat';
 import { useProjects } from '@/composables/useProjects';
 import { hasApiStatus } from '@/utils/api-error';
@@ -114,10 +117,14 @@ const onPick = async (event: Event): Promise<void> => {
   const room = MAX_CHAT_PHOTOS - chips.value.length;
   if (files.length > room) photoError.value = CHAT_PHOTO_COUNT_MESSAGE;
   const started = generation;
+  // Every accepted photo gets its chip at once, so the cap counts photos still uploading and the row shows what is coming.
+  const picked = files.slice(0, Math.max(0, room)).map((file) => ({ file, chip: { key: nextKey++, photoId: null } as Chip }));
+  chips.value = [...chips.value, ...picked.map((entry) => entry.chip)];
+  const present = (key: number): boolean => generation === started && chips.value.some((c) => c.key === key);
   // One at a time, as the project page does: order is kept and phone uploads are more reliable in sequence.
-  for (const file of files.slice(0, Math.max(0, room))) {
-    const chip: Chip = { key: nextKey++, photoId: null };
-    chips.value = [...chips.value, chip];
+  for (const { file, chip } of picked) {
+    // Removed with the x before its turn: nothing to upload.
+    if (!present(chip.key)) continue;
     try {
       const resized = await resizePhoto(file);
       const photo = await uploadPhoto(props.projectId, resized);
@@ -125,6 +132,8 @@ const onPick = async (event: Event): Promise<void> => {
       chips.value = chips.value.map((c) => (c.key === chip.key ? { ...c, photoId: photo.id } : c));
     } catch (e) {
       if (generation !== started) return;
+      // A failure for a chip the person already removed is not worth a message.
+      if (!present(chip.key)) continue;
       chips.value = chips.value.filter((c) => c.key !== chip.key);
       photoError.value = hasApiStatus(e, 409) ? CHAT_PHOTOS_FULL_MESSAGE : CHAT_PHOTO_FAILED_MESSAGE;
     }
