@@ -143,6 +143,14 @@ describe('photos', () => {
     expect(last.images).toEqual([png(9).toString('base64')])
     expect(last.content).toBe("[Pictures: 1 small ones are the project's photos; the last 0 large ones are attached to this message]\nSame faucet?")
   })
+  it('says the photo could not be loaded when the last row has photos but nothing could be read', () => {
+    const built = buildChatPrompt(context(), [{ role: 'user', content: 'What is this?', createdById: 'u1', photoCount: 1 }], 'u1', today, { attached: [], others: [] })
+    expect(built.messages.at(-1)).toEqual({ role: 'user', content: '(the attached photo could not be loaded) What is this?' })
+  })
+  it('keeps the no-question wording when the unloadable last row has no text', () => {
+    const built = buildChatPrompt(context(), [{ role: 'user', content: '', createdById: 'u1', photoCount: 2 }], 'u1', today, { attached: [], others: [] })
+    expect(built.messages.at(-1)).toEqual({ role: 'user', content: '(the attached photo could not be loaded) (photo attached, no question)' })
+  })
   it('sends no images and no prefix when the project has no photos', () => {
     const built = buildChatPrompt(context(), [{ role: 'user', content: 'Hi', createdById: 'u1', photoCount: 0 }], 'u1', today, { attached: [], others: [] })
     expect(built.messages.at(-1)).toEqual({ role: 'user', content: 'Hi' })

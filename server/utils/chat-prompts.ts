@@ -149,7 +149,12 @@ const historyMessages = (history: ChatHistoryRow[], currentUserId: string, photo
         images: [...photos.others, ...photos.attached].map((bytes) => bytes.toString('base64')),
       };
     }
-    const marker = row.photoCount > 0 ? `(with ${row.photoCount} photos) ` : '';
+    if (index === lastIndex && row.photoCount > 0) {
+      // Every attached blob was unreadable or deleted and the project has no other readable photo: say so rather than imply the model saw one.
+      const body = text.trim() ? text : '(photo attached, no question)';
+      return { role: 'user', content: `${member}(the attached photo could not be loaded) ${body}` };
+    }
+    const marker = row.photoCount > 0 ? `(with ${row.photoCount} ${row.photoCount === 1 ? 'photo' : 'photos'}) ` : '';
     return { role: 'user', content: `${member}${marker}${text}` };
   });
 };

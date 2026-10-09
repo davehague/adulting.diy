@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 vi.mock('@vercel/blob', () => ({ put: vi.fn(), get: vi.fn(), del: vi.fn() }))
 
 import { put, get, del } from '@vercel/blob'
-import { putPrivate, getPrivate, removeBlobs } from '@/server/utils/blob-storage'
+import { putPrivate, getPrivate, readPrivateBytes, removeBlobs } from '@/server/utils/blob-storage'
 
 const sdk = { put: put as unknown as ReturnType<typeof vi.fn>, get: get as unknown as ReturnType<typeof vi.fn>, del: del as unknown as ReturnType<typeof vi.fn> }
 
@@ -47,6 +47,34 @@ describe('blob-storage', () => {
     await removeBlobs([])
     expect(sdk.del).not.toHaveBeenCalled()
   })
+
+  describe('readPrivateBytes', () => {
+    it('returns the exact bytes of a 200 stream', async () => {
+      const bytes = Uint8Array.from([0xff, 0xd8, 0xff, 0x00, 0x7f, 0x80])
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(bytes.slice(0, 2))
+          controller.enqueue(bytes.slice(2))
+          controller.close()
+        },
+      })
+      sdk.get.mockResolvedValue({ statusCode: 200, stream, blob: { etag: '"abc"' } })
+      const result = await readPrivateBytes('a.jpg')
+      expect(Buffer.isBuffer(result)).toBe(true)
+      expect(result).toEqual(Buffer.from(bytes))
+    })
+
+    it('returns null when the blob does not exist', async () => {
+      sdk.get.mockResolvedValue(null)
+      expect(await readPrivateBytes('missing.jpg')).toBeNull()
+    })
+
+    it('returns null for a 304 with no stream', async () => {
+      sdk.get.mockResolvedValue({ statusCode: 304, stream: null, blob: { etag: '"abc"' } })
+      expect(await readPrivateBytes('a.jpg')).toBeNull()
+    })
+  })
+
   describe('credentials', () => {
     const saved = process.env.BLOB_READ_WRITE_TOKEN
     afterEach(() => {

@@ -88,8 +88,8 @@ describe('project chat routes', () => {
     expect(chatService.send).toHaveBeenCalledWith('h1', 'u1', 'p1', { retry: true })
   })
 
-  it('POST rejects a null body, an empty object, whitespace text and 2001 characters without calling the service', async () => {
-    for (const [body, message] of [[null, EMPTY_MESSAGE], [{}, EMPTY_MESSAGE], [{ text: '   ' }, EMPTY_MESSAGE], [{ text: 'x'.repeat(2001) }, LENGTH_MESSAGE]]) {
+  it('POST rejects a null body, a string body, an empty object, whitespace text and 2001 characters without calling the service', async () => {
+    for (const [body, message] of [[null, EMPTY_MESSAGE], ['hello', EMPTY_MESSAGE], [{}, EMPTY_MESSAGE], [{ text: '   ' }, EMPTY_MESSAGE], [{ text: 'x'.repeat(2001) }, LENGTH_MESSAGE]]) {
       vi.mocked(readBody).mockResolvedValue(body)
       await expect(call(postRoute, 'u1')).rejects.toMatchObject({ statusCode: 400, message })
     }

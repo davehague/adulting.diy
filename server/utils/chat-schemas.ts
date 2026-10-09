@@ -10,7 +10,8 @@ const bodySchema = z.object({
 // A send is either a retry of the last unanswered message or a new message with text, photos or both. Each failure has one fixed message.
 export const parseChatSendInput = (body: unknown): ChatSendInput => {
   if (typeof body === 'object' && body !== null && (body as { retry?: unknown }).retry === true) return { retry: true };
-  const parsed = bodySchema.safeParse(body ?? {});
+  const isPlainObject = typeof body === 'object' && body !== null && !Array.isArray(body);
+  const parsed = bodySchema.safeParse(isPlainObject ? body : {});
   if (!parsed.success) throw new HttpError(parsed.error.issues[0].message, 400);
   const { text, photoIds } = parsed.data;
   if (!text && photoIds.length === 0) throw new HttpError(CHAT_EMPTY_MESSAGE, 400);

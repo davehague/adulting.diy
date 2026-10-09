@@ -15,7 +15,7 @@ describe('parseChatSendInput', () => {
     expect(parseChatSendInput({ retry: true, text: 'x', photoIds: ['a'] })).toEqual({ retry: true })
   })
   it('needs a message or a photo', () => {
-    for (const body of [null, {}, { text: '' }, { text: '   ' }, { photoIds: [] }, { retry: 'yes' }, { retry: false }])
+    for (const body of [null, {}, { text: '' }, { text: '   ' }, { photoIds: [] }, { retry: 'yes' }, { retry: false }, 'hello', []])
       expect(caught(body)).toMatchObject({ statusCode: 400, message: 'Add a message or a photo' })
   })
   it('rejects over-long or non-string text with the length message', () => {

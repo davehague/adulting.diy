@@ -243,6 +243,7 @@ describe('photos', () => {
     await expect(service.send('h1', 'u1', 'p1', { text: 'x', photoIds: ['ph1', 'nope'] })).rejects.toMatchObject({ statusCode: 404, message: 'Photo not found' })
     expect(db.projectChatMessage.create).not.toHaveBeenCalled()
     expect(db.aiRequestLog.create).not.toHaveBeenCalled()
+    expect(db.projectChatMessage.findFirst).not.toHaveBeenCalled()
     expect(db.projectPhoto.findMany.mock.calls[0][0]).toEqual({ where: { projectId: 'p1' }, orderBy: { position: 'asc' }, select: { id: true, fullPath: true, thumbPath: true } })
   })
   it('saves the photo ids on the user row and returns them', async () => {
@@ -260,7 +261,7 @@ describe('photos', () => {
     db.projectChatMessage.findMany.mockResolvedValue([userRow({ id: 'new', content: 'look', photoIds: ['ph2', 'ph1'], createdAt: at(0) }), userRow({ id: 'old', content: 'earlier', photoIds: ['ph3'], createdAt: at(-5000) })])
     await service.send('h1', 'u1', 'p1', { text: 'look', photoIds: ['ph2', 'ph1'] })
     const sent = sentMessages()
-    expect(sent[1]).toEqual({ role: 'user', content: '(with 1 photos) earlier' })
+    expect(sent[1]).toEqual({ role: 'user', content: '(with 1 photo) earlier' })
     expect(sent[2].images).toEqual(['h/p/ph3-thumb.jpg', 'h/p/ph2-full.jpg', 'h/p/ph1-full.jpg'].map((p) => Buffer.from(p).toString('base64')))
     expect(sent[2].content).toBe("[Pictures: 1 small ones are the project's photos; the last 2 large ones are attached to this message]\nlook")
     expect(vi.mocked(readPrivateBytes).mock.calls.map((c) => c[0])).toEqual(['h/p/ph3-thumb.jpg', 'h/p/ph2-full.jpg', 'h/p/ph1-full.jpg'])
@@ -272,6 +273,23 @@ describe('photos', () => {
     const sent = sentMessages()
     expect(sent.at(-1)!.images).toHaveLength(2)
     expect(vi.mocked(console.info).mock.calls[0][0]).toMatch(/photos 0\/2 \(1 unreadable\)$/)
+  })
+  it('a missing blob is skipped and counted as unreadable', async () => {
+    vi.mocked(readPrivateBytes).mockImplementation(async (path: string) => (path.includes('ph1') ? null : Buffer.from(path)))
+    db.projectChatMessage.findMany.mockResolvedValue([userRow({ id: 'new', content: 'look', photoIds: ['ph1'], createdAt: at(0) })])
+    await service.send('h1', 'u1', 'p1', { text: 'look', photoIds: ['ph1'] })
+    expect(sentMessages().at(-1)!.images).toHaveLength(2)
+    expect(vi.mocked(console.info).mock.calls[0][0]).toMatch(/photos 0\/2 \(1 unreadable\)$/)
+  })
+  it('a retry whose photo was deleted since resends the photos that remain, with no 404 and no unreadable count', async () => {
+    db.projectChatMessage.findFirst.mockResolvedValue(userRow({ failedAt: at(-100), photoIds: ['gone', 'ph1'] }))
+    db.projectChatMessage.update.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ ...userRow({ photoIds: ['gone', 'ph1'] }), ...data }))
+    db.projectChatMessage.findMany.mockResolvedValue([userRow({ content: 'It will not budge', photoIds: ['gone', 'ph1'], createdAt: at(0) })])
+    await service.send('h1', 'u1', 'p1', { retry: true })
+    expect(sentMessages().at(-1)!.images).toEqual(['h/p/ph2-thumb.jpg', 'h/p/ph3-thumb.jpg', 'h/p/ph1-full.jpg'].map((p) => Buffer.from(p).toString('base64')))
+    const line = vi.mocked(console.info).mock.calls[0][0] as string
+    expect(line).toMatch(/photos 1\/3$/)
+    expect(line).not.toContain('unreadable')
   })
   it("a retry resends the saved row's photos", async () => {
     db.projectChatMessage.findFirst.mockResolvedValue(userRow({ failedAt: at(-100), photoIds: ['ph3'] }))
