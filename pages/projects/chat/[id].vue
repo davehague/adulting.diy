@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto flex h-[calc(100dvh-4rem)] max-w-3xl flex-col">
+  <div class="mx-auto flex h-full max-w-3xl flex-col">
     <header class="border-b border-stone-200 bg-white px-3 py-2">
       <NuxtLink :to="`/projects/${id}`" class="text-sm text-amber-700 hover:text-amber-800">&larr; Project</NuxtLink>
       <h1 class="truncate text-base font-medium text-stone-900">{{ title || 'Project chat' }}</h1>

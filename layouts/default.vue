@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-stone-50">
+  <div class="min-h-dvh flex flex-col bg-stone-50" :class="route.meta.hideFooter ? 'h-dvh overflow-hidden' : ''">
     <!-- Development User Switcher -->
     <DevUserSwitcher />
 
@@ -185,7 +185,7 @@
     </div>
 
     <!-- Main Content -->
-    <main class="flex-grow">
+    <main class="flex-grow min-h-0">
       <slot />
     </main>
 

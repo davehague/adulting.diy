@@ -1,5 +1,5 @@
 <template>
-  <div ref="list" class="min-h-0 flex-1 overflow-y-auto px-3 py-4 space-y-3" aria-label="Messages">
+  <div ref="list" class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 space-y-3" aria-label="Messages">
     <p v-if="messages.length === 0 && !pending" class="text-sm text-stone-600">
       Ask anything about this project. I know its notes, steps, plan and providers, and I can look things up.
     </p>
