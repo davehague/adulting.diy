@@ -6,7 +6,7 @@ import { type ProjectPath, type ProjectStatus } from '@/types/project';
 import { PATH_LABELS, STATUS_LABELS } from '@/utils/project-labels';
 import { formatMinutes } from '@/utils/project-steps';
 
-// Everything about the project that may reach the model. No ids, no photos, no contact details by construction.
+// Everything about the project that may reach the model. No ids, no contact details by construction; photos arrive separately, as ChatPhotos.
 export interface ChatProject {
   title: string;
   location: string | null;
@@ -40,6 +40,15 @@ export interface ChatHistoryRow {
   role: ChatRole;
   content: string;
   createdById: string;
+  // photos attached to this row (user rows)
+  photoCount: number;
+}
+
+export interface ChatPhotos {
+  // the photos attached to the message being answered, full size, in attachment order
+  attached: Buffer[];
+  // every other photo of the project, as thumbnails, in position order
+  others: Buffer[];
 }
 
 export const chatTools: ChatTool[] = [
@@ -64,6 +73,7 @@ How to answer:
 - Never invent part numbers, prices, product names or links. If you did not get them from a search or from the project, say you are not sure.
 - Mention costs in US dollars as rough ranges and say they are estimates.
 - Do not repeat the project description back; the household wrote it.
+- Photos may be attached. Say what you see when it matters, say when the picture is too small or unclear to tell, and never guess a brand or model you cannot read.
 
 Today is ${today}.`;
 
@@ -118,14 +128,29 @@ const projectBlock = (context: ChatContext): string =>
       : 'Linked contractors: none',
   ].join('\n');
 
-// The whole conversation goes every time; the context window is far larger than the cap. Members are never named.
-const historyMessages = (history: ChatHistoryRow[], currentUserId: string): ChatMessage[] => {
+const picturesLine = (photos: ChatPhotos): string =>
+  `[Pictures: ${photos.others.length} small ones are the project's photos; the last ${photos.attached.length} large ones are attached to this message]`;
+
+// The whole conversation goes every time; the context window is far larger than the cap. Members are never named. Images ride only on the last user message: the project's thumbnails, then the attached photos.
+const historyMessages = (history: ChatHistoryRow[], currentUserId: string, photos: ChatPhotos): ChatMessage[] => {
   const recent = history.slice(-MAX_CHAT_HISTORY);
   const authors = new Set(recent.filter((row) => row.role === 'user').map((row) => row.createdById));
-  return recent.map((row) => {
+  const lastIndex = recent.length - 1;
+  const hasImages = photos.attached.length + photos.others.length > 0;
+  return recent.map((row, index) => {
     if (row.role === 'assistant') return { role: 'assistant', content: row.content };
-    const prefix = authors.size > 1 && row.createdById !== currentUserId ? '(another household member) ' : '';
-    return { role: 'user', content: prefix + redactContactDetails(row.content) };
+    const member = authors.size > 1 && row.createdById !== currentUserId ? '(another household member) ' : '';
+    const text = redactContactDetails(row.content);
+    if (index === lastIndex && hasImages) {
+      const body = text.trim() ? text : '(photo attached, no question)';
+      return {
+        role: 'user',
+        content: `${member}${picturesLine(photos)}\n${body}`,
+        images: [...photos.others, ...photos.attached].map((bytes) => bytes.toString('base64')),
+      };
+    }
+    const marker = row.photoCount > 0 ? `(with ${row.photoCount} photos) ` : '';
+    return { role: 'user', content: `${member}${marker}${text}` };
   });
 };
 
@@ -135,7 +160,8 @@ export const buildChatPrompt = (
   history: ChatHistoryRow[],
   currentUserId: string,
   today: string,
+  photos: ChatPhotos,
 ): { messages: ChatMessage[]; tools: ChatTool[] } => ({
-  messages: [{ role: 'system', content: `${rules(today)}\n\nProject:\n${projectBlock(context)}` }, ...historyMessages(history, currentUserId)],
+  messages: [{ role: 'system', content: `${rules(today)}\n\nProject:\n${projectBlock(context)}` }, ...historyMessages(history, currentUserId, photos)],
   tools: chatTools,
 });

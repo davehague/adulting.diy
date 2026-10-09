@@ -28,6 +28,13 @@ export const getPrivate = async (pathname: string, ifNoneMatch?: string): Promis
   return { statusCode: 200, stream: result.stream, etag: result.blob.etag };
 };
 
+// The whole object as bytes, for sending a photo to the model. null when the blob does not exist.
+export const readPrivateBytes = async (pathname: string): Promise<Buffer | null> => {
+  const result = await getPrivate(pathname);
+  if (!result || !result.stream) return null;
+  return Buffer.from(await new Response(result.stream).arrayBuffer());
+};
+
 export const removeBlobs = async (pathnames: string[]): Promise<void> => {
   if (pathnames.length === 0) return;
   await del(pathnames, authOptions());
