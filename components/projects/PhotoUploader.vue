@@ -1,19 +1,26 @@
 <template>
-  <div>
+  <div @dragenter.prevent="onDragEnter" @dragover.prevent @dragleave="onDragLeave" @drop.prevent="onDrop">
     <ul v-if="items.length" class="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
-      <li v-for="item in items" :key="item.key" class="relative">
-        <img :src="item.previewUrl" alt="" class="w-full aspect-square object-cover rounded-lg border border-stone-200">
-        <span class="absolute bottom-1 left-1 text-xs font-medium px-1.5 py-0.5 rounded bg-white/90"
-              :class="item.state === 'failed' ? 'text-red-700' : 'text-stone-700'">
-          {{ STATE_LABELS[item.state] }}
-        </span>
-        <button v-if="item.state === 'waiting' || item.state === 'failed'"
-                type="button"
-                class="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 text-stone-700 text-sm leading-none hover:bg-white"
-                aria-label="Remove photo"
-                @click="removeItem(item.key)">
-          &times;
-        </button>
+      <li v-for="item in items" :key="item.key">
+        <div class="relative">
+          <img v-if="!item.previewBroken" :src="item.previewUrl" alt="" class="w-full aspect-square object-cover rounded-lg border border-stone-200"
+               @error="item.previewBroken = true">
+          <!-- Chrome and Firefox cannot show a HEIC photo until it has been converted; the thumbnail replaces this once it has. -->
+          <div v-else class="w-full aspect-square rounded-lg border border-stone-200 bg-stone-100 flex items-center justify-center text-stone-400">
+            <ImageIcon :size="28" />
+          </div>
+          <span class="absolute bottom-1 left-1 text-xs font-medium px-1.5 py-0.5 rounded bg-white/90"
+                :class="item.state === 'failed' ? 'text-red-700' : 'text-stone-700'">
+            {{ STATE_LABELS[item.state] }}
+          </span>
+          <button v-if="item.state === 'waiting' || item.state === 'failed'"
+                  type="button"
+                  class="absolute top-1 right-1 w-6 h-6 rounded-full bg-white/90 text-stone-700 text-sm leading-none hover:bg-white"
+                  aria-label="Remove photo"
+                  @click="removeItem(item.key)">
+            &times;
+          </button>
+        </div>
         <button v-if="item.state === 'failed' && canRetry"
                 type="button"
                 class="mt-1 w-full text-xs font-medium text-amber-700 hover:text-amber-800"
@@ -24,11 +31,15 @@
       </li>
     </ul>
 
-    <label v-if="roomLeft > 0"
-           class="inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 hover:text-amber-800 px-3 py-1.5 rounded-lg border border-stone-300 bg-white hover:bg-stone-50 transition-colors cursor-pointer">
-      <Camera :size="16" />Add photo
-      <input type="file" accept="image/*" multiple class="sr-only" @change="onPick">
-    </label>
+    <div v-if="roomLeft > 0"
+         class="flex flex-wrap items-center gap-3 rounded-lg sm:border-2 sm:border-dashed sm:p-4 transition-colors"
+         :class="dragging ? 'border-amber-500 bg-amber-50' : 'border-stone-300'">
+      <label class="inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 hover:text-amber-800 px-3 py-1.5 rounded-lg border border-stone-300 bg-white hover:bg-stone-50 transition-colors cursor-pointer">
+        <Camera :size="16" />Add photo
+        <input type="file" accept="image/*,.heic,.heif" multiple class="sr-only" @change="onPick">
+      </label>
+      <span class="hidden sm:inline text-sm text-stone-500">{{ dragging ? 'Drop to add' : 'or drop photos here' }}</span>
+    </div>
     <p v-else class="text-sm text-stone-600">That's the maximum of {{ MAX_PROJECT_PHOTOS }} photos for a project.</p>
     <p v-if="notice" class="mt-2 text-sm text-stone-600">{{ notice }}</p>
   </div>
@@ -36,7 +47,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount } from 'vue';
-import { Camera } from 'lucide-vue-next';
+import { Camera, Image as ImageIcon } from 'lucide-vue-next';
 import { MAX_PROJECT_PHOTOS, type ProjectPhotoDto } from '@/types/project';
 import { useProjects } from '@/composables/useProjects';
 import { resizePhoto } from '@/utils/image-resize';
@@ -47,6 +58,9 @@ interface UploadItem {
   key: number;
   file: File;
   previewUrl: string;
+  // The browser could not show the picked file (a HEIC photo outside Safari); a placeholder stands in until the
+  // converted thumbnail is ready.
+  previewBroken: boolean;
   state: UploadState;
   error: string | null;
 }
@@ -105,6 +119,11 @@ const uploadOne = async (item: UploadItem, projectId: string): Promise<void> => 
   item.error = null;
   try {
     const resized = await resizePhoto(item.file);
+    if (item.previewBroken) {
+      URL.revokeObjectURL(item.previewUrl);
+      item.previewUrl = URL.createObjectURL(resized.thumb);
+      item.previewBroken = false;
+    }
     const photo = await uploadPhoto(projectId, resized);
     item.state = 'done';
     emit('uploaded', photo);
@@ -161,20 +180,55 @@ const startAutoUpload = (): Promise<void> => enqueue(async () => {
   await uploadAllTask(projectId);
 });
 
-const onPick = async (event: Event): Promise<void> => {
-  const input = event.target as HTMLInputElement;
-  const files = Array.from(input.files ?? []);
-  // Reset so picking the same file again still fires a change event.
-  input.value = '';
+// Picked with the button or dropped on the box: the same queue either way.
+const addFiles = async (files: File[]): Promise<void> => {
   notice.value = null;
   const room = Math.max(0, roomLeft.value);
   if (files.length > room) {
     notice.value = `Only ${room} more photo${room === 1 ? '' : 's'} can be added (this project can have ${MAX_PROJECT_PHOTOS}).`;
   }
   for (const file of files.slice(0, room)) {
-    items.value.push({ key: nextKey++, file, previewUrl: URL.createObjectURL(file), state: 'waiting', error: null });
+    items.value.push({ key: nextKey++, file, previewUrl: URL.createObjectURL(file), previewBroken: false, state: 'waiting', error: null });
   }
   if (props.autoUpload) await startAutoUpload();
+};
+
+const onPick = async (event: Event): Promise<void> => {
+  const input = event.target as HTMLInputElement;
+  const files = Array.from(input.files ?? []);
+  // Reset so picking the same file again still fires a change event.
+  input.value = '';
+  await addFiles(files);
+};
+
+// A file dragged from Finder often has no media type in Chrome (HEIC especially), so the name counts too.
+const isPhotoFile = (file: File): boolean => file.type.startsWith('image/') || /\.(heic|heif|jpe?g|png|webp|gif|avif)$/i.test(file.name);
+
+// dragenter and dragleave fire for every child the pointer crosses; counting them keeps the highlight steady.
+const dragging = ref(false);
+let dragDepth = 0;
+const onDragEnter = (event: DragEvent): void => {
+  if (!event.dataTransfer?.types.includes('Files')) return;
+  dragDepth++;
+  dragging.value = true;
+};
+const onDragLeave = (): void => {
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (dragDepth === 0) dragging.value = false;
+};
+const onDrop = async (event: DragEvent): Promise<void> => {
+  dragDepth = 0;
+  dragging.value = false;
+  const dropped = Array.from(event.dataTransfer?.files ?? []);
+  if (dropped.length === 0) return;
+  const photos = dropped.filter(isPhotoFile);
+  if (roomLeft.value <= 0) {
+    notice.value = `That's the maximum of ${MAX_PROJECT_PHOTOS} photos for a project.`;
+    return;
+  }
+  await addFiles(photos);
+  const skipped = dropped.length - photos.length;
+  if (skipped > 0 && !notice.value) notice.value = `Skipped ${skipped} file${skipped === 1 ? '' : 's'} that ${skipped === 1 ? "isn't a photo" : "aren't photos"}.`;
 };
 
 const removeItem = (key: number): void => {

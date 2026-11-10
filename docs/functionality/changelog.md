@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-10
+
+### Adding photos from a computer
+- iPhone photos in Apple's HEIC format now upload from Chrome and Firefox, not just Safari; they used to fail with "Could not read this file as a photo". The converter is only downloaded the first time a browser cannot open a HEIC photo itself, and the same fix covers photos added from the project chat
+- On a computer, photos can be dragged from a folder and dropped on the box around **Add photo**; the box highlights while you drag, and anything that is not a photo is skipped with a note
+- A HEIC photo shows a placeholder until its thumbnail is ready, and a failed photo's message now sits below the photo instead of under its "Failed" label
+
 ## 2026-10-09
 
 ### Moving lists in from other tools
