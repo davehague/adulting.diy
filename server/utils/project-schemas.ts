@@ -138,6 +138,20 @@ export const documentUpdateSchema = z
   )
   .refine((value) => value.name !== undefined || value.note !== undefined, 'Nothing to update');
 
+export const ingestUploadUrlSchema = z.object(
+  { fileName: z.string({ required_error: 'fileName is required', invalid_type_error: 'fileName is required' }).min(1, 'fileName is required').max(255, 'fileName must be 255 characters or fewer') },
+  { required_error: 'Body must be { fileName }', invalid_type_error: 'Body must be { fileName }' },
+);
+
+export const ingestDocumentRegisterSchema = z.object(
+  {
+    documentId: z.string({ required_error: 'documentId is required', invalid_type_error: 'documentId is required' }).min(1, 'documentId is required'),
+    name: documentName.optional(),
+    note: documentNote.optional().transform((value) => value ?? null),
+  },
+  { required_error: 'Body must be { documentId, name?, note? }', invalid_type_error: 'Body must be { documentId, name?, note? }' },
+);
+
 export const photoDimensionsSchema = z.object({ width: dimension, height: dimension });
 
 const isStatus = (value: string): value is ProjectStatus =>
