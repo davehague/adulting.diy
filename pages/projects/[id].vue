@@ -130,6 +130,11 @@
                        @uploaded="onUploaded" />
       </section>
 
+      <ProjectDocuments :project-id="project.id"
+                        :household-id="project.householdId ?? null"
+                        :documents="project.documents ?? []"
+                        @update:documents="onDocumentsChange" />
+
       <!-- Danger zone -->
       <section class="flex justify-end">
         <button type="button"
@@ -203,6 +208,7 @@ import {
   PROJECT_PATHS,
   PROJECT_STATUSES,
   type ProjectDetail,
+  type ProjectDocumentDto,
   type ProjectPath,
   type ProjectPhotoDto,
   type ProjectProviderDto,
@@ -218,6 +224,7 @@ import PhotoCarousel from '@/components/projects/PhotoCarousel.vue';
 import ProjectSteps from '@/components/projects/ProjectSteps.vue';
 import ProjectProviders from '@/components/projects/ProjectProviders.vue';
 import ProjectPlan from '@/components/projects/ProjectPlan.vue';
+import ProjectDocuments from '@/components/projects/ProjectDocuments.vue';
 import MarkDoneDialog from '@/components/projects/MarkDoneDialog.vue';
 
 const route = useRoute();
@@ -307,6 +314,11 @@ const onStepsChange = (steps: ProjectStepDto[]): void => {
 // `providerCategoryId`; the template guards both reads, and every change replaces the value here.
 const onProviderLinksChange = (links: ProjectProviderDto[]): void => {
   if (project.value) project.value.providers = links;
+};
+
+// An older server build (mid-deploy) may send a project without `documents`; the template guards the read.
+const onDocumentsChange = (documents: ProjectDocumentDto[]): void => {
+  if (project.value) project.value.documents = documents;
 };
 
 const onProviderCategoryChange = (categoryId: string | null): void => {

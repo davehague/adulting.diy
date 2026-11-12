@@ -1,8 +1,12 @@
+import { useAuthStore } from '@/stores/auth';
+import { documentExtension } from '@/utils/project-documents';
 import {
+  DOCUMENT_TYPES,
   type NextStepsResponse,
   type PhotoVariant,
   type ProjectCreateInput,
   type ProjectDetail,
+  type ProjectDocumentDto,
   type ProjectListFilters,
   type ProjectListItem,
   type ProjectPhotoDto,
@@ -53,6 +57,36 @@ export const useProjects = () => {
     return response.blob();
   };
 
+  // The file goes from the browser straight to Blob; our route only signs the one path. `path` comes from documentBlobPath.
+  const uploadDocumentFile = async (
+    projectId: string,
+    path: string,
+    file: File,
+    onProgress: (percent: number) => void,
+  ): Promise<void> => {
+    const extension = documentExtension(path);
+    if (!extension) throw new Error('Only PDF, Word, Excel, JPEG or PNG files');
+    const token = useAuthStore().accessToken;
+    // Loaded on the first upload only: the Blob client is about 100 KB and most visits never upload a document.
+    const { uploadPresigned } = await import('@vercel/blob/client');
+    await uploadPresigned(path, file, {
+      access: 'private',
+      handleUploadUrl: `/api/projects/${projectId}/documents/upload`,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      contentType: DOCUMENT_TYPES[extension],
+      onUploadProgress: ({ percentage }) => onProgress(Math.round(percentage)),
+    });
+  };
+
+  const registerDocument = (projectId: string, input: { id: string; blobPath: string; name: string; note: string | null }) =>
+    api.post<ProjectDocumentDto>(`/api/projects/${projectId}/documents`, input);
+  const getDocumentLink = (projectId: string, documentId: string) =>
+    api.post<{ url: string; expiresAt: string }>(`/api/projects/${projectId}/documents/${documentId}/link`, {});
+  const updateDocument = (projectId: string, documentId: string, input: { name?: string; note?: string | null }) =>
+    api.patch<ProjectDocumentDto>(`/api/projects/${projectId}/documents/${documentId}`, input);
+  const deleteDocument = (projectId: string, documentId: string) =>
+    api.delete(`/api/projects/${projectId}/documents/${documentId}`);
+
   const listNextSteps = () => api.get<NextStepsResponse>('/api/projects/next-steps');
   const addStep = (projectId: string, input: ProjectStepCreateInput) =>
     api.post<ProjectStepDto>(`/api/projects/${projectId}/steps`, input);
@@ -91,6 +125,7 @@ export const useProjects = () => {
   return {
     listProjects, getProject, createProject, updateProject, deleteProject, listLocations,
     uploadPhoto, deletePhoto, fetchPhotoBlob,
+    uploadDocumentFile, registerDocument, getDocumentLink, updateDocument, deleteDocument,
     listNextSteps, addStep, updateStep, deleteStep,
     listProjectProviders, linkProvider, setProviderLinkStatus, unlinkProvider,
     getSuggestions, runSuggestions,
