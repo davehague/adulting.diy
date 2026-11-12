@@ -72,6 +72,15 @@ describe('getState', () => {
     await expect(service.getState('h1', 'u1', 'p1')).rejects.toMatchObject({ statusCode: 404, message: 'Project not found' })
     expect(db.project.findFirst.mock.calls[0][0].where).toEqual({ id: 'p1', householdId: 'h1', metaStatus: 'active' })
   })
+  it('never loads the project documents: they must not reach the model', async () => {
+    db.project.findFirst.mockResolvedValue(null)
+    await expect(service.getState('h1', 'u1', 'p1')).rejects.toMatchObject({ statusCode: 404 })
+    const query = db.project.findFirst.mock.calls[0][0]
+    expect(query.select).toBeDefined()
+    expect(query.select.documents).toBeUndefined()
+    expect(query.include).toBeUndefined()
+    expect((db as Record<string, unknown>).projectDocument).toBeUndefined()
+  })
   it('reports not enabled for an unlisted household and reads nothing else', async () => {
     vi.stubEnv('AI_SUGGESTIONS_HOUSEHOLD_IDS', 'other')
     expect(await service.getState('h1', 'u1', 'p1')).toEqual({ enabled: false, messages: [], pending: false })
