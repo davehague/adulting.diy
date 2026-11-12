@@ -34,6 +34,7 @@ model User {
   projectSuggestions     ProjectSuggestion[]     @relation("ProjectSuggestionCreatedBy")
   projectPlans           ProjectPlan[]           @relation("ProjectPlanCreatedBy")
   projectChatMessages    ProjectChatMessage[]    @relation("ProjectChatMessageCreatedBy")
+  projectDocuments       ProjectDocument[]       @relation("ProjectDocumentUploadedBy")
 
   @@map("users")
 }
@@ -328,11 +329,32 @@ model Project {
   suggestion  ProjectSuggestion?
   plan        ProjectPlan?
   chatMessages ProjectChatMessage[]
+  documents   ProjectDocument[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
   @@index([householdId, metaStatus, status])
   @@map("projects")
+}
+
+// A file that is not a photo (a contractor brief, a quote, a contract), uploaded by the browser straight to the private Blob store.
+model ProjectDocument {
+  id           String   @id @default(uuid()) // made by the browser before upload; part of blobPath
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId    String
+  blobPath     String   @unique // households/{householdId}/projects/{projectId}/documents/{id}/{fileName}
+  fileName     String   // the safe file name in blobPath, with its extension; what a download is called
+  name         String   // display name, editable
+  note         String?
+  contentType  String   // read back from Blob when the upload is registered
+  sizeBytes    Int
+  uploadedBy   User     @relation("ProjectDocumentUploadedBy", fields: [uploadedById], references: [id])
+  uploadedById String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([projectId, createdAt])
+  @@map("project_documents")
 }
 
 model ProjectPhoto {

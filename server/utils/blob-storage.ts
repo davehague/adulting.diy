@@ -1,6 +1,9 @@
-import { put, get, del } from '@vercel/blob';
+import type { IncomingMessage } from 'node:http';
+import { put, get, del, head, issueSignedToken, presignUrl, BlobNotFoundError } from '@vercel/blob';
+import { handleUploadPresigned, type HandleUploadPresignedBody } from '@vercel/blob/client';
+import { HttpError } from '@/server/utils/api-errors';
 
-// The only module that talks to Vercel Blob. Services depend on these three functions so tests can fake storage.
+// The only module that talks to Vercel Blob. Services depend on these functions so tests can fake storage.
 
 export interface PrivateBlobRead {
   statusCode: 200 | 304;
@@ -38,4 +41,63 @@ export const readPrivateBytes = async (pathname: string): Promise<Buffer | null>
 export const removeBlobs = async (pathnames: string[]): Promise<void> => {
   if (pathnames.length === 0) return;
   await del(pathnames, authOptions());
+};
+
+// Size and stored type of one blob, or null when it does not exist.
+export const headPrivate = async (pathname: string): Promise<{ size: number; contentType: string } | null> => {
+  try {
+    const result = await head(pathname, authOptions());
+    return { size: result.size, contentType: result.contentType };
+  } catch (error) {
+    if (error instanceof BlobNotFoundError) return null;
+    throw error;
+  }
+};
+
+// A GET URL for one private blob that works for anyone holding it until it expires. Served from the Blob domain, never ours.
+export const presignPrivateGet = async (pathname: string, ttlMs: number): Promise<string> => {
+  const validUntil = Date.now() + ttlMs;
+  const token = await issueSignedToken({ pathname, operations: ['get'], validUntil, ...authOptions() });
+  const { presignedUrl } = await presignUrl(token, { operation: 'get', pathname, access: 'private', validUntil });
+  return presignedUrl;
+};
+
+export interface UploadGrant {
+  contentType: string;
+  maxBytes: number;
+  ttlMs: number;
+}
+
+// handleUploadPresigned only uses this key to verify upload-completed callbacks. We never register one and refuse
+// callback bodies before calling it, so it is never read; local dev has no BLOB_WEBHOOK_PUBLIC_KEY.
+const NO_CALLBACK_KEY = 'unused';
+
+// Answers the browser's uploadPresigned: `sign` authorises the exact pathname (throwing refuses it) and says what may
+// be uploaded there. The resulting URL can write only that pathname, only that type and size, never over an existing blob.
+export const handlePresignedUpload = async (
+  body: unknown,
+  request: IncomingMessage,
+  sign: (pathname: string) => Promise<UploadGrant>,
+): Promise<unknown> => {
+  if (typeof body !== 'object' || body === null || (body as { type?: unknown }).type !== 'blob.generate-presigned-url') {
+    throw new HttpError('Unsupported upload request', 400);
+  }
+  return handleUploadPresigned({
+    body: body as HandleUploadPresignedBody,
+    request,
+    webhookPublicKey: NO_CALLBACK_KEY,
+    getSignedToken: async (pathname) => {
+      const grant = await sign(pathname);
+      const validUntil = Date.now() + grant.ttlMs;
+      const token = await issueSignedToken({
+        pathname,
+        operations: ['put'],
+        allowedContentTypes: [grant.contentType],
+        maximumSizeInBytes: grant.maxBytes,
+        validUntil,
+        ...authOptions(),
+      });
+      return { token, urlOptions: { addRandomSuffix: false, allowOverwrite: false, validUntil } };
+    },
+  });
 };
