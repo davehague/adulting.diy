@@ -1,6 +1,6 @@
 # Project and Task Ingest - Technical Reference
 
-Home projects (see [functionality doc](../functionality/projects.md)) and tasks (see [functionality doc](../functionality/task-management.md)) can be created by machines with the same per-household API key the provider ingest uses. Key creation, hashing and revocation are in [provider-ingest.md](provider-ingest.md#api-keys). This is how lists kept elsewhere (Todoist, scripts) are moved into a household.
+Home projects (see [functionality doc](../functionality/projects.md)) and tasks (see [functionality doc](../functionality/task-management.md)) can be created by machines with the same per-household API key the provider ingest uses, and documents and photos can be attached to projects. Key creation, hashing and revocation are in [provider-ingest.md](provider-ingest.md#api-keys). This is how lists kept elsewhere (Todoist, scripts) are moved into a household.
 
 ## Key Files
 
@@ -8,6 +8,9 @@ Home projects (see [functionality doc](../functionality/projects.md)) and tasks 
 - `server/services/ProjectIngestService.ts`, `server/services/TaskIngestService.ts` - batch logic
 - `server/utils/project-schemas.ts` (`projectIngestItemSchema`), `server/utils/task-schemas.ts` (`taskIngestItemSchema`) - item validation
 - `ApiKeyService.requireOwnerInHousehold` - the attribution check below
+- `server/api/ingest/projects.get.ts`, `server/api/ingest/projects/[id]/documents/upload-url.post.ts`, `server/api/ingest/projects/[id]/documents.post.ts`, `server/api/ingest/projects/[id]/photos.post.ts` - project files
+- `server/services/ProjectFileIngestService.ts` - the ingest-only steps; every file rule stays in `ProjectDocumentService` and `ProjectPhotoService`
+- `server/utils/blob-storage.ts` (`presignPrivatePut`, `findPrivateBlob`, `BLOB_API_VERSION`), `server/utils/photo-upload.ts` (the photo form, shared with the browser route)
 
 ## Shared Rules
 
@@ -96,6 +99,59 @@ The other recurrence patterns, reminders and default assignees are not accepted 
   "errors": [{ "index": 1, "name": "Other", "message": "Unknown category: Kids" }]
 }
 ```
+
+## Project Files
+
+The project and task batch rules above do not apply here: these routes take one file per call. Writes are attributed to the key's owner and refused with 403 if that person has left the household; a deleted project or one in another household answers 404. Files added this way appear on the project page on its next load, exactly as if added there.
+
+### `GET /api/ingest/projects`
+
+`{ "projects": [{ "id", "title", "location", "status", "path", "createdAt" }] }`: every project that is not deleted, Done included, newest first. Use it to find the id to attach a file to.
+
+### Documents: three calls
+
+PDF, Word (`.docx`), Excel (`.xlsx`), JPEG or PNG, up to 25 MB, 30 per project. The file goes straight to storage, so large scans work.
+
+```bash
+KEY=adk_...; P=<project id>; F="Owens quote.pdf"
+# 1. Ask for an upload URL (checks type, the 30 cap and the project; valid 10 minutes)
+curl -s -X POST https://adulting.diy/api/ingest/projects/$P/documents/upload-url \
+  -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -d "{\"fileName\": \"$F\"}"
+# -> { "documentId", "fileName": "Owens-quote.pdf", "uploadUrl", "method": "PUT",
+#      "headers": { "x-api-version": "12" }, "maxBytes": 26214400, "expiresAt" }
+
+# 2. PUT the file with the returned headers (the request's own Content-Type does not matter)
+curl -s -X PUT -H 'x-api-version: 12' --data-binary @"$F" "$UPLOAD_URL"
+
+# 3. Register it (name and note optional)
+curl -s -X POST https://adulting.diy/api/ingest/projects/$P/documents \
+  -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
+  -d '{"documentId": "<from step 1>", "note": "Owens quote, Nov 2026"}'
+```
+
+- Send every header in `headers` with the PUT. Without `x-api-version` the file is stored as a download, so a PDF will not open in the browser. The value mirrors the SDK's own `BLOB_API_VERSION`; a unit test fails if an SDK upgrade changes it.
+- The upload URL writes only that one path, only that file type, at most 25 MB, and never over an existing file. A second PUT answers 400 (the first one landed); an expired URL means asking for a new one.
+- Register finds the file by `documentId` under this project and household, then applies the same checks as the page (real size and type read back, the cap re-counted). It answers 400 "Upload not found. Try again." when nothing was uploaded under that id (or the document was deleted since), and 400 for a malformed id. Repeating a successful register returns the same document, so it is safe to retry.
+- Without `name`, the document is named after the stored file: `Owens-quote.pdf` becomes "Owens quote". `name` is 1 to 120 characters; `note` up to 200.
+- A URL asked for and never used, or a PUT never registered, leaves nothing visible (the file, if any, sits in storage with no row).
+
+### `POST /api/ingest/projects/[id]/photos`
+
+One photo per call, the same multipart form the browser sends: `full` (JPEG, at most 3 MB), `thumb` (JPEG, at most 200 KB), `width` and `height` (the full image's pixels). The caller makes both JPEGs; the browser's own targets are a 2000 px longest side at quality 85 and a 400 px thumbnail at quality 80:
+
+```python
+from PIL import Image, ImageOps
+import io, requests
+img = ImageOps.exif_transpose(Image.open("porch.jpg")).convert("RGB")
+def jpeg(edge, q):
+    c = img.copy(); c.thumbnail((edge, edge)); b = io.BytesIO(); c.save(b, "JPEG", quality=q); return b.getvalue(), c.size
+full, (w, h) = jpeg(2000, 85); thumb, _ = jpeg(400, 80)
+requests.post(f"https://adulting.diy/api/ingest/projects/{P}/photos", headers={"Authorization": f"Bearer {KEY}"},
+              files={"full": ("full.jpg", full, "image/jpeg"), "thumb": ("thumb.jpg", thumb, "image/jpeg")},
+              data={"width": w, "height": h})
+```
+
+Returns `{ id, width, height, position }`. 409 at 25 photos, 400 for a non-JPEG or a missing part, 413 over the sizes. **Not safe to retry:** there is no caller-supplied id, so repeating a call after a lost response adds a second copy (delete it on the page).
 
 ## Related
 

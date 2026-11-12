@@ -2,6 +2,10 @@
 
 ## 2026-11-12
 
+### Files from scripts
+- A script holding the household's API key can now list the household's projects and attach documents (up to 25 MB) and photos to one, so quotes arriving by email or photos taken elsewhere can land on the right project without opening the app
+- A document added this way opens in the browser like one added on the page, and is named after its file unless the script gives it a name
+
 ### Documents on projects
 - A project page now has a **Documents** section below Photos for files that are not photos: contractor briefs, quotes and contracts as PDF, Word, Excel, JPEG or PNG, up to 25 MB each and 30 per project
 - Add them from a phone or a computer, or drop them on the section on a computer; each one shows its progress, and large scanned files upload as reliably as small ones

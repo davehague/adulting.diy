@@ -171,7 +171,7 @@ Deleting a project hides it everywhere but keeps the record, its photos and its 
 
 - At most 25 photos, 30 documents, 100 steps and 25 linked providers per project.
 - Documents cannot be previewed inside the app, Word and Excel files can only be downloaded, a document cannot be linked to the provider it came from, and the project list shows no document count.
-- Documents can only be added from the project page, not from the new-project form or by a script with the household's API key.
+- Documents can only be added from the project page or by a script with the household's API key, not from the new-project form. A photo added by a script that retries after a lost connection can arrive twice.
 - A document link keeps working for anyone who has it until it expires, five minutes after it was opened.
 - A file whose upload finished but was never saved (the page closed in between) stays in storage, unseen.
 - Steps cannot be reordered.

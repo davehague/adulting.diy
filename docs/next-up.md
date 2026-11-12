@@ -24,7 +24,7 @@ Capture with photos (slice 1), steps with next steps on the dashboard (slice 2),
 - DIY plan, next levels: a skill-level selector (beginner / handy / pro); cost on checklist steps with a total on the dashboard (schema change); photos as input (own privacy decision, slower call); a background-job mechanism if the ask log shows plans running past about 35 seconds; a merge on Plan again that keeps edits; product or video links only with a source the model cannot invent from; a separate model setting for plans if they want a different model
 - Slice 3b, on hold until the first real quote arrives: quotes recorded as numbers on a project's provider link. Not designed yet; open questions are one quote per link or several over time, and whether a quote has a date, a note and what it covers
 - A clean-up job for the stored photos and documents of long-deleted projects, and for document files that were uploaded but never saved (the page closed between upload and save)
-- Documents, next levels: link a document to the provider it came from (the natural start of slice 3b, quotes); an API-key route so a script can attach quotes arriving by email (same presigned shape as the browser); a document count on project cards; letting the chat read a document (its own privacy decision)
+- Documents, next levels: link a document to the provider it came from (the natural start of slice 3b, quotes); a document count on project cards; letting the chat read a document (its own privacy decision)
 
 ## Projects - Deferred
 
