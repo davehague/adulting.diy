@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-vi.mock('@vercel/blob', () => ({ put: vi.fn(), get: vi.fn(), del: vi.fn() }))
+vi.mock('@vercel/blob', () => ({ put: vi.fn(), get: vi.fn(), del: vi.fn(), list: vi.fn(), issueSignedToken: vi.fn(), presignUrl: vi.fn() }))
 
-import { put, get, del } from '@vercel/blob'
-import { putPrivate, getPrivate, readPrivateBytes, removeBlobs } from '@/server/utils/blob-storage'
+import { put, get, del, list, issueSignedToken, presignUrl } from '@vercel/blob'
+import { putPrivate, getPrivate, readPrivateBytes, removeBlobs, findPrivateBlob, presignPrivatePut } from '@/server/utils/blob-storage'
 
 const sdk = { put: put as unknown as ReturnType<typeof vi.fn>, get: get as unknown as ReturnType<typeof vi.fn>, del: del as unknown as ReturnType<typeof vi.fn> }
 
@@ -105,4 +105,35 @@ describe('blob-storage', () => {
       expect(sdk.del.mock.calls[0][1] ?? {}).not.toHaveProperty('token')
     })
   })
+
+  describe('findPrivateBlob', () => {
+    const prefix = 'households/h/projects/p/documents/d/'
+    it('asks for at most two blobs under the prefix', async () => {
+      vi.mocked(list).mockResolvedValue({ blobs: [] } as never)
+      expect(await findPrivateBlob(prefix)).toBeNull()
+      expect(vi.mocked(list).mock.calls[0][0]).toMatchObject({ prefix, limit: 2 })
+    })
+    it('returns the one blob', async () => {
+      vi.mocked(list).mockResolvedValue({ blobs: [{ pathname: `${prefix}a.pdf` }] } as never)
+      expect(await findPrivateBlob(prefix)).toBe(`${prefix}a.pdf`)
+    })
+    it('treats two blobs under one id as not found', async () => {
+      vi.mocked(list).mockResolvedValue({ blobs: [{ pathname: `${prefix}a.pdf` }, { pathname: `${prefix}b.pdf` }] } as never)
+      expect(await findPrivateBlob(prefix)).toBeNull()
+    })
+  })
+
+  it('presignPrivatePut signs one path, one type, the cap, no overwrite, and returns the PUT headers', async () => {
+    vi.mocked(issueSignedToken).mockResolvedValue({ delegationToken: 'd', clientSigningToken: 'c', validUntil: 1 } as never)
+    vi.mocked(presignUrl).mockResolvedValue({ presignedUrl: 'https://vercel.com/api/blob/?sig' } as never)
+    const out = await presignPrivatePut('households/h/projects/p/documents/d/a.pdf', { contentType: 'application/pdf', maxBytes: 26214400, ttlMs: 600000 })
+    expect(vi.mocked(issueSignedToken).mock.calls[0][0]).toMatchObject({
+      pathname: 'households/h/projects/p/documents/d/a.pdf', operations: ['put'], allowedContentTypes: ['application/pdf'], maximumSizeInBytes: 26214400,
+    })
+    expect(vi.mocked(presignUrl).mock.calls[0][1]).toMatchObject({
+      operation: 'put', access: 'private', allowedContentTypes: ['application/pdf'], maximumSizeInBytes: 26214400, addRandomSuffix: false, allowOverwrite: false,
+    })
+    expect(out).toMatchObject({ url: 'https://vercel.com/api/blob/?sig', headers: { 'x-api-version': '12' } })
+  })
 })
+

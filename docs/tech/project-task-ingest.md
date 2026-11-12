@@ -113,23 +113,25 @@ The project and task batch rules above do not apply here: these routes take one 
 PDF, Word (`.docx`), Excel (`.xlsx`), JPEG or PNG, up to 25 MB, 30 per project. The file goes straight to storage, so large scans work.
 
 ```bash
-KEY=adk_...; P=<project id>; F="Owens quote.pdf"
+KEY="adk_..."; P="<project id>"; F="Owens quote.pdf"; API=https://adulting.diy/api/ingest/projects/$P
 # 1. Ask for an upload URL (checks type, the 30 cap and the project; valid 10 minutes)
-curl -s -X POST https://adulting.diy/api/ingest/projects/$P/documents/upload-url \
-  -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -d "{\"fileName\": \"$F\"}"
-# -> { "documentId", "fileName": "Owens-quote.pdf", "uploadUrl", "method": "PUT",
-#      "headers": { "x-api-version": "12" }, "maxBytes": 26214400, "expiresAt" }
+R=$(curl -sf -X POST "$API/documents/upload-url" -H "Authorization: Bearer $KEY" \
+  -H 'Content-Type: application/json' -d "$(jq -n --arg f "$F" '{fileName: $f}')")
+# R = { "documentId", "fileName": "Owens-quote.pdf", "uploadUrl", "method": "PUT",
+#       "headers": { "x-api-version": "12" }, "maxBytes": 26214400, "expiresAt" }
+DOC=$(jq -r .documentId <<<"$R"); UPLOAD_URL=$(jq -r .uploadUrl <<<"$R")
 
-# 2. PUT the file with the returned headers (the request's own Content-Type does not matter)
-curl -s -X PUT -H 'x-api-version: 12' --data-binary @"$F" "$UPLOAD_URL"
+# 2. PUT the file with every header from R.headers (read them; don't hardcode the version)
+HEADERS=(); while IFS= read -r h; do HEADERS+=(-H "$h"); done < <(jq -r '.headers | to_entries[] | "\(.key): \(.value)"' <<<"$R")
+curl -sf -X PUT "${HEADERS[@]}" --data-binary @"$F" "$UPLOAD_URL"
 
 # 3. Register it (name and note optional)
-curl -s -X POST https://adulting.diy/api/ingest/projects/$P/documents \
-  -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
-  -d '{"documentId": "<from step 1>", "note": "Owens quote, Nov 2026"}'
+curl -sf -X POST "$API/documents" -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
+  -d "$(jq -n --arg d "$DOC" '{documentId: $d, note: "Owens quote, Nov 2026"}')"
 ```
 
-- Send every header in `headers` with the PUT. Without `x-api-version` the file is stored as a download, so a PDF will not open in the browser. The value mirrors the SDK's own `BLOB_API_VERSION`; a unit test fails if an SDK upgrade changes it.
+- Send every header in `headers` with the PUT, read from the response rather than copied, since the version can change with an SDK upgrade. Without `x-api-version` the file is stored as a download, so a PDF will not open in the browser. The value mirrors the SDK's own `BLOB_API_VERSION`; a unit test fails if an SDK upgrade changes it.
+- `name` must be a string when sent; leave it out rather than sending `null` (null answers 400).
 - The upload URL writes only that one path, only that file type, at most 25 MB, and never over an existing file. A second PUT answers 400 (the first one landed); an expired URL means asking for a new one.
 - Register finds the file by `documentId` under this project and household, then applies the same checks as the page (real size and type read back, the cap re-counted). It answers 400 "Upload not found. Try again." when nothing was uploaded under that id (or the document was deleted since), and 400 for a malformed id. Repeating a successful register returns the same document, so it is safe to retry.
 - Without `name`, the document is named after the stored file: `Owens-quote.pdf` becomes "Owens quote". `name` is 1 to 120 characters; `note` up to 200.
