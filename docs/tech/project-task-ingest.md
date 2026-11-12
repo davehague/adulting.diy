@@ -102,6 +102,8 @@ The other recurrence patterns, reminders and default assignees are not accepted 
 
 ## Project Files
 
+Call `https://www.adulting.diy`. The bare `adulting.diy` answers with a redirect to `www`, which curl does not follow without `-L` and which makes most HTTP libraries drop the `Authorization` header, so the call comes back 401.
+
 The project and task batch rules above do not apply here: these routes take one file per call. Writes are attributed to the key's owner and refused with 403 if that person has left the household; a deleted project or one in another household answers 404. Files added this way appear on the project page on its next load, exactly as if added there.
 
 ### `GET /api/ingest/projects`
@@ -113,7 +115,7 @@ The project and task batch rules above do not apply here: these routes take one 
 PDF, Word (`.docx`), Excel (`.xlsx`), JPEG or PNG, up to 25 MB, 30 per project. The file goes straight to storage, so large scans work.
 
 ```bash
-KEY="adk_..."; P="<project id>"; F="Owens quote.pdf"; API=https://adulting.diy/api/ingest/projects/$P
+KEY="adk_..."; P="<project id>"; F="Owens quote.pdf"; API=https://www.adulting.diy/api/ingest/projects/$P
 # 1. Ask for an upload URL (checks type, the 30 cap and the project; valid 10 minutes)
 R=$(curl -sf -X POST "$API/documents/upload-url" -H "Authorization: Bearer $KEY" \
   -H 'Content-Type: application/json' -d "$(jq -n --arg f "$F" '{fileName: $f}')")
@@ -148,7 +150,7 @@ img = ImageOps.exif_transpose(Image.open("porch.jpg")).convert("RGB")
 def jpeg(edge, q):
     c = img.copy(); c.thumbnail((edge, edge)); b = io.BytesIO(); c.save(b, "JPEG", quality=q); return b.getvalue(), c.size
 full, (w, h) = jpeg(2000, 85); thumb, _ = jpeg(400, 80)
-requests.post(f"https://adulting.diy/api/ingest/projects/{P}/photos", headers={"Authorization": f"Bearer {KEY}"},
+requests.post(f"https://www.adulting.diy/api/ingest/projects/{P}/photos", headers={"Authorization": f"Bearer {KEY}"},
               files={"full": ("full.jpg", full, "image/jpeg"), "thumb": ("thumb.jpg", thumb, "image/jpeg")},
               data={"width": w, "height": h})
 ```
