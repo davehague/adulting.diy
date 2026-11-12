@@ -23,6 +23,34 @@ export type ProjectProviderStatus = (typeof PROJECT_PROVIDER_STATUSES)[number];
 
 export const MAX_PROJECT_PROVIDERS = 25;
 
+export const MAX_PROJECT_DOCUMENTS = 30;
+export const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
+export const MAX_DOCUMENT_NAME_LENGTH = 120;
+export const MAX_DOCUMENT_NOTE_LENGTH = 200;
+
+export type DocumentExtension = 'pdf' | 'docx' | 'xlsx' | 'jpg' | 'jpeg' | 'png';
+
+// The only files a project document can be. The extension decides the type: Blob checks the upload against it.
+export const DOCUMENT_TYPES: Record<DocumentExtension, string> = {
+  pdf: 'application/pdf',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+};
+
+export interface ProjectDocumentDto {
+  id: string;
+  name: string;
+  note: string | null;
+  // the safe file name stored in Blob, which is what a download is called
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  createdAt: Date | string;
+}
+
 export type PhotoVariant = 'full' | 'thumb';
 
 export interface ProjectPhotoDto {
@@ -96,6 +124,8 @@ export interface ProjectListItem {
 
 export interface ProjectDetail {
   id: string;
+  // the browser builds document upload paths from it (the upload is signed over the exact path it sends)
+  householdId: string;
   title: string;
   location: string | null;
   status: ProjectStatus;
@@ -108,6 +138,8 @@ export interface ProjectDetail {
   photos: ProjectPhotoDto[];
   steps: ProjectStepDto[];
   providers: ProjectProviderDto[];
+  // newest first
+  documents: ProjectDocumentDto[];
 }
 
 export interface ProjectCreateInput {
