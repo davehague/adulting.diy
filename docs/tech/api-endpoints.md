@@ -95,12 +95,17 @@ The API uses these authentication levels:
 | `POST` | `/api/projects` | Household | Create project (`title` required, `location` and `notes` optional); status starts as `planning`, path as null |
 | `GET` | `/api/projects/locations` | Household | Distinct locations already used by the household's non-deleted projects, for suggestions |
 | `GET` | `/api/projects/next-steps` | Household | The dashboard list: `hasProjects` (any non-deleted project exists) and one item per Active project, newest first, each with `kind` = `step`, `noSteps` or `allDone` and, for `step`, the next undone step (id, text, estimate) |
-| `GET` | `/api/projects/[id]` | Household | Get one project with its photos in order, its steps in order (position, then creation time), its saved `providerCategoryId`, and its linked providers (`providers`, ordered chosen, contacted, considering, passed, then oldest link first) |
+| `GET` | `/api/projects/[id]` | Household | Get one project with its `householdId`, its documents (newest first, metadata only), its photos in order, its steps in order (position, then creation time), its saved `providerCategoryId`, and its linked providers (`providers`, ordered chosen, contacted, considering, passed, then oldest link first) |
 | `PUT` | `/api/projects/[id]` | Household | Update any of title, location, status, path, notes, `providerCategoryId` (null clears it; 400 if the category is not the household's); moving to `done` sets `completedAt`, moving away clears it |
 | `DELETE` | `/api/projects/[id]` | Household | Soft delete project |
 | `POST` | `/api/projects/[id]/photos` | Household | Upload one photo; multipart form fields `full` and `thumb` (the JPEG files) plus `width` and `height` (the full image's pixel size) |
 | `GET` | `/api/projects/[id]/photos/[photoId]` | Household | Stream a photo; query `variant` = `thumb` or `full` (default `full`) |
 | `DELETE` | `/api/projects/[id]/photos/[photoId]` | Household | Remove a photo's row and both stored files |
+| `POST` | `/api/projects/[id]/documents/upload` | Household | The `@vercel/blob/client` `uploadPresigned` handshake (`{ type: 'blob.generate-presigned-url', payload: { pathname } }`): signs a PUT for that exact path when it is this household's and project's document path with an allowed extension, the project has fewer than 30 documents and the id is new. 400 for any other body (callbacks included), 404, 409 |
+| `POST` | `/api/projects/[id]/documents` | Household | Register an uploaded document: `{ id, blobPath, name (1-120), note? (up to 200) }`. Heads the blob; 400 "Upload not found. Try again." when it is not there, 400 for a type that does not match the extension and 413 "Over 25 MB" (both delete the blob), 409 at the cap. A repeated id returns the existing document |
+| `PATCH` | `/api/projects/[id]/documents/[documentId]` | Household | `{ name?, note? }`, at least one; a blank name is 400 |
+| `DELETE` | `/api/projects/[id]/documents/[documentId]` | Household | Remove the row, then the stored file (best effort) |
+| `POST` | `/api/projects/[id]/documents/[documentId]/link` | Household | `{ url, expiresAt }`: a presigned GET URL for the file, valid 5 minutes |
 | `POST` | `/api/projects/[id]/steps` | Household | Add a step (`text` required, 1 to 200 characters; `estimateMinutes` optional, whole number 1 to 9999); it goes last. 409 at 100 steps |
 | `PUT` | `/api/projects/[id]/steps/[stepId]` | Household | Update any of `text`, `estimateMinutes` (null clears it), `done` (true sets the done time unless already set, false clears it) |
 | `DELETE` | `/api/projects/[id]/steps/[stepId]` | Household | Remove a step for good |
@@ -207,7 +212,7 @@ Key data models handled by the API:
 - **OccurrenceHistoryLog**: Audit trail for occurrence changes
 - **FormerHouseholdMember**: Snapshot of departed users for historical display
 - **Provider**, **ProviderCategory**, **ProviderStatus**, **ProviderContact**, **ProviderEvidence**, **ProviderComment**, **TaskProvider**, **ApiKey**: Provider directory and machine ingest (see [provider-ingest.md](provider-ingest.md))
-- **Project**, **ProjectPhoto**, **ProjectStep**, **ProjectProvider**, **ProjectSuggestion**, **ProjectPlan**, **ProjectChatMessage**: Home project tracking with private photos, a checklist of steps, providers linked with a per-project status, the latest AI provider suggestion, the latest AI DIY plan and the project's chat messages (see [projects.md](../functionality/projects.md))
+- **Project**, **ProjectPhoto**, **ProjectDocument**, **ProjectStep**, **ProjectProvider**, **ProjectSuggestion**, **ProjectPlan**, **ProjectChatMessage**: Home project tracking with private photos, documents (files that are not photos), a checklist of steps, providers linked with a per-project status, the latest AI provider suggestion, the latest AI DIY plan and the project's chat messages (see [projects.md](../functionality/projects.md))
 - **AiRequestLog**: One row per AI ask of any feature (outcome, timing, sizes; no text); the shared daily cap counts the suggestion and plan rows only
 
 ## Rate Limiting

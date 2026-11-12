@@ -11,7 +11,7 @@ A household management app built with Nuxt 3, Vue.js, Prisma, and CockroachDB. I
 - Flexible notification system (email + Slack) with configurable reminders
 - Task pausing and soft deletion
 - Provider directory: contractors and service providers with ratings, notes, neighbor recommendations and task links
-- Home projects with private photos, step checklists, linked providers with a per-project status, AI provider suggestions, an AI DIY plan and a per-project chat that can read the photos and search the web (for households switched on), and next steps on the dashboard
+- Home projects with private photos and documents, step checklists, linked providers with a per-project status, AI provider suggestions, an AI DIY plan and a per-project chat that can read the photos and search the web (for households switched on), and next steps on the dashboard
 - User authentication (Google OAuth)
 - Persistent authentication state
 
@@ -23,7 +23,7 @@ A household management app built with Nuxt 3, Vue.js, Prisma, and CockroachDB. I
 - **State Management:** [Pinia](https://pinia.vuejs.org/)
 - **Database ORM:** [Prisma](https://www.prisma.io/)
 - **Database:** [CockroachDB](https://www.cockroachlabs.com/) (compatible with PostgreSQL)
-- **Storage:** [Vercel Blob](https://vercel.com/docs/vercel-blob) (private store, project photos)
+- **Storage:** [Vercel Blob](https://vercel.com/docs/vercel-blob) (private store, project photos and documents)
 - **AI:** [Ollama Cloud](https://ollama.com/) for provider suggestions, DIY plans and the project chat (plain HTTP, no SDK)
 - **Notifications:** [Mailjet](https://www.mailjet.com/) email and Slack incoming webhooks
 - **Icons:** [Lucide Vue Next](https://lucide.dev/)
@@ -155,7 +155,7 @@ NUXT_PUBLIC_GOOGLE_CLIENT_ID="your-google-client-id"
 MJ_APIKEY_PUBLIC="your-mailjet-api-key"
 MJ_APIKEY_PRIVATE="your-mailjet-secret-key"
 
-# Vercel Blob (private store for project photos; shared by local dev and production)
+# Vercel Blob (private store for project photos and documents; shared by local dev and production)
 BLOB_READ_WRITE_TOKEN="your-vercel-blob-token"
 
 # AI features: provider suggestions, DIY plans, project chat (optional; all off without the key and the household list)

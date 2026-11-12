@@ -6,6 +6,7 @@
 
 - Capture a project with just a title, from a phone or a desktop
 - Add a location, notes and up to 25 photos
+- Keep up to 30 documents on a project (contractor briefs, quotes, contracts) and open them from any device
 - Set a status (Planning, Active, Future, Done) and a path (DIY, Hire, Not sure)
 - Break a project into a checklist of steps, each with an optional time estimate
 - Check off each Active project's next step from the dashboard
@@ -22,7 +23,7 @@
 
 ### What a Project Is
 
-Each project has a title, an optional location (free text, such as "Master bathroom", with suggestions from locations the household has already used), a status, a path, optional notes, up to 25 photos, a checklist of steps, and a list of linked providers. The list is shared by the whole household: there is no owner or assignee, and any member can create, edit and delete any project.
+Each project has a title, an optional location (free text, such as "Master bathroom", with suggestions from locations the household has already used), a status, a path, optional notes, up to 25 photos, up to 30 documents, a checklist of steps, and a list of linked providers. The list is shared by the whole household: there is no owner or assignee, and any member can create, edit and delete any project.
 
 ### Status and Path
 
@@ -55,6 +56,14 @@ When there are no projects, the list shows a short line and the New project butt
 The project page shows every photo in order. Title, location, status, path and notes are all editable in place, each saving when you leave the field or pick a value. The title cannot be blank. Photos can be added the same way as on the new-project form, up to the cap, and removed one at a time with a confirmation.
 
 Tapping a photo opens it full size, showing the whole photo scaled to fit the screen rather than cropped. When a project has more than one photo, swiping (or, on larger screens, the previous and next arrows or the Left and Right arrow keys) moves between them, and a counter such as "2 / 5" shows the position. Close it with the close button, the Escape key, or by tapping the dark area outside the photo; tapping the photo itself, or swiping, never closes it.
+
+### Documents
+
+Below Photos, a **Documents** section holds the files that are not photos: contractor briefs, quotes, contracts. A document can be a PDF, a Word document, an Excel spreadsheet, or a JPEG or PNG image (a phone photo of a paper quote, say), up to 25 MB, and a project can hold 30. Documents are added from the project page only, not from the new-project form, whatever the project's status.
+
+**Add documents** opens the phone's or computer's file picker, and on a computer files can also be dropped onto the section. Anything that is not one of the five kinds is turned away with "Only PDF, Word, Excel, JPEG or PNG files", a file over 25 MB with "Over 25 MB", and files beyond the room left with "This project can hold 30 documents". Files upload one at a time, in the order picked, each showing its progress and then "Saving...". The file travels straight to private storage rather than through the app, which is what lets large scans upload. If one fails, **Retry** first checks whether the file actually arrived (a phone can lose the answer after the upload finished) and only sends it again if it did not; × drops a waiting or failed file. When a project has 30 documents the Add button is replaced by "This project has 30 documents".
+
+Each document shows an icon for its kind, its name, its note when it has one, its size and the day it was added, newest first. The name starts as the file's name without its extension. Tapping it opens the document in a new tab: PDFs and images show in the browser's own viewer, Word and Excel files download, and a download keeps the original file's name (made safe), even after the document is renamed. **Edit** opens the name and an optional one-line note (up to 200 characters, such as "Owens quote, Nov 2026"); each saves when you leave the field or press Enter, a blank name is refused, and Escape closes without saving. **Remove** deletes the document for good after a confirmation.
 
 ### Steps
 
@@ -140,7 +149,9 @@ An Active project with no steps, or with every step done, appears as itself, lab
 
 Photos are private: only a signed-in member of the owning household can load one. A photo link opened by anyone else, or in a browser that is not signed in, returns an error, not the image.
 
-Deleting a project hides it everywhere but keeps the record and its photos; nothing can load them afterward. Deleting a single photo removes it for good. A project's chat is deleted with the project.
+Documents are private too. Opening one asks the app, which checks that you are a signed-in member of the household, for a link that works for five minutes; after that the link is dead. Documents are never sent to the provider suggestions, the DIY plan or the chat.
+
+Deleting a project hides it everywhere but keeps the record, its photos and its documents; nothing can load them afterward. Deleting a single photo or document removes it for good. A project's chat is deleted with the project.
 
 ## Connections
 
@@ -152,13 +163,17 @@ Deleting a project hides it everywhere but keeps the record and its photos; noth
 
 - **Projects page**: the list, reached from the main navigation beside Providers on desktop and mobile
 - **New project form**: capture with photos
-- **Project page**: details, steps, the DIY plan, linked providers, photos and the full-size viewer, and the Chat button
+- **Project page**: details, steps, the DIY plan, linked providers, photos and the full-size viewer, documents, and the Chat button
 - **Project chat**: its own full-screen page, reached from the Chat button
 - **Dashboard**: the Project next steps section
 
 ## Current Limitations
 
-- At most 25 photos, 100 steps and 25 linked providers per project.
+- At most 25 photos, 30 documents, 100 steps and 25 linked providers per project.
+- Documents cannot be previewed inside the app, Word and Excel files can only be downloaded, a document cannot be linked to the provider it came from, and the project list shows no document count.
+- Documents can only be added from the project page, not from the new-project form or by a script with the household's API key.
+- A document link keeps working for anyone who has it until it expires, five minutes after it was opened.
+- A file whose upload finished but was never saved (the page closed in between) stays in storage, unseen.
 - Steps cannot be reordered.
 - No step count on project cards, and no total of the time remaining.
 - No assignees, due dates or reminders on steps or projects.

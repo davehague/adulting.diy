@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-12
+
+### Documents on projects
+- A project page now has a **Documents** section below Photos for files that are not photos: contractor briefs, quotes and contracts as PDF, Word, Excel, JPEG or PNG, up to 25 MB each and 30 per project
+- Add them from a phone or a computer, or drop them on the section on a computer; each one shows its progress, and large scanned files upload as reliably as small ones
+- Tap a document's name to open it in a new tab (Word and Excel files download); a downloaded file keeps a readable name
+- Each document can be renamed and given a short note, such as "Owens quote, Nov 2026", and removed by anyone in the household
+- Documents are private to the household and are never sent to the AI features
+
 ## 2026-11-10
 
 ### Adding photos from a computer

@@ -20,7 +20,7 @@ Adulting.DIY is a household task management system designed to help families and
 - **Email Service**: Mailjet (for notifications)
 - **Validation**: Zod (schema validation)
 - **Dates**: date-fns (date manipulation)
-- **Storage**: Vercel Blob (private store, project photos)
+- **Storage**: Vercel Blob (private store, project photos and documents)
 - **AI**: Ollama Cloud over plain `fetch` (provider suggestions, the DIY plan and the project chat; no SDK)
 
 ### Development & Deployment
@@ -47,7 +47,7 @@ This file is a signpost. The detail lives in `docs/`; read the relevant doc befo
 | [docs/functionality/notifications-and-reminders.md](docs/functionality/notifications-and-reminders.md) | Product | Notification events, preferences, channels, reminder rules |
 | [docs/functionality/household-management.md](docs/functionality/household-management.md) | Product | Households, roles, invite codes, former members, task categories |
 | [docs/functionality/providers.md](docs/functionality/providers.md) | Product | Contractor directory, neighbor evidence, task and project links |
-| [docs/functionality/projects.md](docs/functionality/projects.md) | Product | Home projects, photos, steps, linked providers, AI provider suggestions, the AI DIY plan, the project chat (with photos), dashboard next steps |
+| [docs/functionality/projects.md](docs/functionality/projects.md) | Product | Home projects, photos, documents, steps, linked providers, AI provider suggestions, the AI DIY plan, the project chat (with photos), dashboard next steps |
 | [docs/functionality/changelog.md](docs/functionality/changelog.md) | Product | What changed, from the user's point of view |
 | [docs/tech/architecture.md](docs/tech/architecture.md) | Developers | System map: directory map, request flow, auth wrappers, data model, pages, integrations, cron |
 | [docs/tech/api-endpoints.md](docs/tech/api-endpoints.md) | Developers | Full API reference |
@@ -76,7 +76,7 @@ This file is a signpost. The detail lives in `docs/`; read the relevant doc befo
 6. **OccurrenceHistoryLog**: Audit trail for task occurrences
 7. **FormerHouseholdMember**: Name snapshots of users who left a household
 8. **Provider**: Contractors/service providers, with **ProviderCategory**, **ProviderStatus**, **ProviderContact**, **ProviderEvidence** (neighbor sightings), **ProviderComment**, and **TaskProvider** (task link); **ApiKey** is the per-household key for machine ingest. See [docs/functionality/providers.md](docs/functionality/providers.md) and [docs/tech/provider-ingest.md](docs/tech/provider-ingest.md)
-9. **Project**: Household home-project tracking (title, location, status, path, notes), with **ProjectPhoto** (private photos in Vercel Blob), **ProjectStep** (a checklist; the dashboard shows each Active project's next undone step) and **ProjectProvider** (a provider linked to the project with its own status: considering, contacted, chosen, passed). **ProjectSuggestion** holds a project's latest AI provider suggestion, **ProjectPlan** its latest AI DIY plan, **ProjectChatMessage** one message of its shared chat, and **AiRequestLog** records each AI ask without any text (the daily cap counts the suggestion and plan rows; chat is uncapped). See [docs/functionality/projects.md](docs/functionality/projects.md) and the AI sections of [docs/tech/architecture.md](docs/tech/architecture.md)
+9. **Project**: Household home-project tracking (title, location, status, path, notes), with **ProjectPhoto** (private photos in Vercel Blob), **ProjectDocument** (PDFs, Word, Excel and images up to 25 MB, uploaded by the browser straight to Blob with a presigned URL and opened through a 5-minute signed link), **ProjectStep** (a checklist; the dashboard shows each Active project's next undone step) and **ProjectProvider** (a provider linked to the project with its own status: considering, contacted, chosen, passed). **ProjectSuggestion** holds a project's latest AI provider suggestion, **ProjectPlan** its latest AI DIY plan, **ProjectChatMessage** one message of its shared chat, and **AiRequestLog** records each AI ask without any text (the daily cap counts the suggestion and plan rows; chat is uncapped). See [docs/functionality/projects.md](docs/functionality/projects.md) and the AI sections of [docs/tech/architecture.md](docs/tech/architecture.md)
 
 ### Task Scheduling System
 

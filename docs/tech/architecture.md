@@ -15,7 +15,7 @@ Nitro server routes (server/api/**)
    ▼
 Service layer (server/services/**)
    ├─→ Prisma → CockroachDB            (all application data)
-   ├─→ Vercel Blob, private store      (project photos)
+   ├─→ Vercel Blob, private store      (project photos and documents)
    └─→ Mailjet / Slack webhooks        (notifications)
 
 Vercel Cron ──→ /api/scheduler/run, /api/scheduler/reminders
@@ -75,7 +75,7 @@ Defined in `prisma/schema.prisma`. Every household-owned model carries `househol
 | Identity | `User`, `Household`, `FormerHouseholdMember` |
 | Tasks | `Category`, `TaskDefinition`, `TaskOccurrence`, `OccurrenceHistoryLog`, `TaskHistoryLog` |
 | Providers | `Provider`, `ProviderCategory`, `ProviderStatus`, `ProviderContact`, `ProviderEvidence`, `ProviderComment`, `TaskProvider`, `ApiKey` |
-| Projects | `Project`, `ProjectPhoto`, `ProjectStep`, `ProjectProvider`, `ProjectSuggestion`, `ProjectPlan` |
+| Projects | `Project`, `ProjectPhoto`, `ProjectDocument`, `ProjectStep`, `ProjectProvider`, `ProjectSuggestion`, `ProjectPlan` |
 | AI usage | `AiRequestLog` |
 
 Conventions:
@@ -112,7 +112,7 @@ The full endpoint list is in [api-endpoints.md](api-endpoints.md).
 | Notifications and reminders | `NotificationService`, `server/services/notifications/*`, `/api/scheduler/reminders` | [notification-system.md](notification-system.md) |
 | Provider directory and machine ingest | `Provider*Service`, `ApiKeyService`, `/api/ingest/providers` | [provider-ingest.md](provider-ingest.md) |
 | Project and task ingest | `ProjectIngestService`, `TaskIngestService`, `/api/ingest/projects`, `/api/ingest/tasks` | [project-task-ingest.md](project-task-ingest.md) |
-| Projects, photos, steps and provider links | `ProjectService`, `ProjectPhotoService`, `ProjectStepService`, `ProjectProviderService` | Below |
+| Projects, photos, documents, steps and provider links | `ProjectService`, `ProjectPhotoService`, `ProjectDocumentService`, `ProjectStepService`, `ProjectProviderService` | Below |
 | AI help: provider suggestions, the DIY plan and the project chat | `ProviderSuggestionService`, `ProjectPlanService`, `ProjectChatService`, `/api/projects/[id]/suggestions`, `/api/projects/[id]/plan`, `/api/projects/[id]/chat`, `server/utils/ai-ask.ts`, `ollama.ts`, `suggestion-*.ts`, `plan-*.ts`, `chat-*.ts`, `provider-ranking.ts`, `utils/chat-markdown.ts` | Below |
 | Dashboard | `DashboardService`, `/api/dashboard`, `/api/projects/next-steps` | Below |
 
@@ -122,6 +122,16 @@ The full endpoint list is in [api-endpoints.md](api-endpoints.md).
 - `ProjectPhotoService` checks that both files are JPEGs within the size limits, writes them to the private Vercel Blob store under `households/{householdId}/projects/{projectId}/`, then creates the `ProjectPhoto` row. The per-project photo cap is checked before the write and again after the row exists, so concurrent uploads cannot exceed it.
 - `server/utils/blob-storage.ts` is the only module that talks to Vercel Blob, which lets tests fake storage.
 - Photos are never served from a public URL. The photo GET route streams the blob through the household auth wrapper, and `components/projects/AuthedImage.vue` fetches it with the bearer token.
+
+### Project Documents
+
+Documents (PDF, DOCX, XLSX, JPEG, PNG; 25 MB; 30 per project) never pass through a function, because Vercel caps a function's request body at 4.5 MB.
+
+- **Upload.** `components/projects/ProjectDocuments.vue` makes the document id (a uuid) and the path `households/{householdId}/projects/{projectId}/documents/{id}/{safeFileName}` with `utils/project-documents.ts` (shared with the server), then calls `uploadPresigned` from `@vercel/blob/client` (dynamically imported on the first upload). The SDK asks `POST /api/projects/[id]/documents/upload`, which runs `handlePresignedUpload` in `blob-storage.ts`: `ProjectDocumentService.authorizeUpload` checks the household, project, path shape, cap and id, and the route issues a signed token for that exact path with the extension's type only, 25 MB, 10 minutes, no random suffix and no overwrite. The browser then PUTs straight to Blob. The PUT is signed over the path the browser sent, which is why `ProjectDetail` carries `householdId`.
+- **Register.** The browser then calls `POST /api/projects/[id]/documents`. The service heads the blob for its real size and type, refuses (and deletes) a mismatched type or an oversize file, checks the cap before and after the insert, and returns the existing row for a repeated id, so a retry is harmless. No upload-completed webhook is used (it cannot reach localhost); `handleUploadPresigned` still demands a webhook key, so `blob-storage.ts` passes the placeholder `'unused'` and refuses callback bodies before calling it.
+- **Open.** `POST /api/projects/[id]/documents/[documentId]/link` returns a presigned GET URL valid 5 minutes, served from the store's own domain with the file's type and `Content-Disposition: inline; filename="<safeFileName>"`. Bytes never come from the app's origin. The browser opens a blank tab inside the tap (so a phone does not block it) and points it at the URL.
+- **Gaps.** A file uploaded but never registered stays in the store with no row (unreachable). A deleted project keeps its document rows and blobs, as with photos. Documents reach no model.
+
 - The "next step" rule (first undone step in order) lives in `utils/project-steps.ts` and is shared by the project page and the dashboard list.
 - `ProjectProvider` links a provider to a project with a per-project status (`considering`, `contacted`, `chosen`, `passed`), unrelated to the provider's household `ProviderStatus` and to `TaskProvider`. `ProjectProviderService` owns the link rules (household checks, the 25-link cap, link order) and exports the select, filter and mapper that `ProjectService` reuses to put links on the project detail and chosen names on the list. Links are never deleted automatically: reads filter out links whose provider is removed or whose project is deleted.
 - `Project.providerCategoryId` is the project's saved provider category. The "Find a provider" modal (`components/projects/FindProviderModal.vue`, with `FindProviderDetails.vue` for the details view) lists providers through the existing `GET /api/providers` (search, category, status, sort, hidden statuses included), starting on that category, and loads details through `GET /api/providers/[id]`; it adds no endpoints. `ProviderCategoryService.remove` moves projects along with providers when a replacement is given; otherwise the foreign key clears the column.
@@ -172,7 +182,7 @@ Design: [the slice 5 spec](../superpowers/specs/2026-10-08-projects-ai-chat-desi
 |---------|----------|---------------|
 | Google Sign-In | Authentication (ID token as bearer) | `NUXT_PUBLIC_GOOGLE_CLIENT_ID` |
 | CockroachDB | All application data | `DATABASE_URL` |
-| Vercel Blob (private store) | Project photos | On Vercel, the project's OIDC token (no variable). Locally, `BLOB_READ_WRITE_TOKEN`, which `server/utils/blob-storage.ts` passes to the SDK explicitly. Never set `BLOB_STORE_ID` locally: with a linked repo (`.vercel/`) it makes the SDK prefer a development OIDC token, which the store refuses with a 403 |
+| Vercel Blob (private store) | Project photos and documents | On Vercel, the project's OIDC token (no variable). Locally, `BLOB_READ_WRITE_TOKEN`, which `server/utils/blob-storage.ts` passes to the SDK explicitly. Never set `BLOB_STORE_ID` locally: with a linked repo (`.vercel/`) it makes the SDK prefer a development OIDC token, which the store refuses with a 403 |
 | Ollama Cloud | AI provider suggestions, the DIY plan and the project chat (chat also uses its `web_search` endpoint on the same key) | `OLLAMA_API_KEY`; `AI_SUGGESTIONS_MODEL` (optional, defaults to `glm-5.3-flash`; suggestions and plans); `AI_CHAT_MODEL` (optional, defaults to `glm-5.3-flash`, which reads images; the chat); `AI_SUGGESTIONS_HOUSEHOLD_IDS` (comma-separated household ids allowed to use all three; unset means nobody). Read from `process.env` at call time in `server/utils/ai-config.ts` |
 | Mailjet | Email notifications | `MJ_APIKEY_PUBLIC`, `MJ_APIKEY_PRIVATE` |
 | Slack incoming webhooks | Slack notifications | Per-user webhook URL stored in notification preferences |
@@ -180,7 +190,7 @@ Design: [the slice 5 spec](../superpowers/specs/2026-10-08-projects-ai-chat-desi
 
 Other environment variables: `APP_URL` (base URL used in notification links; defaults to `https://adulting.diy`) and `DEV_LOGIN_BYPASS` (development only).
 
-Local development and production share one blob store, so a local photo upload is a real upload.
+Local development and production share one blob store, so a local photo or document upload is a real upload.
 
 `nuxt.config.ts` sets `nitro.vercel.functions.maxDuration` to 300 seconds (Fluid compute is on, which allows 300 on every plan) so a chat reply with searches (up to 60 s) or a plan (45 s) can finish. Nitro deploys the server as one function, so the limit applies to every route, including the scheduled jobs below.
 
