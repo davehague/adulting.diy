@@ -168,3 +168,25 @@ export interface ProjectIngestResult {
   skipped: { index: number; id: string; title: string; reason: string }[];
   errors: { index: number; title: string; message: string }[];
 }
+
+// A project as GET /api/ingest/projects lists it, so a script can find the id to attach files to.
+export interface IngestProjectSummary {
+  id: string;
+  title: string;
+  location: string | null;
+  status: string;
+  path: string | null;
+  createdAt: Date | string;
+}
+
+// What a script needs to PUT a document straight to storage (POST /api/ingest/projects/:id/documents/upload-url).
+export interface DocumentUploadUrl {
+  documentId: string;
+  fileName: string;
+  uploadUrl: string;
+  method: 'PUT';
+  // send these with the PUT
+  headers: Record<string, string>;
+  maxBytes: number;
+  expiresAt: string;
+}

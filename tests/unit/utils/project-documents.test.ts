@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   defaultDocumentName,
+  displayNameFromStoredFile,
   documentBlobPath,
   documentExtension,
   formatDocumentSize,
@@ -118,5 +119,16 @@ describe('formatDocumentSize', () => {
     expect(formatDocumentSize(860160)).toBe('840 KB')
     expect(formatDocumentSize(2516582)).toBe('2.4 MB')
     expect(formatDocumentSize(1024 * 1024)).toBe('1.0 MB')
+  })
+})
+
+describe('displayNameFromStoredFile', () => {
+  it('turns the stored name back into words', () => {
+    expect(displayNameFromStoredFile('Owens-quote.pdf')).toBe('Owens quote')
+    expect(displayNameFromStoredFile('back_porch--brief.v2.pdf')).toBe('back porch brief.v2')
+  })
+  it('falls back to Document and cuts to 120', () => {
+    expect(displayNameFromStoredFile('.pdf')).toBe('Document')
+    expect(displayNameFromStoredFile(`${'a'.repeat(200)}.pdf`)).toHaveLength(120)
   })
 })

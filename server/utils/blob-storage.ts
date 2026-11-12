@@ -1,5 +1,5 @@
 import type { IncomingMessage } from 'node:http';
-import { put, get, del, head, issueSignedToken, presignUrl, BlobNotFoundError } from '@vercel/blob';
+import { put, get, del, head, list, issueSignedToken, presignUrl, BlobNotFoundError } from '@vercel/blob';
 import { handleUploadPresigned, type HandleUploadPresignedBody } from '@vercel/blob/client';
 import { HttpError } from '@/server/utils/api-errors';
 
@@ -100,4 +100,35 @@ export const handlePresignedUpload = async (
       return { token, urlOptions: { addRandomSuffix: false, allowOverwrite: false, validUntil } };
     },
   });
+};
+
+// The Blob API version @vercel/blob sends on every request (its own BLOB_API_VERSION). A script PUTting to a presigned
+// URL must send it too, or Blob stores a PDF as a download rather than one that opens in the browser.
+// tests/unit/utils/blob-api-version.test.ts fails if an SDK upgrade changes it.
+export const BLOB_API_VERSION = '12';
+
+// A PUT URL a script can use with plain HTTP (curl, Python): one path, one type, the size cap, no overwrite.
+export const presignPrivatePut = async (
+  pathname: string,
+  grant: UploadGrant,
+): Promise<{ url: string; headers: Record<string, string>; expiresAt: string }> => {
+  const validUntil = Date.now() + grant.ttlMs;
+  const limits = { allowedContentTypes: [grant.contentType], maximumSizeInBytes: grant.maxBytes };
+  const token = await issueSignedToken({ pathname, operations: ['put'], validUntil, ...limits, ...authOptions() });
+  const { presignedUrl } = await presignUrl(token, {
+    operation: 'put',
+    pathname,
+    access: 'private',
+    validUntil,
+    ...limits,
+    addRandomSuffix: false,
+    allowOverwrite: false,
+  });
+  return { url: presignedUrl, headers: { 'x-api-version': BLOB_API_VERSION }, expiresAt: new Date(validUntil).toISOString() };
+};
+
+// The one blob under a prefix, or null when there is none or (never expected) more than one.
+export const findPrivateBlob = async (prefix: string): Promise<string | null> => {
+  const { blobs } = await list({ prefix, limit: 2, ...authOptions() });
+  return blobs.length === 1 ? blobs[0].pathname : null;
 };

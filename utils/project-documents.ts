@@ -62,3 +62,9 @@ export const formatDocumentSize = (bytes: number): string => {
   if (bytes < mb) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / mb).toFixed(1)} MB`;
 };
+
+// The stored file name back into words, for a document registered without a name (the original name is not kept).
+export const displayNameFromStoredFile = (fileName: string): string => {
+  const name = splitExtension(fileName).base.replace(/[-_]+/g, ' ').trim().slice(0, MAX_DOCUMENT_NAME_LENGTH).trim();
+  return name || 'Document';
+};
