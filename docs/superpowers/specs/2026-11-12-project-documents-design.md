@@ -98,7 +98,7 @@ The URL is served by Blob with the file's own content type, so PDFs and images o
 
 ### Reading
 
-The project detail response gains `documents: ProjectDocumentDto[]` (id, name, note, fileName, contentType, sizeBytes, createdAt), newest first. Metadata only; no URLs.
+The project detail response gains `documents: ProjectDocumentDto[]` (id, name, note, fileName, contentType, sizeBytes, createdAt), newest first. Metadata only; no URLs. It also gains `householdId`, because the spike showed the browser's PUT is signed over the exact path the browser sends, so the browser has to build the full path itself.
 
 ### The section
 
