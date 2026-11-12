@@ -3,6 +3,7 @@ import prisma from '@/server/utils/prisma/client';
 import { HttpError } from '@/server/utils/api-errors';
 import { stepOrder, stepSelect } from '@/server/services/ProjectStepService';
 import { linkOrder, linkSelect, toProviderLinks, visibleLinkWhere } from '@/server/services/ProjectProviderService';
+import { documentOrder, documentSelect } from '@/server/services/ProjectDocumentService';
 import {
   DEFAULT_LIST_STATUSES,
   type ProjectCreateInput,
@@ -23,12 +24,14 @@ const detailInclude = {
   },
   steps: { orderBy: stepOrder, select: stepSelect },
   providers: { where: visibleLinkWhere, orderBy: linkOrder, select: linkSelect },
+  documents: { orderBy: documentOrder, select: documentSelect },
 } satisfies Prisma.ProjectInclude;
 
 type ProjectWithPhotos = Prisma.ProjectGetPayload<{ include: typeof detailInclude }>;
 
 const toDetail = (project: ProjectWithPhotos): ProjectDetail => ({
   id: project.id,
+  householdId: project.householdId,
   title: project.title,
   location: project.location,
   status: project.status as ProjectStatus,
@@ -40,6 +43,7 @@ const toDetail = (project: ProjectWithPhotos): ProjectDetail => ({
   photos: project.photos,
   steps: project.steps,
   providers: toProviderLinks(project.providers),
+  documents: project.documents,
 });
 
 export class ProjectService {

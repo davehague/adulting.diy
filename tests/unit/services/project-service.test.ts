@@ -27,6 +27,7 @@ const row = (overrides: Record<string, unknown> = {}) => ({
   steps: [],
   providerCategoryId: null,
   providers: [],
+  documents: [],
   ...overrides,
 })
 
@@ -42,6 +43,14 @@ describe('ProjectService', () => {
       expect(where.householdId).toBe('h1')
       expect(where.metaStatus).toBe('active')
       expect(where.status).toEqual({ in: ['planning', 'active'] })
+    })
+
+    it('does not load documents for the list', async () => {
+      db.project.findMany.mockResolvedValue([])
+      await service.list('h1', {})
+      const query = db.project.findMany.mock.calls[0][0]
+      expect(query.include?.documents).toBeUndefined()
+      expect(query.select?.documents).toBeUndefined()
     })
 
     it('filters to projects with no path when path is none', async () => {
@@ -120,6 +129,22 @@ describe('ProjectService', () => {
       const result = await service.get('h1', 'p1')
       expect(result.title).toBe('Paint ceiling spots')
       expect(result.photos).toEqual([{ id: 'ph1', width: 2000, height: 1500, position: 0 }])
+    })
+
+    it('returns the household id and the documents, newest first, as metadata only', async () => {
+      const documents = [{
+        id: 'd1', name: 'Owens quote', note: null, fileName: 'Owens-quote.pdf', contentType: 'application/pdf',
+        sizeBytes: 2048, createdAt: new Date('2026-11-12T12:00:00Z'),
+      }]
+      db.project.findFirst.mockResolvedValue(row({ documents }))
+      const result = await service.get('h1', 'p1')
+      expect(result.householdId).toBe('h1')
+      expect(result.documents).toEqual(documents)
+      const include = db.project.findFirst.mock.calls[0][0].include
+      expect(include.documents.orderBy).toEqual({ createdAt: 'desc' })
+      expect(include.documents.select).toEqual({
+        id: true, name: true, note: true, fileName: true, contentType: true, sizeBytes: true, createdAt: true,
+      })
     })
 
     it('returns the project with its steps, asked for in position then creation order', async () => {

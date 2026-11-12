@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { HttpError } from '@/server/utils/api-errors';
 import {
   DEFAULT_LIST_STATUSES,
+  MAX_DOCUMENT_NAME_LENGTH,
+  MAX_DOCUMENT_NOTE_LENGTH,
   MAX_PROJECT_STEPS,
   MAX_STEP_ESTIMATE_MINUTES,
   MAX_STEP_TEXT_LENGTH,
@@ -106,6 +108,36 @@ export const projectProviderStatusSchema = z.object({
 });
 
 const dimension = z.coerce.number().int().min(1).max(20000);
+const documentName = z
+  .string({ required_error: 'Name is required', invalid_type_error: 'Name is required' })
+  .trim()
+  .min(1, "Name can't be blank")
+  .max(MAX_DOCUMENT_NAME_LENGTH, `Name must be ${MAX_DOCUMENT_NAME_LENGTH} characters or fewer`);
+
+const documentNote = z
+  .string()
+  .trim()
+  .max(MAX_DOCUMENT_NOTE_LENGTH, `Note must be ${MAX_DOCUMENT_NOTE_LENGTH} characters or fewer`)
+  .transform(emptyToNull)
+  .nullable();
+
+export const documentRegisterSchema = z.object(
+  {
+    id: z.string().uuid('Invalid document id'),
+    blobPath: z.string().min(1, 'Invalid document path').max(400, 'Invalid document path'),
+    name: documentName,
+    note: documentNote.optional().transform((value) => value ?? null),
+  },
+  { required_error: 'Document details are required', invalid_type_error: 'Document details are required' },
+);
+
+export const documentUpdateSchema = z
+  .object(
+    { name: documentName.optional(), note: documentNote.optional() },
+    { required_error: 'Nothing to update', invalid_type_error: 'Nothing to update' },
+  )
+  .refine((value) => value.name !== undefined || value.note !== undefined, 'Nothing to update');
+
 export const photoDimensionsSchema = z.object({ width: dimension, height: dimension });
 
 const isStatus = (value: string): value is ProjectStatus =>
