@@ -1,6 +1,6 @@
 # Project file ingest: design
 
-Written 2026-11-12, the same day the Documents section shipped (main 2350dbc). Status: approved in chat by David ("take all four and write the spec"); the plan comes next.
+Written 2026-11-12, the same day the Documents section shipped (main 2350dbc). Status: the four decisions are David's ("take all four and write the spec"); this document awaits his approval before the plan.
 
 ## Intent
 
@@ -9,7 +9,7 @@ Let a script holding the household API key put files on a project: documents (qu
 ## Goals
 
 - A script in any language (curl, Python, Node) can find a project, attach a document of up to 25 MB, and attach a photo.
-- Every rule the browser enforces still holds: types, sizes, caps, household isolation, safe retries.
+- Every rule the browser enforces still holds: types, sizes, caps, household isolation, safe retries for documents (photos: see Settled below).
 - No new storage path and no new table: the same services, the same Blob layout, the same rows.
 
 ## Non-goals
@@ -53,9 +53,12 @@ Lists the household's projects that are not deleted, every status, newest first:
 - It calls `ProjectDocumentService.authorizeUpload` with that path, which checks the project (404), the shape, the cap (409) and the id.
 - It returns `{ documentId, fileName, uploadUrl, method: "PUT", headers: { "x-api-version": "12" }, maxBytes: 26214400, expiresAt }`. The URL is a presigned PUT for that one path, that type only, 25 MB, valid 10 minutes, no overwrite, no random suffix. The header map is what the caller must send with the PUT; its version value is read from one constant in `blob-storage.ts` with a comment naming the SDK constant it mirrors.
 
-**2. The caller PUTs the file** to `uploadUrl` with those headers. Example: `curl -X PUT -H 'x-api-version: 12' --data-binary @"Owens quote.pdf" "$UPLOAD_URL"`. A wrong type, an oversize file or an expired URL is refused by Blob.
+**2. The caller PUTs the file** to `uploadUrl` with those headers. The request's own `Content-Type` does not matter: the spike's PUTs with `application/x-www-form-urlencoded` (curl's default) and with `application/pdf` both stored `application/pdf`, because Blob takes the type from the path's extension and checks it against the token. So the returned headers carry only `x-api-version` (claude's call, from the spike). Example: `curl -X PUT -H 'x-api-version: 12' --data-binary @"Owens quote.pdf" "$UPLOAD_URL"`. A wrong type, an oversize file or an expired URL is refused by Blob.
 
 **3. `POST /api/ingest/projects/:id/documents`** with `{ documentId, name?, note? }`.
+
+- `documentId` must be a lower-case uuid (400 otherwise) before it is used in a Blob prefix (claude's call).
+- The project is checked first (active, this household; 404 otherwise), so a foreign or deleted project gets the 404 the conventions promise rather than "Upload not found" (claude's call).
 
 - The server finds the stored file by listing the Blob prefix `households/{householdId}/projects/{projectId}/documents/{documentId}/` (one result expected; none → 400 "Upload not found. Try again."). This keeps the caller from carrying the path.
 - `name` defaults to the stored file name without its extension, with `-` and `_` shown as spaces (so `Owens-quote.pdf` becomes "Owens quote"); the browser default (the original name) is not available here because nothing stores it between the calls (claude's call). Same limits as the page: name 1 to 120 after trimming, note up to 200, blank note → null.
@@ -70,6 +73,12 @@ Lists the household's projects that are not deleted, every status, newest first:
 - Routes: `server/api/ingest/projects.get.ts`, `server/api/ingest/projects/[id]/documents/upload-url.post.ts`, `server/api/ingest/projects/[id]/documents.post.ts`, `server/api/ingest/projects/[id]/photos.post.ts`. Nitro serves `projects.post.ts` and `projects/` side by side, as it does for photos.
 - `blob-storage.ts` gains `presignPrivatePut(pathname, grant): Promise<{ url: string; headers: Record<string, string>; expiresAt: string }>` and `findPrivateBlob(prefix): Promise<string | null>` (a `list` with that prefix and limit 2; more than one result is treated as "not found", since the shape allows only one).
 - The photo route's multipart parsing is shared with the browser route rather than copied (extract a small helper; the builder decides its shape).
+
+### Settled after the builder check (claude's calls)
+
+- **Photo retries are not idempotent.** The photo route has no caller-supplied id, so a retry after a lost response adds a second copy (up to the cap). Accepted and documented in the tech doc: a script that is unsure should list the project's photos on the page or accept a duplicate it can delete. An idempotency key would need a schema change, which this slice rules out.
+- **Register after a delete** answers 400 "Upload not found. Try again.", because deleting a document removes its file.
+- **Photo body size** mirrors the browser route: no extra `Content-Length` pre-check; Vercel itself refuses bodies over 4.5 MB with 413, and the service refuses a full image over 3 MB or a thumbnail over 200 KB.
 
 ## Where it meets existing features (impact analysis)
 
