@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('@/server/utils/prisma/client', () => ({
   default: {
     project: { findFirst: vi.fn() },
-    projectPhoto: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), delete: vi.fn(), count: vi.fn() },
+    projectPhoto: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), delete: vi.fn(), count: vi.fn(), update: vi.fn() },
+    $transaction: vi.fn(),
   },
 }))
 
@@ -40,6 +41,7 @@ describe('ProjectPhotoService', () => {
     blob.put.mockResolvedValue(undefined)
     blob.remove.mockResolvedValue(undefined)
     db.projectPhoto.count.mockResolvedValue(1)
+    ;(prisma.$transaction as unknown as ReturnType<typeof vi.fn>).mockImplementation(async (fn: (tx: unknown) => unknown) => fn(prisma))
   })
 
   describe('add', () => {
@@ -156,6 +158,132 @@ describe('ProjectPhotoService', () => {
       await expect(service.add('h1', 'p1', 'u1', upload())).rejects.toMatchObject({ statusCode: 502 })
       expect(db.projectPhoto.create).not.toHaveBeenCalled()
       expect(blob.remove).toHaveBeenCalled()
+    })
+  })
+
+  describe('insert', () => {
+    const ID = '55555555-5555-4555-8555-555555555555'
+    const createdAt = new Date('2026-11-02')
+    const setup = () => {
+      db.project.findFirst.mockResolvedValue({ id: 'p1' })
+      db.projectPhoto.findMany.mockResolvedValue([])
+      db.projectPhoto.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({ ...data, createdAt }))
+    }
+
+    it('returns the row DTO with createdAt', async () => {
+      setup()
+      const result = await service.insert('h1', 'p1', 'u1', upload())
+      const data = db.projectPhoto.create.mock.calls[0][0].data
+      expect(result).toEqual({ id: data.id, width: 2000, height: 1500, position: 0, createdAt })
+    })
+
+    it('without an id names the blobs after the generated id', async () => {
+      setup()
+      await service.insert('h1', 'p1', 'u1', upload())
+      const data = db.projectPhoto.create.mock.calls[0][0].data
+      expect(data.fullPath).toBe(`households/h1/projects/p1/${data.id}-full.jpg`)
+      expect(data.thumbPath).toBe(`households/h1/projects/p1/${data.id}-thumb.jpg`)
+    })
+
+    it('with an id uses it for the row but keeps it out of the blob paths', async () => {
+      setup()
+      const result = await service.insert('h1', 'p1', 'u1', upload(), { id: ID })
+      const data = db.projectPhoto.create.mock.calls[0][0].data
+      expect(data.id).toBe(ID)
+      expect(result.id).toBe(ID)
+      expect(data.fullPath).toMatch(/^households\/h1\/projects\/p1\/[0-9a-f-]{36}-full\.jpg$/)
+      expect(data.thumbPath).toMatch(/^households\/h1\/projects\/p1\/[0-9a-f-]{36}-thumb\.jpg$/)
+      expect(data.fullPath).not.toContain(ID)
+      expect(data.thumbPath).not.toContain(ID)
+      expect(blob.put.mock.calls.map((c) => c[0])).toEqual([data.fullPath, data.thumbPath])
+    })
+
+    it('uses a different file key for each insert with the same id, and a losing create removes only its own paths', async () => {
+      setup()
+      const winner = await service.insert('h1', 'p1', 'u1', upload(), { id: ID })
+      const winnerData = db.projectPhoto.create.mock.calls[0][0].data
+      expect(winner.id).toBe(ID)
+
+      db.projectPhoto.create.mockRejectedValueOnce(Object.assign(new Error('Unique constraint failed'), { code: 'P2002' }))
+      blob.remove.mockClear()
+      await expect(service.insert('h1', 'p1', 'u1', upload(), { id: ID })).rejects.toMatchObject({ code: 'P2002' })
+      const loserData = db.projectPhoto.create.mock.calls[1][0].data
+      expect(loserData.fullPath).not.toBe(winnerData.fullPath)
+      expect(loserData.thumbPath).not.toBe(winnerData.thumbPath)
+      expect(blob.remove).toHaveBeenCalledTimes(1)
+      expect(blob.remove).toHaveBeenCalledWith([loserData.fullPath, loserData.thumbPath])
+      const removed = blob.remove.mock.calls[0][0] as string[]
+      expect(removed).not.toContain(winnerData.fullPath)
+      expect(removed).not.toContain(winnerData.thumbPath)
+      expect(removed.some((path) => path.includes(`${ID}-full.jpg`) || path.includes(`${ID}-thumb.jpg`))).toBe(false)
+    })
+  })
+
+  describe('reorder', () => {
+    const createdAt = new Date('2026-11-02')
+    const tx = () => prisma.$transaction as unknown as ReturnType<typeof vi.fn>
+
+    it('returns 404 for a missing or deleted project and opens no transaction', async () => {
+      db.project.findFirst.mockResolvedValue(null)
+      await expect(service.reorder('h1', 'p1', ['a'])).rejects.toMatchObject({ statusCode: 404 })
+      expect(db.project.findFirst.mock.calls[0][0].where).toEqual({ id: 'p1', householdId: 'h1', metaStatus: 'active' })
+      expect(tx()).not.toHaveBeenCalled()
+    })
+
+    it('rejects a list that misses a photo or names an unknown one, writing nothing', async () => {
+      db.project.findFirst.mockResolvedValue({ id: 'p1' })
+      db.projectPhoto.findMany.mockResolvedValue([{ id: 'a', position: 0 }, { id: 'b', position: 1 }])
+      for (const ids of [['a'], ['a', 'b', 'c'], ['a', 'x'], []]) {
+        await expect(service.reorder('h1', 'p1', ids)).rejects.toMatchObject({
+          statusCode: 400, message: 'photoIds must list every photo in this project exactly once',
+        })
+      }
+      expect(db.projectPhoto.update).not.toHaveBeenCalled()
+    })
+
+    it('rewrites positions to the index, skipping rows already there, and returns the rows in order', async () => {
+      db.project.findFirst.mockResolvedValue({ id: 'p1' })
+      db.projectPhoto.findMany
+        .mockResolvedValueOnce([{ id: 'a', position: 0 }, { id: 'b', position: 4 }, { id: 'c', position: 2 }])
+        .mockResolvedValueOnce([
+          { id: 'a', position: 0, width: 1, height: 1, createdAt },
+          { id: 'c', position: 1, width: 2, height: 1, createdAt },
+          { id: 'b', position: 2, width: 3, height: 1, createdAt },
+        ])
+      const result = await service.reorder('h1', 'p1', ['a', 'c', 'b'])
+      expect(db.projectPhoto.update.mock.calls).toEqual([
+        [{ where: { id: 'c' }, data: { position: 1 } }],
+        [{ where: { id: 'b' }, data: { position: 2 } }],
+      ])
+      expect(db.projectPhoto.findMany.mock.calls[1][0]).toEqual({
+        where: { projectId: 'p1' },
+        orderBy: { position: 'asc' },
+        select: { id: true, position: true, width: true, height: true, createdAt: true },
+      })
+      expect(result.map((p) => p.id)).toEqual(['a', 'c', 'b'])
+      expect(tx()).toHaveBeenCalledTimes(1)
+    })
+
+    it('allows an empty list for a project with no photos', async () => {
+      db.project.findFirst.mockResolvedValue({ id: 'p1' })
+      db.projectPhoto.findMany.mockResolvedValue([])
+      await expect(service.reorder('h1', 'p1', [])).resolves.toEqual([])
+      expect(db.projectPhoto.update).not.toHaveBeenCalled()
+    })
+
+    it('turns a write conflict (P2034) into a 409 asking to retry', async () => {
+      db.project.findFirst.mockResolvedValue({ id: 'p1' })
+      tx().mockRejectedValue(Object.assign(new Error('write conflict'), { code: 'P2034' }))
+      await expect(service.reorder('h1', 'p1', ['a'])).rejects.toMatchObject({
+        statusCode: 409, message: 'Photos changed while reordering. Try again.',
+      })
+    })
+
+    it('rethrows other transaction errors', async () => {
+      db.project.findFirst.mockResolvedValue({ id: 'p1' })
+      const down = new Error('db down')
+      tx().mockRejectedValue(down)
+      await expect(service.reorder('h1', 'p1', ['a'])).rejects.toBe(down)
     })
   })
 

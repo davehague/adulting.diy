@@ -4,6 +4,7 @@ import {
   DEFAULT_LIST_STATUSES,
   MAX_DOCUMENT_NAME_LENGTH,
   MAX_DOCUMENT_NOTE_LENGTH,
+  MAX_PROJECT_PHOTOS,
   MAX_PROJECT_STEPS,
   MAX_STEP_ESTIMATE_MINUTES,
   MAX_STEP_TEXT_LENGTH,
@@ -153,6 +154,35 @@ export const ingestDocumentRegisterSchema = z.object(
 );
 
 export const photoDimensionsSchema = z.object({ width: dimension, height: dimension });
+
+// --- Ingest: manage documents and photos ---------------------------------------------------------------------------
+// The browser's document rules, plus .strict() so a script's typo is an error rather than a silent no-op.
+export const ingestDocumentUpdateSchema = z
+  .object(
+    { name: documentName.optional(), note: documentNote.optional() },
+    { required_error: 'Body must be { name?, note? }', invalid_type_error: 'Body must be { name?, note? }' },
+  )
+  .strict()
+  .refine((value) => value.name !== undefined || value.note !== undefined, 'Nothing to update');
+
+// A photo id chosen by the script; lowercased because ProjectPhoto.id is a plain string column.
+export const ingestPhotoIdSchema = z
+  .string()
+  .uuid('photoId must be a UUID')
+  .transform((value) => value.toLowerCase());
+
+export const ingestPhotoOrderSchema = z
+  .object(
+    {
+      photoIds: z
+        .array(z.string().min(1, 'photoIds must be photo ids'), { required_error: 'photoIds is required', invalid_type_error: 'photoIds must be a list of photo ids' })
+        .max(MAX_PROJECT_PHOTOS, `photoIds can list at most ${MAX_PROJECT_PHOTOS} photos`),
+    },
+    { required_error: 'Body must be { photoIds }', invalid_type_error: 'Body must be { photoIds }' },
+  )
+  .strict()
+  .refine((value) => new Set(value.photoIds).size === value.photoIds.length, 'photoIds must not repeat a photo');
+// --------------------------------------------------------------------------------------------------------------------
 
 const isStatus = (value: string): value is ProjectStatus =>
   (PROJECT_STATUSES as readonly string[]).includes(value);
