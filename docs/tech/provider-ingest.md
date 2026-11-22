@@ -1,5 +1,7 @@
 # Provider Ingest - Technical Reference
 
+> **Calling the API from a script or an agent?** Start with [docs/api/README.md](../api/README.md): base URL, keys, the rules that matter, a copy-paste helper and the consumers list. This page is the full contract.
+
 Providers (see [functionality doc](../functionality/providers.md)) can be loaded by machines through a per-household API key. This is how the neighborhood watcher feeds contractor recommendations into a household.
 
 ## Data Model

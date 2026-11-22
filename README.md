@@ -122,6 +122,7 @@ Project documentation is organized in `docs/`:
 | [docs/functionality/](docs/functionality/) | Product | One doc per capability, no code: [tasks](docs/functionality/task-management.md), [notifications and reminders](docs/functionality/notifications-and-reminders.md), [households](docs/functionality/household-management.md), [providers](docs/functionality/providers.md), [projects](docs/functionality/projects.md) |
 | [docs/functionality/changelog.md](docs/functionality/changelog.md) | Product | What changed, from the user's point of view |
 | [docs/tech/architecture.md](docs/tech/architecture.md) | Developers | System map: structure, request flow, auth, data model, integrations |
+| [docs/api/](docs/api/README.md) | Script and agent authors | How to use the household API: base URL, keys, rules, a copy-paste helper, and who calls it |
 | [docs/tech/](docs/tech/) | Developers | Subsystem docs: [API reference](docs/tech/api-endpoints.md), [task scheduling](docs/tech/task-scheduling.md), [notification system](docs/tech/notification-system.md), [provider ingest](docs/tech/provider-ingest.md), [project and task ingest](docs/tech/project-task-ingest.md) (what a script can do with the household API key), [testing](docs/tech/testing.md), [dev login bypass](docs/tech/dev-login-bypass.md) |
 | [docs/adrs/](docs/adrs/) | Developers | Architectural Decision Records |
 | [docs/brand.md](docs/brand.md) | Everyone | Colors, typography, component patterns |

@@ -1,5 +1,7 @@
 # Project and Task Ingest - Technical Reference
 
+> **Calling the API from a script or an agent?** Start with [docs/api/README.md](../api/README.md): base URL, keys, the rules that matter, a copy-paste helper and the consumers list. This page is the full contract.
+
 Home projects (see [functionality doc](../functionality/projects.md)) and tasks (see [functionality doc](../functionality/task-management.md)) can be created by machines with the same per-household API key the provider ingest uses, and an existing project can be read, updated and deleted, its steps managed, and documents and photos attached, renamed, reordered and removed. Key creation, hashing and revocation are in [provider-ingest.md](provider-ingest.md#api-keys). This is how lists kept elsewhere (Todoist, scripts) are moved into a household, and how a script finishes a project without anyone opening the app to clean up.
 
 ## Key Files
