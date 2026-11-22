@@ -34,7 +34,7 @@ const location = z
 const notes = z
   .string()
   .trim()
-  .max(5000, 'Notes must be 5000 characters or fewer')
+  .max(MAX_PROJECT_NOTES_LENGTH, `Notes must be ${MAX_PROJECT_NOTES_LENGTH} characters or fewer`)
   .transform(emptyToNull)
   .nullable()
   .optional();
@@ -182,7 +182,7 @@ export const ingestProjectUpdateSchema = z
       location,
       notes,
       notesAppend: z
-        .string({ invalid_type_error: "notesAppend can't be blank" })
+        .string({ invalid_type_error: 'notesAppend must be text' })
         .trim()
         .min(1, "notesAppend can't be blank")
         .max(MAX_PROJECT_NOTES_LENGTH, `notesAppend must be ${MAX_PROJECT_NOTES_LENGTH} characters or fewer`)
@@ -190,7 +190,7 @@ export const ingestProjectUpdateSchema = z
       status: z.enum(PROJECT_STATUSES, { message: 'Unknown status' }).optional(),
       path: z.enum(PROJECT_PATHS, { message: 'Unknown path' }).nullable().optional(),
     },
-    { required_error: 'Nothing to update', invalid_type_error: 'Nothing to update' },
+    { required_error: 'Nothing to update', invalid_type_error: 'Body must be a JSON object' },
   )
   .strict()
   .refine((value) => Object.values(value).some((field) => field !== undefined), 'Nothing to update')

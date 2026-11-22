@@ -93,6 +93,13 @@ describe('ingest project routes', () => {
       await expect(call(patchRoute)).rejects.toMatchObject({ message: 'Nothing to update' })
       vi.mocked(readBody).mockResolvedValue({ notes: 'a', notesAppend: 'b' })
       await expect(call(patchRoute)).rejects.toMatchObject({ message: 'Send notes or notesAppend, not both' })
+      // clearing the notes and appending in one call is still both
+      vi.mocked(readBody).mockResolvedValue({ notes: null, notesAppend: 'b' })
+      await expect(call(patchRoute)).rejects.toMatchObject({ message: 'Send notes or notesAppend, not both' })
+      vi.mocked(readBody).mockResolvedValue({ notesAppend: 5 })
+      await expect(call(patchRoute)).rejects.toMatchObject({ message: 'notesAppend must be text' })
+      vi.mocked(readBody).mockResolvedValue('title=x')
+      await expect(call(patchRoute)).rejects.toMatchObject({ message: 'Body must be a JSON object' })
     })
 
     it('passes 403, 404, 409 and 400 from the service through', async () => {

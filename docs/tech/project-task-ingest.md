@@ -208,7 +208,7 @@ Returns the same shape as the GET, after the change.
 
 - Send only the fields to change, and at least one. An empty body, an unknown field (such as `note` or `notes_append`) and `notes` with `notesAppend` all answer 400, so a typo never silently does nothing. The provider category and linked providers are not set here.
 - `notesAppend` answers 400 when the notes would go over 5000 characters, and nothing is written. Use it rather than reading the notes and sending them back with `notes`: it does not overwrite a change someone made in between. If the notes keep changing while it writes, it gives up after three tries with 409 "The notes changed while appending. Try again."
-- **Safe to retry.** Setting a field twice leaves the same result. `notesAppend` adds nothing when the notes already end with exactly that paragraph, so a retry after a lost response does not double it (the same paragraph cannot be appended twice in a row on purpose).
+- **Safe to retry.** Setting a field twice leaves the same result. `notesAppend` adds nothing when the notes already end with exactly that paragraph, so a retry after a lost response does not double it (the same paragraph cannot be appended twice in a row on purpose). The check only looks at the last paragraph: if someone else appended between the lost response and the retry, the retry adds the paragraph again, so a careful client reads the project first and looks for its text.
 - With `notesAppend` and other fields together, the notes are written first and the other fields right after, not as one transaction. Every field is checked before either write, so a 400 means nothing changed.
 - Checking off steps never moves a project to Done; a script that has finished the checklist sends `status: "done"` itself.
 

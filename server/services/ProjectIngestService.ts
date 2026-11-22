@@ -85,7 +85,11 @@ export class ProjectIngestService {
       updatedAt: extra.updatedAt,
       steps: detail.steps.map(toIngestStep),
       documents: detail.documents.map(toIngestDocument),
-      photos: detail.photos.map((photo) => toIngestPhoto({ ...photo, createdAt: photoCreatedAt.get(photo.id) ?? detail.createdAt })),
+      // a photo deleted between the two reads is left out rather than given a made-up createdAt
+      photos: detail.photos.flatMap((photo) => {
+        const createdAt = photoCreatedAt.get(photo.id);
+        return createdAt ? [toIngestPhoto({ ...photo, createdAt })] : [];
+      }),
       providers: detail.providers.map(toIngestProvider),
     };
   }
