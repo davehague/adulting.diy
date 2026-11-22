@@ -204,8 +204,8 @@ describe('ProjectStepService.addMany', () => {
     db.projectStep.createMany.mockResolvedValue({ count: 2 })
     const result = await service.addMany('h1', 'u1', 'p1', inputs(2))
     expect(db.projectStep.createMany.mock.calls[0][0].data).toEqual([
-      { projectId: 'p1', createdById: 'u1', text: 'Plan step 1', estimateMinutes: null, position: 5 },
-      { projectId: 'p1', createdById: 'u1', text: 'Plan step 2', estimateMinutes: 10, position: 6 },
+      { id: expect.any(String), projectId: 'p1', createdById: 'u1', text: 'Plan step 1', estimateMinutes: null, position: 5 },
+      { id: expect.any(String), projectId: 'p1', createdById: 'u1', text: 'Plan step 2', estimateMinutes: 10, position: 6 },
     ])
     expect(result.skipped).toBe(0)
     expect(result.steps).toHaveLength(4)
@@ -235,5 +235,77 @@ describe('ProjectStepService.addMany', () => {
     db.project.findFirst.mockResolvedValue(null)
     await expect(service.addMany('h1', 'u1', 'p1', inputs(1))).rejects.toMatchObject({ statusCode: 404 })
     expect(db.projectStep.createMany).not.toHaveBeenCalled()
+  })
+})
+
+describe('ProjectStepService.append', () => {
+  let service: ProjectStepService
+  beforeEach(() => {
+    service = new ProjectStepService()
+    vi.clearAllMocks()
+    db.project.findFirst.mockResolvedValue({ id: 'p1' })
+  })
+
+  const inputs = (n: number) => Array.from({ length: n }, (_, i) => ({ text: `Step ${i + 1}`, estimateMinutes: i === 0 ? undefined : 5 * i }))
+
+  it('creates the rows with pre-generated ids and returns them in input order without re-reading', async () => {
+    db.projectStep.findMany.mockResolvedValueOnce([{ position: 0 }, { position: 4 }])
+    db.projectStep.createMany.mockResolvedValue({ count: 2 })
+    const result = await service.append('h1', 'u1', 'p1', inputs(2))
+    const rows = db.projectStep.createMany.mock.calls[0][0].data
+    expect(rows).toHaveLength(2)
+    expect(rows.map((r: { position: number }) => r.position)).toEqual([5, 6])
+    expect(rows[0].id).not.toBe(rows[1].id)
+    expect(result.overflow).toBe(0)
+    expect(result.created).toEqual([
+      { id: rows[0].id, text: 'Step 1', position: 5, doneAt: null, estimateMinutes: null },
+      { id: rows[1].id, text: 'Step 2', position: 6, doneAt: null, estimateMinutes: 5 },
+    ])
+    expect(db.projectStep.findMany).toHaveBeenCalledTimes(1)
+  })
+
+  it('adds what fits under the cap and reports the overflow', async () => {
+    db.projectStep.findMany.mockResolvedValueOnce(Array.from({ length: 98 }, (_, i) => ({ position: i })))
+    db.projectStep.createMany.mockResolvedValue({ count: 2 })
+    const result = await service.append('h1', 'u1', 'p1', inputs(5))
+    expect(db.projectStep.createMany.mock.calls[0][0].data).toHaveLength(2)
+    expect(result.created.map((s) => s.text)).toEqual(['Step 1', 'Step 2'])
+    expect(result.overflow).toBe(3)
+  })
+
+  it('makes no createMany call when nothing fits', async () => {
+    db.projectStep.findMany.mockResolvedValueOnce(Array.from({ length: 100 }, (_, i) => ({ position: i })))
+    const result = await service.append('h1', 'u1', 'p1', inputs(2))
+    expect(db.projectStep.createMany).not.toHaveBeenCalled()
+    expect(result).toEqual({ created: [], overflow: 2 })
+  })
+
+  it('returns 404 for an unknown project and reads no steps', async () => {
+    db.project.findFirst.mockResolvedValue(null)
+    await expect(service.append('h1', 'u1', 'p1', inputs(1))).rejects.toMatchObject({ statusCode: 404 })
+    expect(db.projectStep.findMany).not.toHaveBeenCalled()
+  })
+})
+
+describe('ProjectStepService.list', () => {
+  let service: ProjectStepService
+  beforeEach(() => {
+    service = new ProjectStepService()
+    vi.clearAllMocks()
+    db.project.findFirst.mockResolvedValue({ id: 'p1' })
+  })
+
+  it('returns the project steps in checklist order', async () => {
+    db.projectStep.findMany.mockResolvedValue([stepRow()])
+    expect(await service.list('h1', 'p1')).toEqual([stepRow()])
+    const args = db.projectStep.findMany.mock.calls[0][0]
+    expect(args.where).toEqual({ projectId: 'p1' })
+    expect(args.orderBy).toEqual([{ position: 'asc' }, { createdAt: 'asc' }])
+  })
+
+  it('returns 404 for another household project', async () => {
+    db.project.findFirst.mockResolvedValue(null)
+    await expect(service.list('h1', 'p1')).rejects.toMatchObject({ statusCode: 404 })
+    expect(db.projectStep.findMany).not.toHaveBeenCalled()
   })
 })

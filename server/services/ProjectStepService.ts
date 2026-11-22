@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { type Prisma } from '@prisma/client';
 import prisma from '@/server/utils/prisma/client';
 import { HttpError } from '@/server/utils/api-errors';
@@ -43,26 +44,52 @@ export class ProjectStepService {
     });
   }
 
-  // Appends several steps in one go (Add all from a DIY plan). Adds what fits under the cap, in the order given, and reports the rest.
-  async addMany(householdId: string, userId: string, projectId: string, inputs: ProjectStepCreateInput[]): Promise<StepBatchResponse> {
+  // Appends steps after the last one, in the order given, up to MAX_PROJECT_STEPS. Returns the created steps (input order) and how many did not fit.
+  // Ids are generated here so createMany can report what it created without a second read.
+  async append(
+    householdId: string,
+    userId: string,
+    projectId: string,
+    inputs: ProjectStepCreateInput[],
+  ): Promise<{ created: ProjectStepDto[]; overflow: number }> {
     await this.requireProject(householdId, projectId);
     const existing = await prisma.projectStep.findMany({ where: { projectId }, select: { position: true } });
     const room = Math.max(0, MAX_PROJECT_STEPS - existing.length);
     const toAdd = inputs.slice(0, room);
     const first = existing.reduce((highest, step) => Math.max(highest, step.position), -1) + 1;
-    if (toAdd.length > 0) {
+    const created: ProjectStepDto[] = toAdd.map((input, index) => ({
+      id: randomUUID(),
+      text: input.text,
+      position: first + index,
+      doneAt: null,
+      estimateMinutes: input.estimateMinutes ?? null,
+    }));
+    if (created.length > 0) {
       await prisma.projectStep.createMany({
-        data: toAdd.map((input, index) => ({
+        data: created.map((step) => ({
+          id: step.id,
           projectId,
           createdById: userId,
-          text: input.text,
-          estimateMinutes: input.estimateMinutes ?? null,
-          position: first + index,
+          text: step.text,
+          estimateMinutes: step.estimateMinutes,
+          position: step.position,
         })),
       });
     }
+    return { created, overflow: inputs.length - toAdd.length };
+  }
+
+  // Appends several steps in one go (Add all from a DIY plan). Adds what fits under the cap, in the order given, and reports the rest.
+  async addMany(householdId: string, userId: string, projectId: string, inputs: ProjectStepCreateInput[]): Promise<StepBatchResponse> {
+    const { overflow } = await this.append(householdId, userId, projectId, inputs);
     const steps = await prisma.projectStep.findMany({ where: { projectId }, orderBy: stepOrder, select: stepSelect });
-    return { steps, skipped: inputs.length - toAdd.length };
+    return { steps, skipped: overflow };
+  }
+
+  // A project's steps in checklist order.
+  async list(householdId: string, projectId: string): Promise<ProjectStepDto[]> {
+    await this.requireProject(householdId, projectId);
+    return prisma.projectStep.findMany({ where: { projectId }, orderBy: stepOrder, select: stepSelect });
   }
 
   async update(householdId: string, projectId: string, stepId: string, input: ProjectStepUpdateInput): Promise<ProjectStepDto> {

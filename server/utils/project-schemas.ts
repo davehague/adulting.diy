@@ -173,3 +173,19 @@ export const parsePathFilter = (raw: unknown): ProjectPathFilter | undefined => 
   if (raw === 'none' || (PROJECT_PATHS as readonly string[]).includes(raw)) return raw as ProjectPathFilter;
   throw new HttpError(`Unknown path: ${raw}`, 400);
 };
+
+// Steps on an existing project (ingest)
+
+export const MAX_INGEST_STEP_BATCH = 100;
+
+// Items are validated one at a time inside ProjectStepIngestService (stepCreateSchema) so a single bad item
+// does not fail the batch; the envelope only has to be an array of 1-100 things.
+export const ingestStepBatchSchema = z.object({
+  steps: z.array(z.unknown()).min(1).max(MAX_INGEST_STEP_BATCH),
+});
+
+// Strict so a misspelled field (estimate, completed) fails loudly instead of being ignored.
+export const ingestStepUpdateSchema = z
+  .object(stepUpdateSchema.shape, { required_error: 'Nothing to update', invalid_type_error: 'Nothing to update' })
+  .strict()
+  .refine((v) => Object.values(v).some((f) => f !== undefined), 'Nothing to update');
