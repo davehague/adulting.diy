@@ -190,3 +190,73 @@ export interface DocumentUploadUrl {
   maxBytes: number;
   expiresAt: string;
 }
+
+export const MAX_PROJECT_NOTES_LENGTH = 5000;
+
+// A step in the ingest contract, shared by the project detail and the per-resource ingest routes; done is doneAt !== null.
+export interface IngestProjectStepDto {
+  id: string;
+  text: string;
+  done: boolean;
+  doneAt: Date | string | null;
+  estimateMinutes: number | null;
+  position: number;
+}
+
+// A document in the ingest contract, shared by the project detail and the per-resource ingest routes.
+export interface IngestProjectDocumentDto {
+  id: string;
+  name: string;
+  note: string | null;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  createdAt: Date | string;
+}
+
+// A photo in the ingest contract, shared by the project detail and the per-resource ingest routes.
+export interface IngestProjectPhotoDto {
+  id: string;
+  position: number;
+  width: number;
+  height: number;
+  createdAt: Date | string;
+}
+
+// A linked provider in the ingest contract, shared by the project detail and the per-resource ingest routes; id is the provider's id, status is the link's own status.
+export interface IngestProjectProviderDto {
+  id: string;
+  name: string;
+  status: ProjectProviderStatus;
+}
+
+// GET and PATCH /api/ingest/projects/:id return this.
+export interface IngestProjectDetail {
+  id: string;
+  title: string;
+  location: string | null;
+  status: ProjectStatus;
+  path: ProjectPath | null;
+  notes: string | null;
+  completedAt: Date | string | null;
+  providerCategoryId: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  // in checklist order
+  steps: IngestProjectStepDto[];
+  // newest first
+  documents: IngestProjectDocumentDto[];
+  // cover (lowest position) first
+  photos: IngestProjectPhotoDto[];
+  providers: IngestProjectProviderDto[];
+}
+
+// PATCH /api/ingest/projects/:id; notesAppend adds a paragraph to the notes instead of replacing them.
+export interface IngestProjectUpdateInput {
+  title?: string;
+  location?: string | null;
+  notes?: string | null;
+  notesAppend?: string;
+  status?: ProjectStatus;
+  path?: ProjectPath | null;
+}
