@@ -149,6 +149,9 @@ See [projects.md](../functionality/projects.md) for the product view.
 | `POST` | `/api/ingest/projects` | Household API Key | Create projects with their steps (max 100 per request); skips one that is already open |
 | `POST` | `/api/ingest/tasks` | Household API Key | Create recurring or one-time tasks (max 100 per request); skips a name that already exists |
 | `GET` | `/api/ingest/projects` | Household API Key | List the household's projects (not deleted, newest first): id, title, location, status, path, createdAt |
+| `GET` | `/api/ingest/projects/[id]` | Household API Key | One project with its notes, steps, documents, photos and linked providers (`IngestProjectDetail`); no file URLs |
+| `PATCH` | `/api/ingest/projects/[id]` | Household API Key | Any of `title`, `location`, `notes`, `notesAppend`, `status`, `path`; unknown fields 400; returns the detail; safe to repeat (`notesAppend` skips a paragraph that is already last) |
+| `DELETE` | `/api/ingest/projects/[id]` | Household API Key | Soft delete; `{ success: true }`, a repeat answers 404 |
 | `POST` | `/api/ingest/projects/[id]/documents/upload-url` | Household API Key | `{ fileName }` → `{ documentId, fileName, uploadUrl, method, headers, maxBytes, expiresAt }`: a 10-minute PUT URL for one document path |
 | `POST` | `/api/ingest/projects/[id]/documents` | Household API Key | `{ documentId, name?, note? }`: register the PUT file; safe to repeat |
 | `POST` | `/api/ingest/projects/[id]/photos` | Household API Key | One photo, multipart `full`, `thumb`, `width`, `height` (as the browser route); not safe to repeat |

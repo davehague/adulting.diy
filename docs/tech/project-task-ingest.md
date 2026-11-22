@@ -10,6 +10,8 @@ Home projects (see [functionality doc](../functionality/projects.md)) and tasks 
 - `ApiKeyService.requireOwnerInHousehold` - the attribution check below
 - `server/api/ingest/projects.get.ts`, `server/api/ingest/projects/[id]/documents/upload-url.post.ts`, `server/api/ingest/projects/[id]/documents.post.ts`, `server/api/ingest/projects/[id]/photos.post.ts` - project files
 - `server/services/ProjectFileIngestService.ts` - the ingest-only steps; every file rule stays in `ProjectDocumentService` and `ProjectPhotoService`
+- `server/api/ingest/projects/[id].get.ts`, `[id].patch.ts`, `[id].delete.ts` - project detail, update and delete; `ProjectIngestService.getDetail`, `update`, `remove`; `ingestProjectUpdateSchema` in `server/utils/project-schemas.ts`
+- `server/utils/ingest-project-dto.ts` - maps the services' step, document, photo and provider shapes to the ingest contract (`IngestProject*Dto` in `types/project.ts`)
 - `server/utils/blob-storage.ts` (`presignPrivatePut`, `findPrivateBlob`, `BLOB_API_VERSION`), `server/utils/photo-upload.ts` (the photo form, shared with the browser route)
 
 ## Shared Rules
@@ -156,6 +158,67 @@ requests.post(f"https://www.adulting.diy/api/ingest/projects/{P}/photos", header
 ```
 
 Returns `{ id, width, height, position }`. 409 at 25 photos, 400 for a non-JPEG or a missing part, 413 over the sizes. **Not safe to retry:** there is no caller-supplied id, so repeating a call after a lost response adds a second copy (delete it on the page).
+
+## Project Detail, Update and Delete
+
+One project per call, so a script can see what is already on a project before it adds to it, change the project's fields, and remove a project it made. The host rule and the 401/403/404 rules of [Project Files](#project-files) apply; the read is not attributed to anyone, so only the writes check that the key's owner is still in the household.
+
+`ProjectIngestService.getDetail`, `update` and `remove` call `ProjectService.get`, `update` and `softDelete`, so the 404 rules, the ordering and the Done rule are the app's own. The response shapes are the ingest contract in `types/project.ts` (`IngestProjectDetail` and the `IngestProject*Dto` items), built by the helpers in `server/utils/ingest-project-dto.ts`; the per-resource ingest routes return the same item shapes. The browser's `ProjectDetail` is a different, wider shape and is not changed by these routes.
+
+### `GET /api/ingest/projects/[id]`
+
+```bash
+curl -sf "https://www.adulting.diy/api/ingest/projects/$P" -H "Authorization: Bearer $KEY"
+```
+
+```json
+{
+  "id": "…", "title": "Porch", "location": "Front", "status": "active", "path": "hire",
+  "notes": "Railing is loose", "completedAt": null, "providerCategoryId": null,
+  "createdAt": "2026-11-12T15:04:05.000Z", "updatedAt": "2026-11-20T09:00:00.000Z",
+  "steps": [{ "id": "…", "text": "Get three quotes", "done": false, "doneAt": null, "estimateMinutes": 30, "position": 0 }],
+  "documents": [{ "id": "…", "name": "Owens quote", "note": null, "fileName": "Owens-quote.pdf", "contentType": "application/pdf", "sizeBytes": 182044, "createdAt": "…" }],
+  "photos": [{ "id": "…", "position": 0, "width": 2000, "height": 1500, "createdAt": "…" }],
+  "providers": [{ "id": "…", "name": "Owens Carpentry", "status": "contacted" }]
+}
+```
+
+- `steps` are in checklist order; `done` is `doneAt != null`. `documents` are newest first. `photos` are in display order, so the first one is the cover. `providers` are the providers linked to the project: `id` is the provider's id and `status` is the link's status (`considering`, `contacted`, `chosen`, `passed`).
+- There are no file URLs. A document or photo is opened in the app; the ids are for the routes that change them.
+- Read-only, safe to repeat.
+
+### `PATCH /api/ingest/projects/[id]`
+
+```bash
+curl -sf -X PATCH "https://www.adulting.diy/api/ingest/projects/$P" -H "Authorization: Bearer $KEY" \
+  -H 'Content-Type: application/json' \
+  -d "$(jq -n '{status: "active", path: "hire", notesAppend: "2026-11-22: Owens quoted $4,200, start in March."}')"
+```
+
+| Field | Notes |
+|-------|-------|
+| `title` | 1-200 chars, trimmed |
+| `location` | Up to 100 chars; blank or null clears it |
+| `notes` | Replaces the notes. Up to 5000 chars; blank or null clears them |
+| `notesAppend` | Adds a paragraph to the end of the notes, after a blank line (or becomes the notes when there are none). 1-5000 chars, trimmed |
+| `status` | `planning`, `active`, `future`, `done`. Moving to `done` stamps `completedAt`, staying `done` keeps it, leaving `done` clears it |
+| `path` | `diy`, `hire`, `unsure`, or null |
+
+Returns the same shape as the GET, after the change.
+
+- Send only the fields to change, and at least one. An empty body, an unknown field (such as `note` or `notes_append`) and `notes` with `notesAppend` all answer 400, so a typo never silently does nothing. The provider category and linked providers are not set here.
+- `notesAppend` answers 400 when the notes would go over 5000 characters, and nothing is written. Use it rather than reading the notes and sending them back with `notes`: it does not overwrite a change someone made in between. If the notes keep changing while it writes, it gives up after three tries with 409 "The notes changed while appending. Try again."
+- **Safe to retry.** Setting a field twice leaves the same result. `notesAppend` adds nothing when the notes already end with exactly that paragraph, so a retry after a lost response does not double it (the same paragraph cannot be appended twice in a row on purpose). The check only looks at the last paragraph: if someone else appended between the lost response and the retry, the retry adds the paragraph again, so a careful client reads the project first and looks for its text.
+- With `notesAppend` and other fields together, the notes are written first and the other fields right after, not as one transaction. Every field is checked before either write, so a 400 means nothing changed.
+- Checking off steps never moves a project to Done; a script that has finished the checklist sends `status: "done"` itself.
+
+### `DELETE /api/ingest/projects/[id]`
+
+```bash
+curl -sf -X DELETE "https://www.adulting.diy/api/ingest/projects/$P" -H "Authorization: Bearer $KEY"
+```
+
+Soft-deletes the project, exactly as Delete on the project page: it leaves every list, and its photos and documents stay in storage. Returns `{ "success": true }`. A repeat answers 404, which a retrying client can treat as done. There is no undelete over the API.
 
 ## Related
 

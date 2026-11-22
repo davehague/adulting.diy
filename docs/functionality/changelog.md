@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-22
+
+### Projects from scripts: read, update and delete
+- A script holding the household's API key can now read one project in full (notes, steps, documents, photos and linked providers), so it can see what is already there before adding to it
+- It can also change a project's title, location, notes, status and path, add a paragraph to the end of the notes without overwriting what someone else wrote, and delete a project it no longer needs. Moving a project to Done this way records when it was finished, just as on the page
+
 ## 2026-11-12
 
 ### Files from scripts
