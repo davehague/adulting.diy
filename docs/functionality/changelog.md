@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-22
+
+### Checklist steps from scripts
+- A script holding the household's API key can now add steps to a project that already exists, edit them, check them off or uncheck them, and delete them, so a checklist worked out elsewhere no longer has to be typed into the app
+- Sending the same steps again does not add copies: a step is skipped while the project has an unchecked one with the same text; a checked-off step can be added again
+- Checking off the last step from a script leaves the project's status alone; marking it Done stays a separate choice
+
 ## 2026-11-12
 
 ### Files from scripts
