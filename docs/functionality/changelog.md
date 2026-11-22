@@ -6,6 +6,11 @@
 - A script holding the household's API key can now read one project in full (notes, steps, documents, photos and linked providers), so it can see what is already there before adding to it
 - It can also change a project's title, location, notes, status and path, add a paragraph to the end of the notes without overwriting what someone else wrote, and delete a project it no longer needs. Moving a project to Done this way records when it was finished, just as on the page
 
+### Checklist steps from scripts
+- A script holding the household's API key can now add steps to a project that already exists, edit them, check them off or uncheck them, and delete them, so a checklist worked out elsewhere no longer has to be typed into the app
+- Sending the same steps again does not add copies: a step is skipped while the project has an unchecked one with the same text; a checked-off step can be added again
+- Checking off the last step from a script leaves the project's status alone; marking it Done stays a separate choice
+
 ## 2026-11-12
 
 ### Files from scripts

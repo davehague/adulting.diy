@@ -73,6 +73,8 @@ Type into **Add a step** and press Enter or tap Add; the cursor stays in the box
 
 Checking off the last undone step asks whether to mark the project Done, with **Mark Done** and **Not yet**. Not yet changes nothing. The question is not asked when the project is already Done, or when a step is unchecked, edited or removed.
 
+A script holding the household's API key can add, edit, check off and remove steps too. Steps it sends are skipped while the project already has an unchecked step with the same text (capitals and surrounding spaces ignored), so sending the same list twice adds nothing. A script checking off the last step does not mark the project Done or ask anyone; the status changes only if the script sets it.
+
 ### Providers on a Project
 
 A project can have providers from the household's directory linked to it, shown on the project page between the steps and the photos, whatever the project's path. Each link has its own status for this project: Considering, Contacted, Chosen or Passed. This is separate from the provider's status in the directory, so the same provider can be Chosen on one project and Passed on another. A project can have at most 25 linked providers.

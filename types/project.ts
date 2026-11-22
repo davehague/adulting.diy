@@ -260,3 +260,10 @@ export interface IngestProjectUpdateInput {
   status?: ProjectStatus;
   path?: ProjectPath | null;
 }
+
+// POST /api/ingest/projects/:id/steps; every array is in the order the items were sent.
+export interface IngestStepBatchResult {
+  created: { index: number; id: string; text: string }[];
+  skipped: { index: number; id: string; text: string; reason: string }[];
+  errors: { index: number; text: string; message: string }[];
+}

@@ -13,6 +13,8 @@ Home projects (see [functionality doc](../functionality/projects.md)) and tasks 
 - `server/api/ingest/projects/[id].get.ts`, `[id].patch.ts`, `[id].delete.ts` - project detail, update and delete; `ProjectIngestService.getDetail`, `update`, `remove`; `ingestProjectUpdateSchema` in `server/utils/project-schemas.ts`
 - `server/utils/ingest-project-dto.ts` - maps the services' step, document, photo and provider shapes to the ingest contract (`IngestProject*Dto` in `types/project.ts`)
 - `server/utils/blob-storage.ts` (`presignPrivatePut`, `findPrivateBlob`, `BLOB_API_VERSION`), `server/utils/photo-upload.ts` (the photo form, shared with the browser route)
+- `server/api/ingest/projects/[id]/steps.post.ts`, `server/api/ingest/projects/[id]/steps/[stepId].patch.ts`, `server/api/ingest/projects/[id]/steps/[stepId].delete.ts` - steps on an existing project
+- `server/services/ProjectStepIngestService.ts` - owner check, the undone-text match and the batch envelope; the cap, positions and `doneAt` rules stay in `ProjectStepService` (`append`, `update`, `remove`)
 
 ## Shared Rules
 
@@ -219,6 +221,58 @@ curl -sf -X DELETE "https://www.adulting.diy/api/ingest/projects/$P" -H "Authori
 ```
 
 Soft-deletes the project, exactly as Delete on the project page: it leaves every list, and its photos and documents stay in storage. Returns `{ "success": true }`. A repeat answers 404, which a retrying client can treat as done. There is no undelete over the API.
+
+## Steps on an existing project
+
+Call `https://www.adulting.diy` (see [Project Files](#project-files) for why not the bare domain). Every write is attributed to the key's owner and refused with 403 if that person has left the household; a deleted project, one in another household, or a step that is not on that project answers 404. A malformed body answers 400 before either check. Changes appear on the project page and in the dashboard's next steps on their next load.
+
+### `POST /api/ingest/projects/[id]/steps`
+
+Adds 1 to 100 steps to the end of the checklist, in the order given, with the [batch rules](#shared-rules) above (items checked one at a time, 200 even with errors or skips).
+
+```bash
+KEY="adk_..."; P="<project id>"; API=https://www.adulting.diy/api/ingest/projects/$P
+curl -sf -X POST "$API/steps" -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
+  -d '{"steps": [{"text": "Call the utility to mark lines", "estimateMinutes": 15}, {"text": "Pull a permit"}]}'
+```
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `text` | yes | 1-200 chars, trimmed |
+| `estimateMinutes` | no | Whole minutes, 1-9999, or null |
+
+```json
+{
+  "created": [{ "index": 0, "id": "…", "text": "Call the utility to mark lines" }],
+  "skipped": [{ "index": 1, "id": "…", "text": "Pull a permit", "reason": "An undone step with this text already exists" }],
+  "errors": [{ "index": 2, "text": "", "message": "Step text is required" }]
+}
+```
+
+- **Match rule:** a step is skipped when the project already has an **undone** step with the same text, ignoring case and surrounding spaces, and `id` is that step's id. A done step never blocks, so "Clean the gutters" can be added again after the last one was checked off. A repeat within the same batch is skipped with the id the first one got ("Repeats an earlier step in this batch").
+- **Cap:** a project holds at most 100 steps. Items that do not fit come back in `errors` with "This project already has 100 steps" and nothing is saved for them; skipped and invalid items take no room. Delete steps (below) to make room.
+- **Safe to retry:** repeating a batch after a lost response skips every step it already added, as long as they are still undone. Two batches sent to the same project at the same moment are not locked against each other and can both add the same text.
+
+### `PATCH /api/ingest/projects/[id]/steps/[stepId]`
+
+```bash
+curl -sf -X PATCH "$API/steps/$STEP" -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -d '{"done": true}'
+# { "id", "text", "done": true, "doneAt": "2026-11-22T15:04:05.000Z", "estimateMinutes": 15, "position": 0 }
+```
+
+- Any of `text` (1-200 chars, trimmed), `estimateMinutes` (1-9999; null clears it) and `done` (`true` or `false`). `{}` answers 400 "Nothing to update"; an unknown field (`estimate`, `completed`) answers 400 instead of being ignored.
+- `done: true` on a step that is already done keeps the time it was first checked; `done: false` clears it.
+- Checking off the last undone step does **not** mark the project Done (the app asks the person). To finish the project, send `status: "done"` to the project itself.
+- Returns the step in the same shape as the project read's `steps`. Safe to retry.
+
+### `DELETE /api/ingest/projects/[id]/steps/[stepId]`
+
+```bash
+curl -sf -X DELETE "$API/steps/$STEP" -H "Authorization: Bearer $KEY"
+# { "success": true }
+```
+
+The first call answers `{ "success": true }`; a repeat answers 404 "Step not found", which a retrying client can treat as done. That holds even when the retry overlaps the first call. The other steps keep their order.
 
 ## Related
 

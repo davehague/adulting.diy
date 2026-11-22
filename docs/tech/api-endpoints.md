@@ -155,6 +155,9 @@ See [projects.md](../functionality/projects.md) for the product view.
 | `POST` | `/api/ingest/projects/[id]/documents/upload-url` | Household API Key | `{ fileName }` → `{ documentId, fileName, uploadUrl, method, headers, maxBytes, expiresAt }`: a 10-minute PUT URL for one document path |
 | `POST` | `/api/ingest/projects/[id]/documents` | Household API Key | `{ documentId, name?, note? }`: register the PUT file; safe to repeat |
 | `POST` | `/api/ingest/projects/[id]/photos` | Household API Key | One photo, multipart `full`, `thumb`, `width`, `height` (as the browser route); not safe to repeat |
+| `POST` | `/api/ingest/projects/[id]/steps` | Household API Key | `{ steps: [{ text, estimateMinutes? }] }` (1-100): append steps; skips one matching an undone step (case and spaces ignored); `created / skipped / errors` |
+| `PATCH` | `/api/ingest/projects/[id]/steps/[stepId]` | Household API Key | Any of `text`, `estimateMinutes` (null clears), `done`; strict body; returns the step (`id, text, done, doneAt, estimateMinutes, position`) |
+| `DELETE` | `/api/ingest/projects/[id]/steps/[stepId]` | Household API Key | Delete one step → `{ success: true }`; a repeat answers 404 |
 | `GET` | `/api/ingest/categories` | Household API Key | List the household's provider category names (`categories`) and task category names (`taskCategories`), so machine callers use existing categories |
 
 See [provider-ingest.md](provider-ingest.md) for the provider ingest contract and [project-task-ingest.md](project-task-ingest.md) for projects and tasks.
