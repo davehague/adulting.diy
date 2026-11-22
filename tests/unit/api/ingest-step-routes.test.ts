@@ -84,13 +84,17 @@ describe('ingest step routes', () => {
     })
 
     it('rejects {}, a non-object body, an unknown field and bad values', async () => {
-      const bodies: [unknown, string?][] = [
+      const unknownKey = expect.stringContaining('Unrecognized key')
+      const bodies: [unknown, unknown?][] = [
         [{}, 'Nothing to update'],
         [undefined, 'Nothing to update'],
         [null, 'Nothing to update'],
         ['text', 'Nothing to update'],
         [{ estimate: 5 }],
         [{ completed: true }],
+        // A valid field next to an unknown one only fails because the schema is strict.
+        [{ done: true, estimate: 5 }, unknownKey],
+        [{ text: 'Call', completed: true }, unknownKey],
         [{ text: '   ' }],
         [{ estimateMinutes: 0 }],
         [{ estimateMinutes: 1.5 }],
@@ -98,9 +102,7 @@ describe('ingest step routes', () => {
       ]
       for (const [body, message] of bodies) {
         vi.mocked(readBody).mockResolvedValue(body)
-        const promise = call(patchRoute)
-        await expect(promise).rejects.toMatchObject({ statusCode: 400 })
-        if (message) await expect(call(patchRoute)).rejects.toMatchObject({ message })
+        await expect(call(patchRoute)).rejects.toMatchObject(message ? { statusCode: 400, message } : { statusCode: 400 })
       }
       expect(steps.update).not.toHaveBeenCalled()
     })

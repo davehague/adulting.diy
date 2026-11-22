@@ -47,7 +47,7 @@ Checking order: owner (403) → project (404) → items. Steps are added with on
 async append(householdId, userId, projectId, inputs): Promise<{ created: ProjectStepDto[]; overflow: number }>
 ```
 
-It pre-generates each step's id with `crypto.randomUUID()` (the column is a UUID with a default, so supplying one needs no schema change) so `createMany` can report what it created without a second read. `addMany` becomes `append` + the existing re-read of all steps, returning `{ steps, skipped: overflow }` as today.
+It pre-generates each step's id with `crypto.randomUUID()` (the column is a string that Prisma fills with a UUID when none is given, so supplying one needs no schema change) so `createMany` can report what it created without a second read. `addMany` becomes `append` + the existing re-read of all steps, returning `{ steps, skipped: overflow }` as today.
 
 A second new method, `list(householdId, projectId): Promise<ProjectStepDto[]>`, returns a project's steps in checklist order after the same 404 check; the ingest service reads it to build the dedupe map.
 
@@ -63,7 +63,7 @@ Checking off the last undone step does **not** mark the project Done (the app as
 
 ## DELETE: remove one step
 
-`ProjectStepService.remove`; returns `{ success: true }` like the browser route. Repeating it answers 404, which a retrying client treats as done.
+`ProjectStepService.remove`; returns `{ success: true }` like the browser route. Repeating it answers 404, which a retrying client treats as done. A retry that overlaps the first call and loses the race at the write (Prisma P2025) is also mapped to 404 in `ProjectStepIngestService`, for both PATCH and DELETE, so the browser routes are untouched.
 
 ## Retry safety (for the doc)
 

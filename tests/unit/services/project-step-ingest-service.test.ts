@@ -8,6 +8,7 @@ vi.mock('@/server/utils/prisma/client', () => ({
   },
 }))
 
+import { Prisma } from '@prisma/client'
 import prisma from '@/server/utils/prisma/client'
 import { ProjectStepIngestService } from '@/server/services/ProjectStepIngestService'
 
@@ -197,5 +198,25 @@ describe('ProjectStepIngestService', () => {
       await expect(service.remove('h1', 'u1', 'p1', 's1')).rejects.toMatchObject({ statusCode: 404 })
       expect(db.projectStep.delete).toHaveBeenCalledTimes(1)
     })
+
+    it('answers 404, not 500, when an overlapping retry deleted the step after the check', async () => {
+      db.projectStep.findFirst.mockResolvedValue({ id: 's1', doneAt: null })
+      db.projectStep.delete.mockRejectedValueOnce(gone())
+      await expect(service.remove('h1', 'u1', 'p1', 's1')).rejects.toMatchObject({ statusCode: 404, message: 'Step not found' })
+    })
+
+    it('passes other database errors through', async () => {
+      db.projectStep.findFirst.mockResolvedValue({ id: 's1', doneAt: null })
+      db.projectStep.delete.mockRejectedValueOnce(new Error('connection reset'))
+      await expect(service.remove('h1', 'u1', 'p1', 's1')).rejects.toThrow('connection reset')
+    })
+  })
+
+  it('update answers 404 when the step was deleted after the check', async () => {
+    db.projectStep.findFirst.mockResolvedValue({ id: 's1', doneAt: null })
+    db.projectStep.update.mockRejectedValueOnce(gone())
+    await expect(service.update('h1', 'u1', 'p1', 's1', { done: true })).rejects.toMatchObject({ statusCode: 404 })
   })
 })
+
+const gone = () => new Prisma.PrismaClientKnownRequestError('Record to delete does not exist.', { code: 'P2025', clientVersion: 'test' })

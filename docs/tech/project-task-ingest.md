@@ -161,7 +161,7 @@ Returns `{ id, width, height, position }`. 409 at 25 photos, 400 for a non-JPEG 
 
 ## Steps on an existing project
 
-Call `https://www.adulting.diy` (see [Project Files](#project-files) for why not the bare domain). Every write is attributed to the key's owner and refused with 403 if that person has left the household; a deleted project, one in another household, or a step that is not on that project answers 404. Changes appear on the project page and in the dashboard's next steps on their next load.
+Call `https://www.adulting.diy` (see [Project Files](#project-files) for why not the bare domain). Every write is attributed to the key's owner and refused with 403 if that person has left the household; a deleted project, one in another household, or a step that is not on that project answers 404. A malformed body answers 400 before either check. Changes appear on the project page and in the dashboard's next steps on their next load.
 
 ### `POST /api/ingest/projects/[id]/steps`
 
@@ -209,7 +209,7 @@ curl -sf -X DELETE "$API/steps/$STEP" -H "Authorization: Bearer $KEY"
 # { "success": true }
 ```
 
-The first call answers `{ "success": true }`; a repeat answers 404 "Step not found", which a retrying client can treat as done. The other steps keep their order.
+The first call answers `{ "success": true }`; a repeat answers 404 "Step not found", which a retrying client can treat as done. That holds even when the retry overlaps the first call. The other steps keep their order.
 
 ## Related
 

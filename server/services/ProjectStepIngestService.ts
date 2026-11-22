@@ -1,3 +1,5 @@
+import { Prisma } from '@prisma/client';
+import { HttpError } from '@/server/utils/api-errors';
 import { ApiKeyService } from '@/server/services/ApiKeyService';
 import { ProjectStepService } from '@/server/services/ProjectStepService';
 import { stepCreateSchema } from '@/server/utils/project-schemas';
@@ -12,6 +14,14 @@ import {
 
 // Step text, case and surrounding space ignored: the identity a retried batch is checked against.
 const matchKey = (text: string): string => text.trim().toLowerCase();
+
+// A retry that overlaps the first call can pass the step check and then find the row gone (P2025); answer the documented 404, not a 500.
+const stepGoneAs404 = (error: unknown): never => {
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+    throw new HttpError('Step not found', 404);
+  }
+  throw error;
+};
 
 const OVER_CAP = `This project already has ${MAX_PROJECT_STEPS} steps`;
 
@@ -92,11 +102,12 @@ export class ProjectStepIngestService {
 
   async update(householdId: string, userId: string, projectId: string, stepId: string, input: ProjectStepUpdateInput): Promise<IngestProjectStepDto> {
     await this.apiKeys.requireOwnerInHousehold(householdId, userId);
-    return toIngestStep(await this.steps.update(householdId, projectId, stepId, input));
+    const step = await this.steps.update(householdId, projectId, stepId, input).catch(stepGoneAs404);
+    return toIngestStep(step);
   }
 
   async remove(householdId: string, userId: string, projectId: string, stepId: string): Promise<void> {
     await this.apiKeys.requireOwnerInHousehold(householdId, userId);
-    await this.steps.remove(householdId, projectId, stepId);
+    await this.steps.remove(householdId, projectId, stepId).catch(stepGoneAs404);
   }
 }
