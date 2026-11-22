@@ -38,9 +38,9 @@ An agent session filed a home project's research into an existing project using 
 
   | Slice / session name | Worktree | Branch | Scope (sections below) | Status |
   |---|---|---|---|---|
-  | `ingest-project` (worker session: `api-gaps`) | `~/source/adulting.diy-worktrees/ingest-project` | `slice/ingest-project` | Slice 1 (read) + Slice 2 (update, notesAppend, delete) | briefed 22 Nov |
-  | `ingest-steps` | `~/source/adulting.diy-worktrees/ingest-steps` | `slice/ingest-steps` | Slice 3 | not started |
-  | `ingest-files` | `~/source/adulting.diy-worktrees/ingest-files` | `slice/ingest-files` | Slice 4 + Slice 5 | not started |
+  | `ingest-project` (worker session: `api-gaps`) | `~/source/adulting.diy-worktrees/ingest-project` | `slice/ingest-project` | Slice 1 (read) + Slice 2 (update, notesAppend, delete) | building; DTO contract merged (51b0ea9) |
+  | `ingest-steps` | `~/source/adulting.diy-worktrees/ingest-steps` | `slice/ingest-steps` | Slice 3 | briefed + started 22 Nov, base 51b0ea9 |
+  | `ingest-files` | `~/source/adulting.diy-worktrees/ingest-files` | `slice/ingest-files` | Slice 4 + Slice 5 | briefed 22 Nov, base 51b0ea9 |
   | follow-up (first free worker) | integration branch | `slice/ingest-docs` | Slice 6, after the three merge | not started |
 
 - **Shared files every slice touches (additive; orchestrator resolves keep-both at merge):** `server/utils/project-schemas.ts`, `types/project.ts`, `docs/tech/project-task-ingest.md`, `docs/tech/api-endpoints.md`, `docs/functionality/changelog.md`. Each slice adds its own section; none rewrites another's.
@@ -49,6 +49,7 @@ An agent session filed a home project's research into an existing project using 
 - **Decisions log:**
   - 22 Nov: session `api-gaps` (anchored to the main checkout) works slice `ingest-project` via absolute worktree paths; it must never write in the main checkout.
   - 22 Nov: **Ingest DTO contract.** Ingest routes return ingest-specific DTOs (not the browser DTOs): `IngestProjectDetail` built from `IngestProjectStepDto` {id, text, done, doneAt, estimateMinutes, position}, `IngestProjectDocumentDto` {id, name, note, fileName, contentType, sizeBytes, createdAt}, `IngestProjectPhotoDto` {id, position, width, height, createdAt}, `IngestProjectProviderDto` {id, name, status}, in `types/project.ts`, with row mappers in `server/utils/ingest-project-dto.ts`. `ingest-project` publishes them as a standalone contract commit merged into the integration branch first; `ingest-steps` and `ingest-files` return these shapes from their single-resource routes. Browser DTOs (`ProjectDetail`, `ProjectPhotoDto`) stay unchanged.
+  - 22 Nov: Steps dedupe (skip undone step with the same text) lives in the ingest layer; `ProjectStepService.addMany` (browser "Add all") keeps its no-dedupe behavior. Photo retry safety = optional client `photoId` passed through to `ProjectPhotoService.add`; browser path unchanged; id in another project → 409.
   - 22 Nov: PATCH project body is `.strict()`; `{}` → 400; `providerCategoryId` not accepted. `notesAppend` is idempotent (skips if notes already end with that paragraph) and uses compare-and-swap, 409 after 3 tries. Repeat DELETE → 404, documented as "done on retry". Ingest GETs don't call `requireOwnerInHousehold`; all writes do.
 
 ## Slices
