@@ -38,7 +38,7 @@ An agent session filed a home project's research into an existing project using 
 
   | Slice / session name | Worktree | Branch | Scope (sections below) | Status |
   |---|---|---|---|---|
-  | `ingest-project` | `~/source/adulting.diy-worktrees/ingest-project` | `slice/ingest-project` | Slice 1 (read) + Slice 2 (update, notesAppend, delete) | not started |
+  | `ingest-project` (worker session: `api-gaps`) | `~/source/adulting.diy-worktrees/ingest-project` | `slice/ingest-project` | Slice 1 (read) + Slice 2 (update, notesAppend, delete) | briefed 22 Nov |
   | `ingest-steps` | `~/source/adulting.diy-worktrees/ingest-steps` | `slice/ingest-steps` | Slice 3 | not started |
   | `ingest-files` | `~/source/adulting.diy-worktrees/ingest-files` | `slice/ingest-files` | Slice 4 + Slice 5 | not started |
   | follow-up (first free worker) | integration branch | `slice/ingest-docs` | Slice 6, after the three merge | not started |
@@ -46,7 +46,8 @@ An agent session filed a home project's research into an existing project using 
 - **Shared files every slice touches (additive; orchestrator resolves keep-both at merge):** `server/utils/project-schemas.ts`, `types/project.ts`, `docs/tech/project-task-ingest.md`, `docs/tech/api-endpoints.md`, `docs/functionality/changelog.md`. Each slice adds its own section; none rewrites another's.
 - **Conventions (decided):** single-resource routes return the same DTO and status code the matching browser route returns; batch routes use the `created / skipped / errors` envelope; DELETE mirrors the browser route's response; every ingest write calls `ApiKeyService.requireOwnerInHousehold` first; route handlers use `defineApiKeyProtectedEventHandler` and `toHttpError`, like `server/api/ingest/projects/[id]/documents.post.ts`.
 - **Hard limits for workers:** no `prisma migrate` / `db push`; no dev server or script that writes to the hosted database or Blob store; no calls to production; no `git push` (a pushed branch can trigger a Vercel preview wired to shared data). Tests mock Prisma and Blob (`tests/setup.ts`), so the full suite is safe to run in any worktree.
-- **Decisions log:** (append here)
+- **Decisions log:**
+  - 22 Nov: session `api-gaps` (anchored to the main checkout) works slice `ingest-project` via absolute worktree paths; it must never write in the main checkout.
 
 ## Slices
 
