@@ -48,6 +48,8 @@ An agent session filed a home project's research into an existing project using 
 - **Hard limits for workers:** no `prisma migrate` / `db push`; no dev server or script that writes to the hosted database or Blob store; no calls to production; no `git push` (a pushed branch can trigger a Vercel preview wired to shared data). Tests mock Prisma and Blob (`tests/setup.ts`), so the full suite is safe to run in any worktree.
 - **Decisions log:**
   - 22 Nov: session `api-gaps` (anchored to the main checkout) works slice `ingest-project` via absolute worktree paths; it must never write in the main checkout.
+  - 22 Nov: **Ingest DTO contract.** Ingest routes return ingest-specific DTOs (not the browser DTOs): `IngestProjectDetail` built from `IngestProjectStepDto` {id, text, done, doneAt, estimateMinutes, position}, `IngestProjectDocumentDto` {id, name, note, fileName, contentType, sizeBytes, createdAt}, `IngestProjectPhotoDto` {id, position, width, height, createdAt}, `IngestProjectProviderDto` {id, name, status}, in `types/project.ts`, with row mappers in `server/utils/ingest-project-dto.ts`. `ingest-project` publishes them as a standalone contract commit merged into the integration branch first; `ingest-steps` and `ingest-files` return these shapes from their single-resource routes. Browser DTOs (`ProjectDetail`, `ProjectPhotoDto`) stay unchanged.
+  - 22 Nov: PATCH project body is `.strict()`; `{}` → 400; `providerCategoryId` not accepted. `notesAppend` is idempotent (skips if notes already end with that paragraph) and uses compare-and-swap, 409 after 3 tries. Repeat DELETE → 404, documented as "done on retry". Ingest GETs don't call `requireOwnerInHousehold`; all writes do.
 
 ## Slices
 
