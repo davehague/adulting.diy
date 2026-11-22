@@ -10,7 +10,7 @@ export default defineApiKeyProtectedEventHandler(async (event, { householdId, us
     const projectId = event.context.params?.id;
     if (!projectId) throw new HttpError('Project ID is required', 400);
     const parsed = ingestProjectUpdateSchema.safeParse(await readBody(event));
-    if (!parsed.success) throw new HttpError(parsed.error.issues[0].message, 400);
+    if (!parsed.success) throw new HttpError(parsed.error.issues[0]?.message ?? 'Invalid request', 400);
     return await new ProjectIngestService().update(householdId, userId, projectId, parsed.data);
   } catch (error) {
     return toHttpError(error, 'updating an ingest project');
