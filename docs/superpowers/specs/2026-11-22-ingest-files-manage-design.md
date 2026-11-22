@@ -39,7 +39,7 @@ The form gains an optional `photoId` text field (a UUID, lowercased before use s
    - in this project, project active in this household → return it (200, `IngestProjectPhotoDto`); nothing is stored and the cap and JPEG checks are skipped, since the first call passed them.
    - on this project id but the project is deleted or in another household → 404 "Project not found".
    - anywhere else → 409 "That photoId is already used" (says nothing about where).
-3. Otherwise `ProjectPhotoService.add(..., { id: photoId })`. If the create loses a race to a concurrent request with the same id (Prisma `P2002`), `add` has already removed its own blobs; the ingest service repeats the lookup in step 2 and returns the winner (or 409).
+3. Otherwise `ProjectPhotoService.insert(..., { id: photoId })`. If the create loses a race to a concurrent request with the same id (Prisma `P2002`), `add` has already removed its own blobs; the ingest service repeats the lookup in step 2 and returns the winner (or 409).
 
 The route now returns `IngestProjectPhotoDto` `{ id, position, width, height, createdAt }` (via `toIngestPhoto`) for a new photo and a repeated `photoId` alike: a superset of the old `{ id, width, height, position }`, so existing callers keep working. Without a `photoId` the route otherwise behaves as today (not safe to retry).
 

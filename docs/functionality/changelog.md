@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-22
+
+### Managing project files from scripts
+- A script holding the household's API key can now rename a project's documents, change or clear their notes, and remove them, so a revised quote or brief can replace the old one without anyone tidying up in the app
+- It can also remove a project's photos and choose their order, which sets the cover photo
+- A script that sends the same photo twice, for example after a dropped connection, now gets the one photo back instead of a second copy
+
 ## 2026-11-12
 
 ### Files from scripts

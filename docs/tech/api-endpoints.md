@@ -151,7 +151,11 @@ See [projects.md](../functionality/projects.md) for the product view.
 | `GET` | `/api/ingest/projects` | Household API Key | List the household's projects (not deleted, newest first): id, title, location, status, path, createdAt |
 | `POST` | `/api/ingest/projects/[id]/documents/upload-url` | Household API Key | `{ fileName }` → `{ documentId, fileName, uploadUrl, method, headers, maxBytes, expiresAt }`: a 10-minute PUT URL for one document path |
 | `POST` | `/api/ingest/projects/[id]/documents` | Household API Key | `{ documentId, name?, note? }`: register the PUT file; safe to repeat |
-| `POST` | `/api/ingest/projects/[id]/photos` | Household API Key | One photo, multipart `full`, `thumb`, `width`, `height` (as the browser route); not safe to repeat |
+| `POST` | `/api/ingest/projects/[id]/photos` | Household API Key | One photo, multipart `full`, `thumb`, `width`, `height` (as the browser route), optional `photoId` (UUID) → `{ id, position, width, height, createdAt }`; safe to repeat with the same `photoId`, not without one |
+| `PATCH` | `/api/ingest/projects/[id]/documents/[documentId]` | Household API Key | `{ name?, note? }`: rename or re-note a document; returns the document |
+| `DELETE` | `/api/ingest/projects/[id]/documents/[documentId]` | Household API Key | Remove a document and its stored file → `{ success: true }`; a repeat answers 404 |
+| `DELETE` | `/api/ingest/projects/[id]/photos/[photoId]` | Household API Key | Remove a photo and its stored files → `{ success: true }`; a repeat answers 404 |
+| `PUT` | `/api/ingest/projects/[id]/photos/order` | Household API Key | `{ photoIds }` listing every photo once, cover first → `{ photos }` in the new order |
 | `GET` | `/api/ingest/categories` | Household API Key | List the household's provider category names (`categories`) and task category names (`taskCategories`), so machine callers use existing categories |
 
 See [provider-ingest.md](provider-ingest.md) for the provider ingest contract and [project-task-ingest.md](project-task-ingest.md) for projects and tasks.
