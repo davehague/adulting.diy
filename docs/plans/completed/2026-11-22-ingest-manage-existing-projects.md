@@ -32,6 +32,8 @@ An agent session filed a home project's research into an existing project using 
 
 ## Initiative status (orchestrator keeps this current)
 
+**Complete, 22 Nov 2026.** Merged to `main` at `f047434` and deployed to production. Production acceptance passed: the scratch run exercised every new route and cleaned up after itself, and the real project was brought up to date using only the new routes.
+
 - **Orchestrator session:** `shed-planning-adulting`. Workers report to it with SendMessage (START / DECISION / COMPLETION).
 - **Integration branch:** `feature/ingest-projects`, cut from `main` at `2b56be0`; integration worktree `~/source/adulting.diy-worktrees/integration`. Slices merge here in order; it merges to `main` once, after a combined test pass and the owner's approval.
 - **Slices (run in parallel, all based on `feature/ingest-projects`):**
@@ -41,7 +43,7 @@ An agent session filed a home project's research into an existing project using 
   | `ingest-project` (worker session: `api-gaps`) | `~/source/adulting.diy-worktrees/ingest-project` | `slice/ingest-project` | Slice 1 (read) + Slice 2 (update, notesAppend, delete) | **merged 9f9dd4d** (78 files / 1304 tests green on integration) |
   | `ingest-steps` | `~/source/adulting.diy-worktrees/ingest-steps` | `slice/ingest-steps` | Slice 3 | **merged 31a080a** (80 files / 1342 tests green on integration) |
   | `ingest-files` | `~/source/adulting.diy-worktrees/ingest-files` | `slice/ingest-files` | Slice 4 + Slice 5 | **merged 3ef65af** (80 files / 1390 tests green; typecheck 63 pre-existing errors, none in touched files) |
-  | follow-up (worker session: `api-gaps`) | `~/source/adulting.diy-worktrees/ingest-project` | `slice/ingest-docs` from 3ef65af | Slice 6 | **merged 54d611d** — final combined pass 80 files / 1390 tests green; awaiting owner approval to merge to main |
+  | follow-up (worker session: `api-gaps`) | `~/source/adulting.diy-worktrees/ingest-project` | `slice/ingest-docs` from 3ef65af | Slice 6 | **merged 54d611d** — final combined pass 80 files / 1390 tests green |
 
 - **Shared files every slice touches (additive; orchestrator resolves keep-both at merge):** `server/utils/project-schemas.ts`, `types/project.ts`, `docs/tech/project-task-ingest.md`, `docs/tech/api-endpoints.md`, `docs/functionality/changelog.md`. Each slice adds its own section; none rewrites another's.
 - **Conventions (decided):** single-resource routes return the same DTO and status code the matching browser route returns; batch routes use the `created / skipped / errors` envelope; DELETE mirrors the browser route's response; every ingest write calls `ApiKeyService.requireOwnerInHousehold` first; route handlers use `defineApiKeyProtectedEventHandler` and `toHttpError`, like `server/api/ingest/projects/[id]/documents.post.ts`.
