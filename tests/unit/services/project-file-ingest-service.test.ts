@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@/server/utils/prisma/client', () => ({
-  default: { project: { findMany: vi.fn(), findFirst: vi.fn() } },
+  default: { project: { findMany: vi.fn(), findFirst: vi.fn() }, projectPhoto: { findUnique: vi.fn() } },
 }))
 const apiKeys = vi.hoisted(() => ({ requireOwnerInHousehold: vi.fn() }))
 vi.mock('@/server/services/ApiKeyService', () => ({ ApiKeyService: vi.fn(() => apiKeys) }))
-const documents = vi.hoisted(() => ({ authorizeUpload: vi.fn(), register: vi.fn() }))
+const documents = vi.hoisted(() => ({ authorizeUpload: vi.fn(), register: vi.fn(), update: vi.fn(), remove: vi.fn() }))
 vi.mock('@/server/services/ProjectDocumentService', () => ({ ProjectDocumentService: vi.fn(() => documents) }))
-const photos = vi.hoisted(() => ({ add: vi.fn() }))
+const photos = vi.hoisted(() => ({ insert: vi.fn(), remove: vi.fn(), reorder: vi.fn() }))
 vi.mock('@/server/services/ProjectPhotoService', () => ({ ProjectPhotoService: vi.fn(() => photos) }))
 const blob = vi.hoisted(() => ({ presignPrivatePut: vi.fn(), findPrivateBlob: vi.fn() }))
 vi.mock('@/server/utils/blob-storage', () => blob)
@@ -133,19 +133,180 @@ describe('ProjectFileIngestService', () => {
     })
   })
 
-  describe('addPhoto', () => {
-    const upload = { full: Buffer.from('f'), thumb: Buffer.from('t'), width: 2000, height: 1500 }
+  describe('updateDocument', () => {
+    const row = { id: D, name: 'N', note: null, fileName: 'a.pdf', contentType: 'application/pdf', sizeBytes: 5, createdAt: new Date('2026-11-01'), blobPath: 'secret', uploadedById: 'u9' }
 
     it('checks the owner first', async () => {
       apiKeys.requireOwnerInHousehold.mockRejectedValue(OWNER_GONE)
-      await expect(service.addPhoto(H, 'u1', P, upload)).rejects.toMatchObject({ statusCode: 403 })
-      expect(photos.add).not.toHaveBeenCalled()
+      await expect(service.updateDocument(H, 'u1', P, D, { name: 'x' })).rejects.toMatchObject({ statusCode: 403 })
+      expect(documents.update).not.toHaveBeenCalled()
     })
 
-    it('adds through the photo rules', async () => {
-      photos.add.mockResolvedValue({ id: 'ph1', width: 2000, height: 1500, position: 0 })
-      await expect(service.addPhoto(H, 'u1', P, upload)).resolves.toEqual({ id: 'ph1', width: 2000, height: 1500, position: 0 })
-      expect(photos.add).toHaveBeenCalledWith(H, P, 'u1', upload)
+    it('updates through the document rules and maps to the ingest shape', async () => {
+      documents.update.mockResolvedValue(row)
+      await expect(service.updateDocument(H, 'u1', P, D, { note: null })).resolves.toEqual({
+        id: D, name: 'N', note: null, fileName: 'a.pdf', contentType: 'application/pdf', sizeBytes: 5, createdAt: row.createdAt,
+      })
+      expect(documents.update).toHaveBeenCalledWith(H, P, D, { note: null })
+    })
+  })
+
+  describe('removeDocument', () => {
+    it('checks the owner first', async () => {
+      apiKeys.requireOwnerInHousehold.mockRejectedValue(OWNER_GONE)
+      await expect(service.removeDocument(H, 'u1', P, D)).rejects.toMatchObject({ statusCode: 403 })
+      expect(documents.remove).not.toHaveBeenCalled()
+    })
+
+    it('delegates to the document rules', async () => {
+      documents.remove.mockResolvedValue(undefined)
+      await expect(service.removeDocument(H, 'u1', P, D)).resolves.toBeUndefined()
+      expect(documents.remove).toHaveBeenCalledWith(H, P, D)
+    })
+
+    it('passes a 404 through', async () => {
+      documents.remove.mockRejectedValue(new HttpError('Document not found', 404))
+      await expect(service.removeDocument(H, 'u1', P, D)).rejects.toMatchObject({ statusCode: 404 })
+    })
+  })
+
+  describe('removePhoto', () => {
+    it('checks the owner first', async () => {
+      apiKeys.requireOwnerInHousehold.mockRejectedValue(OWNER_GONE)
+      await expect(service.removePhoto(H, 'u1', P, 'ph1')).rejects.toMatchObject({ statusCode: 403 })
+      expect(photos.remove).not.toHaveBeenCalled()
+    })
+
+    it('delegates to the photo rules', async () => {
+      photos.remove.mockResolvedValue(undefined)
+      await expect(service.removePhoto(H, 'u1', P, 'ph1')).resolves.toBeUndefined()
+      expect(photos.remove).toHaveBeenCalledWith(H, P, 'ph1')
+    })
+
+    it('lowercases the id, since photo ids are stored lowercase', async () => {
+      photos.remove.mockResolvedValue(undefined)
+      await service.removePhoto(H, 'u1', P, 'AB12CD34-0000-4000-8000-0000000000EF')
+      expect(photos.remove).toHaveBeenCalledWith(H, P, 'ab12cd34-0000-4000-8000-0000000000ef')
+    })
+  })
+
+  describe('reorderPhotos', () => {
+    it('checks the owner first', async () => {
+      apiKeys.requireOwnerInHousehold.mockRejectedValue(OWNER_GONE)
+      await expect(service.reorderPhotos(H, 'u1', P, ['a'])).rejects.toMatchObject({ statusCode: 403 })
+      expect(photos.reorder).not.toHaveBeenCalled()
+    })
+
+    it('reorders through the photo rules and returns the rows in the ingest shape', async () => {
+      const createdAt = new Date('2026-11-01')
+      photos.reorder.mockResolvedValue([{ id: 'b', position: 0, width: 2, height: 1, createdAt }, { id: 'a', position: 1, width: 3, height: 1, createdAt }])
+      await expect(service.reorderPhotos(H, 'u1', P, ['b', 'a'])).resolves.toEqual([
+        { id: 'b', position: 0, width: 2, height: 1, createdAt },
+        { id: 'a', position: 1, width: 3, height: 1, createdAt },
+      ])
+      expect(photos.reorder).toHaveBeenCalledWith(H, P, ['b', 'a'])
+    })
+
+    it('lowercases the ids', async () => {
+      photos.reorder.mockResolvedValue([])
+      await service.reorderPhotos(H, 'u1', P, ['B', 'a'])
+      expect(photos.reorder).toHaveBeenCalledWith(H, P, ['b', 'a'])
+    })
+  })
+
+  describe('addPhoto', () => {
+    const upload = { full: Buffer.from('f'), thumb: Buffer.from('t'), width: 2000, height: 1500 }
+    const PH = '44444444-4444-4444-8444-444444444444'
+    const createdAt = new Date('2026-11-02')
+    const inserted = { id: 'ph1', width: 2000, height: 1500, position: 0, createdAt }
+    const found = (over: Record<string, unknown> = {}) => ({
+      id: PH, position: 2, width: 800, height: 600, createdAt, projectId: P, project: { householdId: H, metaStatus: 'active' }, ...over,
+    })
+    const p2002 = Object.assign(new Error('Unique constraint failed'), { code: 'P2002' })
+
+    it('checks the owner first', async () => {
+      apiKeys.requireOwnerInHousehold.mockRejectedValue(OWNER_GONE)
+      await expect(service.addPhoto(H, 'u1', P, upload, PH)).rejects.toMatchObject({ statusCode: 403 })
+      expect(db.projectPhoto.findUnique).not.toHaveBeenCalled()
+      expect(photos.insert).not.toHaveBeenCalled()
+    })
+
+    it('without a photoId looks nothing up and inserts without an id', async () => {
+      photos.insert.mockResolvedValue(inserted)
+      await expect(service.addPhoto(H, 'u1', P, upload)).resolves.toEqual({ id: 'ph1', position: 0, width: 2000, height: 1500, createdAt })
+      expect(db.projectPhoto.findUnique).not.toHaveBeenCalled()
+      expect(photos.insert).toHaveBeenCalledWith(H, P, 'u1', upload, {})
+    })
+
+    it('with a fresh photoId looks it up, then inserts with that id', async () => {
+      db.projectPhoto.findUnique.mockResolvedValue(null)
+      photos.insert.mockResolvedValue({ ...inserted, id: PH })
+      await expect(service.addPhoto(H, 'u1', P, upload, PH)).resolves.toMatchObject({ id: PH, createdAt })
+      expect(db.projectPhoto.findUnique).toHaveBeenCalledWith({
+        where: { id: PH },
+        select: { id: true, position: true, width: true, height: true, createdAt: true, projectId: true, project: { select: { householdId: true, metaStatus: true } } },
+      })
+      expect(photos.insert).toHaveBeenCalledWith(H, P, 'u1', upload, { id: PH })
+    })
+
+    it('returns the existing photo for a repeated photoId and stores nothing', async () => {
+      db.projectPhoto.findUnique.mockResolvedValue(found())
+      await expect(service.addPhoto(H, 'u1', P, upload, PH)).resolves.toEqual({ id: PH, position: 2, width: 800, height: 600, createdAt })
+      expect(photos.insert).not.toHaveBeenCalled()
+    })
+
+    it('answers 409 when the photoId belongs to another project', async () => {
+      db.projectPhoto.findUnique.mockResolvedValue(found({ projectId: 'other' }))
+      await expect(service.addPhoto(H, 'u1', P, upload, PH)).rejects.toMatchObject({ statusCode: 409, message: 'That photoId is already used' })
+      expect(photos.insert).not.toHaveBeenCalled()
+    })
+
+    it('answers 404 when the photoId is on this project id but the project is deleted or in another household', async () => {
+      for (const project of [{ householdId: H, metaStatus: 'deleted' }, { householdId: 'other', metaStatus: 'active' }]) {
+        db.projectPhoto.findUnique.mockResolvedValue(found({ project }))
+        await expect(service.addPhoto(H, 'u1', P, upload, PH)).rejects.toMatchObject({ statusCode: 404, message: 'Project not found' })
+      }
+      expect(photos.insert).not.toHaveBeenCalled()
+    })
+
+    it('after losing a create race (P2002) returns the winner', async () => {
+      db.projectPhoto.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce(found())
+      photos.insert.mockRejectedValue(p2002)
+      await expect(service.addPhoto(H, 'u1', P, upload, PH)).resolves.toMatchObject({ id: PH, position: 2 })
+      expect(db.projectPhoto.findUnique).toHaveBeenCalledTimes(2)
+    })
+
+    it('after a P2002 answers 409 when the winner is on another project', async () => {
+      db.projectPhoto.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce(found({ projectId: 'other' }))
+      photos.insert.mockRejectedValue(p2002)
+      await expect(service.addPhoto(H, 'u1', P, upload, PH)).rejects.toMatchObject({ statusCode: 409 })
+    })
+
+    it('after a P2002 answers 404 when the winner sits in a deleted project', async () => {
+      db.projectPhoto.findUnique.mockResolvedValueOnce(null).mockResolvedValueOnce(found({ project: { householdId: H, metaStatus: 'deleted' } }))
+      photos.insert.mockRejectedValue(p2002)
+      await expect(service.addPhoto(H, 'u1', P, upload, PH)).rejects.toMatchObject({ statusCode: 404 })
+    })
+
+    it('answers 409 to retry when a P2002 leaves nothing to find (the winner was undone)', async () => {
+      db.projectPhoto.findUnique.mockResolvedValue(null)
+      photos.insert.mockRejectedValue(p2002)
+      await expect(service.addPhoto(H, 'u1', P, upload, PH)).rejects.toMatchObject({
+        statusCode: 409, message: 'Another upload with this photoId was in progress. Try again.',
+      })
+    })
+
+    it('rethrows other insert errors without a second lookup', async () => {
+      db.projectPhoto.findUnique.mockResolvedValue(null)
+      const down = new Error('db down')
+      photos.insert.mockRejectedValue(down)
+      await expect(service.addPhoto(H, 'u1', P, upload, PH)).rejects.toBe(down)
+      expect(db.projectPhoto.findUnique).toHaveBeenCalledTimes(1)
+    })
+
+    it('passes the cap refusal through', async () => {
+      photos.insert.mockRejectedValue(new HttpError('This project already has 25 photos', 409))
+      await expect(service.addPhoto(H, 'u1', P, upload)).rejects.toMatchObject({ statusCode: 409 })
     })
   })
 })

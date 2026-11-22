@@ -47,7 +47,7 @@ Leaving or reloading the new-project form after a photo was picked but before Sa
 
 The list shows Active and Planning projects by default, ordered by status (Active, Planning, Future, Done) and newest first within each. A "Show future and done" toggle adds the other two statuses, and a path filter narrows the list to DIY, Hire, Not sure, or Needs details.
 
-Each card shows the cover thumbnail (the first photo added, or a placeholder if there are none), the title, location, a status badge, a path badge or the "Needs details" marker, and a photo count when there is more than one photo. A project with a chosen provider also shows "Chosen:" and the provider's name, with "+1" (or more) when several are chosen. A card with more than one photo is swipeable: swiping left and right moves between photos, with small dots showing which one is in view. Tapping anywhere on the card opens the project.
+Each card shows the cover thumbnail (the first photo in order, which is the first one added unless a script has reordered them, or a placeholder if there are none), the title, location, a status badge, a path badge or the "Needs details" marker, and a photo count when there is more than one photo. A project with a chosen provider also shows "Chosen:" and the provider's name, with "+1" (or more) when several are chosen. A card with more than one photo is swipeable: swiping left and right moves between photos, with small dots showing which one is in view. Tapping anywhere on the card opens the project.
 
 When there are no projects, the list shows a short line and the New project button. When a filter leaves nothing to show, it says no projects match.
 
@@ -72,6 +72,8 @@ A project can have a checklist of steps, shown on the project page between the d
 Type into **Add a step** and press Enter or tap Add; the cursor stays in the box so several steps can be entered in a row. The estimate is added afterward by editing the step. Tapping a step's text opens it for editing: the text and the estimate each save when the field is left or Enter is pressed, clearing the estimate removes it, and **Remove** deletes the step for good after a confirmation. Checked-off steps stay where they are, greyed and struck through, and unchecking one brings it back.
 
 Checking off the last undone step asks whether to mark the project Done, with **Mark Done** and **Not yet**. Not yet changes nothing. The question is not asked when the project is already Done, or when a step is unchecked, edited or removed.
+
+A script holding the household's API key can add, edit, check off and remove steps too. Steps it sends are skipped while the project already has an unchecked step with the same text (capitals and surrounding spaces ignored), so sending the same list twice adds nothing. A script checking off the last step does not mark the project Done or ask anyone; the status changes only if the script sets it.
 
 ### Providers on a Project
 
@@ -158,6 +160,7 @@ Deleting a project hides it everywhere but keeps the record, its photos and its 
 - **[Task Management](./task-management.md)**: project next steps sit on the dashboard alongside the task stat cards and Coming Up feed. Projects and tasks are otherwise separate; a step is not a task.
 - **[Household Management](./household-management.md)**: the list belongs to the household, and membership is what grants access to projects and their photos.
 - **[Providers](./providers.md)**: providers from the directory are linked to projects, found through the directory's categories; each provider's page lists the projects it is linked to.
+- **Scripts**: a script holding the household's API key can create projects with their steps, read a project in full, change its title, location, notes, status and path (or add a paragraph to its notes), and delete it; add, edit, check off and delete steps; and attach, rename and remove documents and photos and set the photo order (which sets the cover). What it does shows on the project page as if done there, and is credited to whoever made the key. It cannot link providers or set the provider category. See [project-task-ingest.md](../tech/project-task-ingest.md).
 
 ## Where It Appears
 
@@ -171,7 +174,8 @@ Deleting a project hides it everywhere but keeps the record, its photos and its 
 
 - At most 25 photos, 30 documents, 100 steps and 25 linked providers per project.
 - Documents cannot be previewed inside the app, Word and Excel files can only be downloaded, a document cannot be linked to the provider it came from, and the project list shows no document count.
-- Documents can only be added from the project page or by a script with the household's API key, not from the new-project form. A photo added by a script that retries after a lost connection can arrive twice.
+- Documents can only be added from the project page or by a script with the household's API key, not from the new-project form. A photo added by a script that retries after a lost connection can arrive twice, unless the script sends the same photo id on each try.
+- Photos can be put in a different order (which sets the cover) only by a script with the household's API key, not on the project page.
 - A document link keeps working for anyone who has it until it expires, five minutes after it was opened.
 - A file whose upload finished but was never saved (the page closed in between) stays in storage, unseen.
 - Steps cannot be reordered.

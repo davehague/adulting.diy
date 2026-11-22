@@ -1,12 +1,11 @@
 import { readMultipartFormData, type H3Event } from "h3";
 import { HttpError } from "@/server/utils/api-errors";
-import { photoDimensionsSchema } from "@/server/utils/project-schemas";
+import { ingestPhotoIdSchema, photoDimensionsSchema } from "@/server/utils/project-schemas";
 import { type PhotoUpload } from "@/server/services/ProjectPhotoService";
 
-// The photo form a browser or a script sends: `full` and `thumb` JPEG files plus the full image's `width` and `height`.
-// The service checks the bytes; this only checks that the parts are there.
-export const readPhotoUpload = async (event: H3Event): Promise<PhotoUpload> => {
-  const parts = (await readMultipartFormData(event)) ?? [];
+type FormPart = { name?: string; data: Buffer };
+
+const parseUploadParts = (parts: FormPart[]): PhotoUpload => {
   const part = (name: string) => parts.find((p) => p.name === name);
   const full = part('full')?.data;
   const thumb = part('thumb')?.data;
@@ -18,4 +17,20 @@ export const readPhotoUpload = async (event: H3Event): Promise<PhotoUpload> => {
   });
   if (!dimensions.success) throw new HttpError('Photo width and height are required', 400);
   return { full, thumb, width: dimensions.data.width, height: dimensions.data.height };
+};
+
+// The photo form a browser or a script sends: `full` and `thumb` JPEG files plus the full image's `width` and `height`.
+// The service checks the bytes; this only checks that the parts are there.
+export const readPhotoUpload = async (event: H3Event): Promise<PhotoUpload> =>
+  parseUploadParts((await readMultipartFormData(event)) ?? []);
+
+// The same form from a script, plus an optional `photoId` text field (a UUID, lowercased) that lets it retry safely.
+export const readIngestPhotoUpload = async (event: H3Event): Promise<{ upload: PhotoUpload; photoId?: string }> => {
+  const parts = (await readMultipartFormData(event)) ?? [];
+  const upload = parseUploadParts(parts);
+  const raw = parts.find((p) => p.name === 'photoId')?.data.toString('utf8');
+  if (raw === undefined) return { upload };
+  const photoId = ingestPhotoIdSchema.safeParse(raw.trim());
+  if (!photoId.success) throw new HttpError('photoId must be a UUID', 400);
+  return { upload, photoId: photoId.data };
 };

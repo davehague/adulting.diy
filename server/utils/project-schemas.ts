@@ -4,6 +4,8 @@ import {
   DEFAULT_LIST_STATUSES,
   MAX_DOCUMENT_NAME_LENGTH,
   MAX_DOCUMENT_NOTE_LENGTH,
+  MAX_PROJECT_NOTES_LENGTH,
+  MAX_PROJECT_PHOTOS,
   MAX_PROJECT_STEPS,
   MAX_STEP_ESTIMATE_MINUTES,
   MAX_STEP_TEXT_LENGTH,
@@ -33,7 +35,7 @@ const location = z
 const notes = z
   .string()
   .trim()
-  .max(5000, 'Notes must be 5000 characters or fewer')
+  .max(MAX_PROJECT_NOTES_LENGTH, `Notes must be ${MAX_PROJECT_NOTES_LENGTH} characters or fewer`)
   .transform(emptyToNull)
   .nullable()
   .optional();
@@ -154,6 +156,35 @@ export const ingestDocumentRegisterSchema = z.object(
 
 export const photoDimensionsSchema = z.object({ width: dimension, height: dimension });
 
+// --- Ingest: manage documents and photos ---------------------------------------------------------------------------
+// The browser's document rules, plus .strict() so a script's typo is an error rather than a silent no-op.
+export const ingestDocumentUpdateSchema = z
+  .object(
+    { name: documentName.optional(), note: documentNote.optional() },
+    { required_error: 'Body must be { name?, note? }', invalid_type_error: 'Body must be { name?, note? }' },
+  )
+  .strict()
+  .refine((value) => value.name !== undefined || value.note !== undefined, 'Nothing to update');
+
+// A photo id chosen by the script; lowercased because ProjectPhoto.id is a plain string column.
+export const ingestPhotoIdSchema = z
+  .string()
+  .uuid('photoId must be a UUID')
+  .transform((value) => value.toLowerCase());
+
+export const ingestPhotoOrderSchema = z
+  .object(
+    {
+      photoIds: z
+        .array(z.string().min(1, 'photoIds must be photo ids'), { required_error: 'photoIds is required', invalid_type_error: 'photoIds must be a list of photo ids' })
+        .max(MAX_PROJECT_PHOTOS, `photoIds can list at most ${MAX_PROJECT_PHOTOS} photos`),
+    },
+    { required_error: 'Body must be { photoIds }', invalid_type_error: 'Body must be { photoIds }' },
+  )
+  .strict()
+  .refine((value) => new Set(value.photoIds).size === value.photoIds.length, 'photoIds must not repeat a photo');
+// --------------------------------------------------------------------------------------------------------------------
+
 const isStatus = (value: string): value is ProjectStatus =>
   (PROJECT_STATUSES as readonly string[]).includes(value);
 
@@ -173,3 +204,40 @@ export const parsePathFilter = (raw: unknown): ProjectPathFilter | undefined => 
   if (raw === 'none' || (PROJECT_PATHS as readonly string[]).includes(raw)) return raw as ProjectPathFilter;
   throw new HttpError(`Unknown path: ${raw}`, 400);
 };
+
+export const ingestProjectUpdateSchema = z
+  .object(
+    {
+      title: title.optional(),
+      location,
+      notes,
+      notesAppend: z
+        .string({ invalid_type_error: 'notesAppend must be text' })
+        .trim()
+        .min(1, "notesAppend can't be blank")
+        .max(MAX_PROJECT_NOTES_LENGTH, `notesAppend must be ${MAX_PROJECT_NOTES_LENGTH} characters or fewer`)
+        .optional(),
+      status: z.enum(PROJECT_STATUSES, { message: 'Unknown status' }).optional(),
+      path: z.enum(PROJECT_PATHS, { message: 'Unknown path' }).nullable().optional(),
+    },
+    { required_error: 'Nothing to update', invalid_type_error: 'Body must be a JSON object' },
+  )
+  .strict()
+  .refine((value) => Object.values(value).some((field) => field !== undefined), 'Nothing to update')
+  .refine((value) => !(value.notes !== undefined && value.notesAppend !== undefined), 'Send notes or notesAppend, not both');
+
+// Steps on an existing project (ingest)
+
+export const MAX_INGEST_STEP_BATCH = 100;
+
+// Items are validated one at a time inside ProjectStepIngestService (stepCreateSchema) so a single bad item
+// does not fail the batch; the envelope only has to be an array of 1-100 things.
+export const ingestStepBatchSchema = z.object({
+  steps: z.array(z.unknown()).min(1).max(MAX_INGEST_STEP_BATCH),
+});
+
+// Strict so a misspelled field (estimate, completed) fails loudly instead of being ignored.
+export const ingestStepUpdateSchema = z
+  .object(stepUpdateSchema.shape, { required_error: 'Nothing to update', invalid_type_error: 'Nothing to update' })
+  .strict()
+  .refine((v) => Object.values(v).some((f) => f !== undefined), 'Nothing to update');

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-22
+
+### Finishing projects from scripts
+A script holding the household's API key can now keep an existing project up to date from start to finish, so research or quotes worked out elsewhere land on the project without anyone tidying up in the app afterward.
+
+- **Read a project in full**: its notes, steps, documents, photos and linked providers, so a script can see what is already there before adding to it
+- **Change the project**: its title, location, notes, status and path. It can add a paragraph to the end of the notes without overwriting what someone else wrote, and moving a project to Done this way records when it was finished, just as on the page. A project it no longer needs can be deleted
+- **Manage the checklist**: add steps to a project that already exists, edit them, check them off or uncheck them, and delete them. Sending the same steps again does not add copies: a step is skipped while the project has an unchecked one with the same text, and a checked-off step can be added again. Checking off the last step leaves the project's status alone; marking it Done stays a separate choice
+- **Manage documents**: rename them, change or clear their notes, and remove them, so a revised quote or brief can replace the old one
+- **Manage photos**: remove them and choose their order, which sets the cover photo. A script that sends the same photo twice, for example after a dropped connection, now gets the one photo back instead of a second copy
+
 ## 2026-11-12
 
 ### Files from scripts
