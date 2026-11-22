@@ -160,7 +160,7 @@ Deleting a project hides it everywhere but keeps the record, its photos and its 
 - **[Task Management](./task-management.md)**: project next steps sit on the dashboard alongside the task stat cards and Coming Up feed. Projects and tasks are otherwise separate; a step is not a task.
 - **[Household Management](./household-management.md)**: the list belongs to the household, and membership is what grants access to projects and their photos.
 - **[Providers](./providers.md)**: providers from the directory are linked to projects, found through the directory's categories; each provider's page lists the projects it is linked to.
-- **Scripts**: a script holding the household's API key can create projects with their steps, read a project in full, change its title, location, notes, status and path (or add a paragraph to its notes), delete it, and attach documents and photos. What it does shows on the project page as if done there, and is credited to whoever made the key. It cannot link providers or set the provider category. See [project-task-ingest.md](../tech/project-task-ingest.md).
+- **Scripts**: a script holding the household's API key can create projects with their steps, read a project in full, change its title, location, notes, status and path (or add a paragraph to its notes), and delete it; add, edit, check off and delete steps; and attach, rename and remove documents and photos and set the photo order (which sets the cover). What it does shows on the project page as if done there, and is credited to whoever made the key. It cannot link providers or set the provider category. See [project-task-ingest.md](../tech/project-task-ingest.md).
 
 ## Where It Appears
 

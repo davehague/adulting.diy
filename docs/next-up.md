@@ -25,9 +25,11 @@ Capture with photos (slice 1), steps with next steps on the dashboard (slice 2),
 - Slice 3b, on hold until the first real quote arrives: quotes recorded as numbers on a project's provider link. Not designed yet; open questions are one quote per link or several over time, and whether a quote has a date, a note and what it covers
 - A clean-up job for the stored photos and documents of long-deleted projects, and for document files that were uploaded but never saved (the page closed between upload and save)
 - Documents, next levels: link a document to the provider it came from (the natural start of slice 3b, quotes); a document count on project cards; letting the chat read a document (its own privacy decision)
+- Ingest API, next levels (deferred from the 2026-11-22 "finish a project from a script" work, [plan](plans/2026-11-22-ingest-manage-existing-projects.md)): letting the project chat read registered documents, so it can answer from the briefs a script attached (same privacy decision as above); linking providers to a project and setting its provider category over the API; accepting Markdown or plain-text documents (scripts convert to PDF today); an optional caller-supplied idempotency key on `notesAppend`, since its repeat check only looks at the last paragraph and a retry after someone else's append writes the paragraph twice
 
 ## Projects - Deferred
 
+- Ingest API, edge cases: two step batches sent to the same project at the same moment are not locked against each other and can both add the same text; two uploads with the same `photoId` racing exactly at the 25-photo cap can leave the retry with a 409 "Another upload with this photoId was in progress" instead of the photo
 - Reordering steps
 - A step count on project cards and a total of the time remaining
 - Assignees, due dates and reminders on steps
@@ -57,3 +59,7 @@ Capture with photos (slice 1), steps with next steps on the dashboard (slice 2),
 - Project chat, robustness: the 8,000-character cut on a reply can split an emoji; a bare web address ending in "&" loses its ";"; a web address inside parentheses is shown as text, not linked; a list number with 21 or more digits renders oddly; multi-line notes can pose as block structure in the prompt; search results are not named in the prompt's "information, not instructions" line; the shared `toHttpError` logs whole unknown errors (repo-wide); three copies of the POST sequence in the Ollama client
 - Project chat, never run before the merge: the real model and search through this code (only the spike did), the assistant tool-call turn sent back without its thinking, any screen in a real browser (320 px, the iOS keyboard, safe-area padding, pointer detection, iOS background fetch failures)
 - DIY plan, tests: no test pins that a trade name holding a phone number or link is masked before it is sent; redaction test covers two of six prompt fields; the 2-second call floor and the exact-true tooVague boundary are not pinned; the plan service tests do not assert "no log row on 429", "no cap count on 403", a 404 on run, or "no upsert when the model throws"; the batch-add tests do not assert the final select and order; route tests lack the 500 path, a null body, a non-string extra and a missing id
+
+## Tooling
+
+- Add `vue-tsc` as a dev dependency so `npx nuxi typecheck` runs; until then `npx tsc --noEmit -p .nuxt/tsconfig.server.json` covers the server only. that check reported 1,697 pre-existing errors on 2026-11-22 (91 outside `tests/`), mostly "possibly undefined" on `issues[0]` and on Prisma mocks in tests, to triage before the typecheck can gate anything

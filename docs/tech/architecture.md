@@ -111,7 +111,7 @@ The full endpoint list is in [api-endpoints.md](api-endpoints.md).
 | Task scheduling and occurrence generation | `server/utils/schedule.ts`, `TaskService`, `OccurrenceService`, `/api/scheduler/run` | [task-scheduling.md](task-scheduling.md) |
 | Notifications and reminders | `NotificationService`, `server/services/notifications/*`, `/api/scheduler/reminders` | [notification-system.md](notification-system.md) |
 | Provider directory and machine ingest | `Provider*Service`, `ApiKeyService`, `/api/ingest/providers` | [provider-ingest.md](provider-ingest.md) |
-| Project and task ingest | `ProjectIngestService`, `ProjectStepIngestService`, `TaskIngestService`, `/api/ingest/projects` (and `/[id]/steps`), `/api/ingest/tasks` | [project-task-ingest.md](project-task-ingest.md) |
+| Project and task ingest | `ProjectIngestService`, `ProjectStepIngestService`, `ProjectFileIngestService`, `TaskIngestService`, `server/utils/ingest-project-dto.ts`, `/api/ingest/projects` (and `/[id]`, `/[id]/steps`, `/[id]/documents`, `/[id]/photos`), `/api/ingest/tasks` | [project-task-ingest.md](project-task-ingest.md) |
 | Projects, photos, documents, steps and provider links | `ProjectService`, `ProjectPhotoService`, `ProjectDocumentService`, `ProjectStepService`, `ProjectProviderService` | Below |
 | AI help: provider suggestions, the DIY plan and the project chat | `ProviderSuggestionService`, `ProjectPlanService`, `ProjectChatService`, `/api/projects/[id]/suggestions`, `/api/projects/[id]/plan`, `/api/projects/[id]/chat`, `server/utils/ai-ask.ts`, `ollama.ts`, `suggestion-*.ts`, `plan-*.ts`, `chat-*.ts`, `provider-ranking.ts`, `utils/chat-markdown.ts` | Below |
 | Dashboard | `DashboardService`, `/api/dashboard`, `/api/projects/next-steps` | Below |
