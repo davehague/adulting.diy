@@ -4,6 +4,7 @@ import {
   DEFAULT_LIST_STATUSES,
   MAX_DOCUMENT_NAME_LENGTH,
   MAX_DOCUMENT_NOTE_LENGTH,
+  MAX_PROJECT_NOTES_LENGTH,
   MAX_PROJECT_STEPS,
   MAX_STEP_ESTIMATE_MINUTES,
   MAX_STEP_TEXT_LENGTH,
@@ -173,3 +174,24 @@ export const parsePathFilter = (raw: unknown): ProjectPathFilter | undefined => 
   if (raw === 'none' || (PROJECT_PATHS as readonly string[]).includes(raw)) return raw as ProjectPathFilter;
   throw new HttpError(`Unknown path: ${raw}`, 400);
 };
+
+export const ingestProjectUpdateSchema = z
+  .object(
+    {
+      title: title.optional(),
+      location,
+      notes,
+      notesAppend: z
+        .string({ invalid_type_error: "notesAppend can't be blank" })
+        .trim()
+        .min(1, "notesAppend can't be blank")
+        .max(MAX_PROJECT_NOTES_LENGTH, `notesAppend must be ${MAX_PROJECT_NOTES_LENGTH} characters or fewer`)
+        .optional(),
+      status: z.enum(PROJECT_STATUSES, { message: 'Unknown status' }).optional(),
+      path: z.enum(PROJECT_PATHS, { message: 'Unknown path' }).nullable().optional(),
+    },
+    { required_error: 'Nothing to update', invalid_type_error: 'Nothing to update' },
+  )
+  .strict()
+  .refine((value) => Object.values(value).some((field) => field !== undefined), 'Nothing to update')
+  .refine((value) => !(value.notes !== undefined && value.notesAppend !== undefined), 'Send notes or notesAppend, not both');
