@@ -19,6 +19,7 @@ import prisma from '@/server/utils/prisma/client'
 import { putPrivate, getPrivate, removeBlobs } from '@/server/utils/blob-storage'
 import { ProjectPhotoService } from '@/server/services/ProjectPhotoService'
 
+const txClient = { projectPhoto: { findMany: vi.fn(), update: vi.fn() } }
 const db = prisma as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>
 const blob = {
   put: putPrivate as unknown as ReturnType<typeof vi.fn>,
@@ -41,7 +42,8 @@ describe('ProjectPhotoService', () => {
     blob.put.mockResolvedValue(undefined)
     blob.remove.mockResolvedValue(undefined)
     db.projectPhoto.count.mockResolvedValue(1)
-    ;(prisma.$transaction as unknown as ReturnType<typeof vi.fn>).mockImplementation(async (fn: (tx: unknown) => unknown) => fn(prisma))
+    // The transaction client is its own mock, so the reorder tests prove the reads and writes go through it.
+    ;(prisma.$transaction as unknown as ReturnType<typeof vi.fn>).mockImplementation(async (fn: (tx: unknown) => unknown) => fn(txClient))
   })
 
   describe('add', () => {
@@ -232,18 +234,25 @@ describe('ProjectPhotoService', () => {
 
     it('rejects a list that misses a photo or names an unknown one, writing nothing', async () => {
       db.project.findFirst.mockResolvedValue({ id: 'p1' })
-      db.projectPhoto.findMany.mockResolvedValue([{ id: 'a', position: 0 }, { id: 'b', position: 1 }])
+      txClient.projectPhoto.findMany.mockResolvedValue([{ id: 'a', position: 0 }, { id: 'b', position: 1 }])
       for (const ids of [['a'], ['a', 'b', 'c'], ['a', 'x'], []]) {
         await expect(service.reorder('h1', 'p1', ids)).rejects.toMatchObject({
           statusCode: 400, message: 'photoIds must list every photo in this project exactly once',
         })
       }
-      expect(db.projectPhoto.update).not.toHaveBeenCalled()
+      expect(txClient.projectPhoto.update).not.toHaveBeenCalled()
+    })
+
+    it('rejects a repeated id even when the count matches, writing nothing', async () => {
+      db.project.findFirst.mockResolvedValue({ id: 'p1' })
+      txClient.projectPhoto.findMany.mockResolvedValue([{ id: 'a', position: 0 }, { id: 'b', position: 1 }])
+      await expect(service.reorder('h1', 'p1', ['a', 'a'])).rejects.toMatchObject({ statusCode: 400 })
+      expect(txClient.projectPhoto.update).not.toHaveBeenCalled()
     })
 
     it('rewrites positions to the index, skipping rows already there, and returns the rows in order', async () => {
       db.project.findFirst.mockResolvedValue({ id: 'p1' })
-      db.projectPhoto.findMany
+      txClient.projectPhoto.findMany
         .mockResolvedValueOnce([{ id: 'a', position: 0 }, { id: 'b', position: 4 }, { id: 'c', position: 2 }])
         .mockResolvedValueOnce([
           { id: 'a', position: 0, width: 1, height: 1, createdAt },
@@ -251,24 +260,26 @@ describe('ProjectPhotoService', () => {
           { id: 'b', position: 2, width: 3, height: 1, createdAt },
         ])
       const result = await service.reorder('h1', 'p1', ['a', 'c', 'b'])
-      expect(db.projectPhoto.update.mock.calls).toEqual([
+      expect(txClient.projectPhoto.update.mock.calls).toEqual([
         [{ where: { id: 'c' }, data: { position: 1 } }],
         [{ where: { id: 'b' }, data: { position: 2 } }],
       ])
-      expect(db.projectPhoto.findMany.mock.calls[1][0]).toEqual({
+      expect(txClient.projectPhoto.findMany.mock.calls[1][0]).toEqual({
         where: { projectId: 'p1' },
         orderBy: { position: 'asc' },
         select: { id: true, position: true, width: true, height: true, createdAt: true },
       })
       expect(result.map((p) => p.id)).toEqual(['a', 'c', 'b'])
+      expect(db.projectPhoto.findMany).not.toHaveBeenCalled()
+      expect(db.projectPhoto.update).not.toHaveBeenCalled()
       expect(tx()).toHaveBeenCalledTimes(1)
     })
 
     it('allows an empty list for a project with no photos', async () => {
       db.project.findFirst.mockResolvedValue({ id: 'p1' })
-      db.projectPhoto.findMany.mockResolvedValue([])
+      txClient.projectPhoto.findMany.mockResolvedValue([])
       await expect(service.reorder('h1', 'p1', [])).resolves.toEqual([])
-      expect(db.projectPhoto.update).not.toHaveBeenCalled()
+      expect(txClient.projectPhoto.update).not.toHaveBeenCalled()
     })
 
     it('turns a write conflict (P2034) into a 409 asking to retry', async () => {

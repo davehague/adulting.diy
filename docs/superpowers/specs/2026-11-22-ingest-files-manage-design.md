@@ -26,7 +26,7 @@ Body `{ name?, note? }`, parsed by a new `ingestDocumentUpdateSchema` (the brows
 
 ### `DELETE /api/ingest/projects/[id]/photos/[photoId]`
 
-`ProjectFileIngestService.removePhoto` → `ProjectPhotoService.remove`. Returns `{ success: true }`; a repeat answers 404 (done on retry). Deleting the cover makes the next-lowest position the cover; positions are not renumbered.
+`ProjectFileIngestService.removePhoto` → `ProjectPhotoService.remove`, with the id lowercased (as on upload). Returns `{ success: true }`; a repeat answers 404 (done on retry). Deleting the cover makes the next-lowest position the cover; positions are not renumbered.
 
 ### `POST /api/ingest/projects/[id]/photos` with `photoId`
 
@@ -39,7 +39,7 @@ The form gains an optional `photoId` text field (a UUID, lowercased before use s
    - in this project, project active in this household → return it (200, `IngestProjectPhotoDto`); nothing is stored and the cap and JPEG checks are skipped, since the first call passed them.
    - on this project id but the project is deleted or in another household → 404 "Project not found".
    - anywhere else → 409 "That photoId is already used" (says nothing about where).
-3. Otherwise `ProjectPhotoService.insert(..., { id: photoId })`. If the create loses a race to a concurrent request with the same id (Prisma `P2002`), `add` has already removed its own blobs; the ingest service repeats the lookup in step 2 and returns the winner (or 409).
+3. Otherwise `ProjectPhotoService.insert(..., { id: photoId })`. If the create loses a race to a concurrent request with the same id (Prisma `P2002`), `add` has already removed its own blobs; the ingest service repeats the lookup in step 2 and returns the winner (or 409; if nothing is found because the winner was undone at the photo cap, 409 "Another upload with this photoId was in progress. Try again.").
 
 The route now returns `IngestProjectPhotoDto` `{ id, position, width, height, createdAt }` (via `toIngestPhoto`) for a new photo and a repeated `photoId` alike: a superset of the old `{ id, width, height, position }`, so existing callers keep working. Without a `photoId` the route otherwise behaves as today (not safe to retry).
 
@@ -47,7 +47,7 @@ The route now returns `IngestProjectPhotoDto` `{ id, position, width, height, cr
 
 ### `PUT /api/ingest/projects/[id]/photos/order`
 
-Body `{ photoIds: string[] }` (`.strict()`, at most 25, no duplicates → 400). `ProjectPhotoService.reorder(householdId, projectId, photoIds)`:
+Body `{ photoIds: string[] }` (`.strict()`, at most 25, no duplicates → 400; ids lowercased, and the service rejects duplicates too). `ProjectPhotoService.reorder(householdId, projectId, photoIds)`:
 
 1. Project active in this household, else 404.
 2. In one `prisma.$transaction`: read the project's photo ids; if `photoIds` is not exactly that set → 400 "photoIds must list every photo in this project exactly once"; set each listed photo's `position` to its index (0..n-1), skipping rows already there; read the photos back ordered by position.

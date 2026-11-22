@@ -182,6 +182,12 @@ describe('ProjectFileIngestService', () => {
       await expect(service.removePhoto(H, 'u1', P, 'ph1')).resolves.toBeUndefined()
       expect(photos.remove).toHaveBeenCalledWith(H, P, 'ph1')
     })
+
+    it('lowercases the id, since photo ids are stored lowercase', async () => {
+      photos.remove.mockResolvedValue(undefined)
+      await service.removePhoto(H, 'u1', P, 'AB12CD34-0000-4000-8000-0000000000EF')
+      expect(photos.remove).toHaveBeenCalledWith(H, P, 'ab12cd34-0000-4000-8000-0000000000ef')
+    })
   })
 
   describe('reorderPhotos', () => {
@@ -198,6 +204,12 @@ describe('ProjectFileIngestService', () => {
         { id: 'b', position: 0, width: 2, height: 1, createdAt },
         { id: 'a', position: 1, width: 3, height: 1, createdAt },
       ])
+      expect(photos.reorder).toHaveBeenCalledWith(H, P, ['b', 'a'])
+    })
+
+    it('lowercases the ids', async () => {
+      photos.reorder.mockResolvedValue([])
+      await service.reorderPhotos(H, 'u1', P, ['B', 'a'])
       expect(photos.reorder).toHaveBeenCalledWith(H, P, ['b', 'a'])
     })
   })
@@ -276,10 +288,12 @@ describe('ProjectFileIngestService', () => {
       await expect(service.addPhoto(H, 'u1', P, upload, PH)).rejects.toMatchObject({ statusCode: 404 })
     })
 
-    it('rethrows a P2002 when nothing is found afterwards', async () => {
+    it('answers 409 to retry when a P2002 leaves nothing to find (the winner was undone)', async () => {
       db.projectPhoto.findUnique.mockResolvedValue(null)
       photos.insert.mockRejectedValue(p2002)
-      await expect(service.addPhoto(H, 'u1', P, upload, PH)).rejects.toBe(p2002)
+      await expect(service.addPhoto(H, 'u1', P, upload, PH)).rejects.toMatchObject({
+        statusCode: 409, message: 'Another upload with this photoId was in progress. Try again.',
+      })
     })
 
     it('rethrows other insert errors without a second lookup', async () => {

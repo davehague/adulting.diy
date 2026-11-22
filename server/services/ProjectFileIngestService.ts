@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import prisma from '@/server/utils/prisma/client';
 import { HttpError } from '@/server/utils/api-errors';
 import { ApiKeyService } from '@/server/services/ApiKeyService';
-import { ProjectDocumentService } from '@/server/services/ProjectDocumentService';
+import { ProjectDocumentService, type DocumentUpdateInput } from '@/server/services/ProjectDocumentService';
 import { ProjectPhotoService, type PhotoUpload } from '@/server/services/ProjectPhotoService';
 import { findPrivateBlob, presignPrivatePut } from '@/server/utils/blob-storage';
 import { toIngestDocument, toIngestPhoto } from '@/server/utils/ingest-project-dto';
@@ -29,11 +29,6 @@ export interface IngestDocumentRegisterInput {
 // Files from a script holding the household API key. Only the steps a browser does not need live here (the server
 // makes the path and a plain-HTTP PUT URL; the upload is found again by its id); every rule stays in the document and
 // photo services.
-export interface IngestDocumentUpdateInput {
-  name?: string;
-  note?: string | null;
-}
-
 export class ProjectFileIngestService {
   private apiKeys = new ApiKeyService();
   private documents = new ProjectDocumentService();
@@ -91,7 +86,7 @@ export class ProjectFileIngestService {
     userId: string,
     projectId: string,
     documentId: string,
-    input: IngestDocumentUpdateInput,
+    input: DocumentUpdateInput,
   ): Promise<IngestProjectDocumentDto> {
     await this.apiKeys.requireOwnerInHousehold(householdId, userId);
     return toIngestDocument(await this.documents.update(householdId, projectId, documentId, input));
@@ -104,12 +99,15 @@ export class ProjectFileIngestService {
 
   async removePhoto(householdId: string, userId: string, projectId: string, photoId: string): Promise<void> {
     await this.apiKeys.requireOwnerInHousehold(householdId, userId);
-    await this.photos.remove(householdId, projectId, photoId);
+    // Photo ids are stored lowercase (photoId is lowercased on upload), so an uppercase copy, as macOS uuidgen prints,
+    // must not answer a 404 that a retrying caller would read as "already deleted".
+    await this.photos.remove(householdId, projectId, photoId.toLowerCase());
   }
 
   async reorderPhotos(householdId: string, userId: string, projectId: string, photoIds: string[]): Promise<IngestProjectPhotoDto[]> {
     await this.apiKeys.requireOwnerInHousehold(householdId, userId);
-    return (await this.photos.reorder(householdId, projectId, photoIds)).map(toIngestPhoto);
+    const ids = photoIds.map((id) => id.toLowerCase());
+    return (await this.photos.reorder(householdId, projectId, ids)).map(toIngestPhoto);
   }
 
   // With a photoId a retry finds the photo again instead of adding a copy: a photoId already stored on this project
@@ -133,7 +131,8 @@ export class ProjectFileIngestService {
       if (!isUniqueViolation(error)) throw error;
       const winner = await this.findExistingPhoto(householdId, projectId, photoId);
       if (winner) return winner;
-      throw error;
+      // The winner was undone in between (it took the project over the photo cap); nothing is stored under this id.
+      throw new HttpError('Another upload with this photoId was in progress. Try again.', 409);
     }
   }
 

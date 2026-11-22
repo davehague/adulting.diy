@@ -158,7 +158,7 @@ requests.post(f"https://www.adulting.diy/api/ingest/projects/{P}/photos", header
 
 Returns `{ id, position, width, height, createdAt }`. 409 at 25 photos, 400 for a non-JPEG or a missing part, 413 over the sizes.
 
-**Retry safety: send a `photoId`.** Add a `photoId` form field holding a UUID you make once per photo (`str(uuid.uuid4())`) and send the same value on every retry. If a photo with that id is already on this project, the call returns it (200, same shape) and stores nothing, so a retry after a lost response never adds a second copy, and two calls racing with the same id still leave one photo. A `photoId` that is not a UUID answers 400; one already used by a photo on another project answers 409 (pick a new one). Without a `photoId` the call is **not** safe to retry: repeating it adds a copy.
+**Retry safety: send a `photoId`.** Add a `photoId` form field holding a UUID you make once per photo (`str(uuid.uuid4())`) and send the same value on every retry. If a photo with that id is already on this project, the call returns it (200, same shape) and stores nothing, so a retry after a lost response never adds a second copy, and two calls racing with the same id still leave one photo. Ids are compared lowercase, so an uppercase UUID (as macOS `uuidgen` prints) works. A `photoId` that is not a UUID answers 400, an empty `photoId` field included (leave the field out instead); one already used by a photo on another project answers 409 (pick a new one). In the rare case that a same-id upload in flight was undone (it took the project past 25 photos), the retry answers 409 "Another upload with this photoId was in progress. Try again." Without a `photoId` the call is **not** safe to retry: repeating it adds a copy.
 
 ```python
 import uuid
@@ -194,7 +194,7 @@ curl -sf -X PUT "$PH_API/order" -H "Authorization: Bearer $KEY" -H 'Content-Type
 ```
 
 - `DELETE` returns `{ "success": true }`; a repeat answers 404 (done on retry). Deleting the cover makes the next photo in order the cover.
-- `PUT .../photos/order` takes `{ "photoIds": [...] }` listing **every** photo on the project exactly once; the first becomes the cover (lowest `position`). A missing, extra or repeated id answers 400 "photoIds must list every photo in this project exactly once", so read the current ids first (`GET /api/ingest/projects/[id]`). Returns `{ "photos": [{ id, position, width, height, createdAt }] }` in the new order, positions 0 to n-1. Safe to retry. If a photo is added or removed while the order is being saved, it answers 409; read the ids again and retry.
+- `PUT .../photos/order` takes `{ "photoIds": [...] }` listing **every** photo on the project exactly once; the first becomes the cover (lowest `position`). A missing, extra or repeated id answers 400 "photoIds must list every photo in this project exactly once", so read the current ids first (`GET /api/ingest/projects/[id]`). Returns `{ "photos": [{ id, position, width, height, createdAt }] }` in the new order, positions 0 to n-1. Safe to retry. If a photo is added or removed at the same moment, the call may answer 400 or 409; read the ids again and retry.
 
 ## Related
 

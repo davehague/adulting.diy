@@ -136,7 +136,8 @@ export class ProjectPhotoService {
       return await prisma.$transaction(async (tx) => {
         const current = await tx.projectPhoto.findMany({ where: { projectId }, select: { id: true, position: true } });
         const known = new Set(current.map((photo) => photo.id));
-        if (photoIds.length !== known.size || !photoIds.every((id) => known.has(id))) {
+        const listed = new Set(photoIds);
+        if (listed.size !== photoIds.length || photoIds.length !== known.size || !photoIds.every((id) => known.has(id))) {
           throw new HttpError('photoIds must list every photo in this project exactly once', 400);
         }
         const positions = new Map(current.map((photo) => [photo.id, photo.position]));
