@@ -75,7 +75,7 @@ Checking off the last undone step does **not** mark the project Done (the app as
 
 - `tests/unit/api/ingest-step-routes.test.ts`: 401 for a missing or unknown key on all three routes (service not called); household, user, project and step ids passed through; POST envelope 400s (missing `steps`, empty, 101 items, not an array); PATCH 400s (`{}`, unknown field, blank text, bad estimate, non-boolean done); service errors (403, 404) pass through; DELETE returns `{ success: true }`.
 - `tests/unit/services/project-step-ingest-service.test.ts` (Prisma mocked, real `ProjectStepService`): owner check before anything (403, nothing read or written); 404 for an unknown project; happy path with positions after the highest existing one; skip an existing undone step ignoring case and spaces; a done step does not block; within-batch repeat skipped with the first one's id; per-item validation errors alongside created items; cap: errors for the items that don't fit, skips don't use room; PATCH done/undone keeps the first `doneAt` and returns the ingest DTO; PATCH never touches the project; DELETE repeat 404.
-- `tests/unit/services/project-step-service.test.ts`: existing `addMany` tests stay green unchanged; add `append` and `list` cases.
+- `tests/unit/services/project-step-service.test.ts`: existing `addMany` tests stay green; the one exact `createMany` data assertion gains `id: expect.any(String)` for the pre-generated id (behavior unchanged). Add `append` and `list` cases.
 
 ## Shared files touched (additive)
 
