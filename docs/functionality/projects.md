@@ -47,7 +47,7 @@ Leaving or reloading the new-project form after a photo was picked but before Sa
 
 The list shows Active and Planning projects by default, ordered by status (Active, Planning, Future, Done) and newest first within each. A "Show future and done" toggle adds the other two statuses, and a path filter narrows the list to DIY, Hire, Not sure, or Needs details.
 
-Each card shows the cover thumbnail (the first photo added, or a placeholder if there are none), the title, location, a status badge, a path badge or the "Needs details" marker, and a photo count when there is more than one photo. A project with a chosen provider also shows "Chosen:" and the provider's name, with "+1" (or more) when several are chosen. A card with more than one photo is swipeable: swiping left and right moves between photos, with small dots showing which one is in view. Tapping anywhere on the card opens the project.
+Each card shows the cover thumbnail (the first photo in order, which is the first one added unless a script has reordered them, or a placeholder if there are none), the title, location, a status badge, a path badge or the "Needs details" marker, and a photo count when there is more than one photo. A project with a chosen provider also shows "Chosen:" and the provider's name, with "+1" (or more) when several are chosen. A card with more than one photo is swipeable: swiping left and right moves between photos, with small dots showing which one is in view. Tapping anywhere on the card opens the project.
 
 When there are no projects, the list shows a short line and the New project button. When a filter leaves nothing to show, it says no projects match.
 
@@ -174,7 +174,8 @@ Deleting a project hides it everywhere but keeps the record, its photos and its 
 
 - At most 25 photos, 30 documents, 100 steps and 25 linked providers per project.
 - Documents cannot be previewed inside the app, Word and Excel files can only be downloaded, a document cannot be linked to the provider it came from, and the project list shows no document count.
-- Documents can only be added from the project page or by a script with the household's API key, not from the new-project form. A photo added by a script that retries after a lost connection can arrive twice.
+- Documents can only be added from the project page or by a script with the household's API key, not from the new-project form. A photo added by a script that retries after a lost connection can arrive twice, unless the script sends the same photo id on each try.
+- Photos can be put in a different order (which sets the cover) only by a script with the household's API key, not on the project page.
 - A document link keeps working for anyone who has it until it expires, five minutes after it was opened.
 - A file whose upload finished but was never saved (the page closed in between) stays in storage, unseen.
 - Steps cannot be reordered.

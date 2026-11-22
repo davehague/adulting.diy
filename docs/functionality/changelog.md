@@ -11,6 +11,11 @@
 - Sending the same steps again does not add copies: a step is skipped while the project has an unchecked one with the same text; a checked-off step can be added again
 - Checking off the last step from a script leaves the project's status alone; marking it Done stays a separate choice
 
+### Managing project files from scripts
+- A script holding the household's API key can now rename a project's documents, change or clear their notes, and remove them, so a revised quote or brief can replace the old one without anyone tidying up in the app
+- It can also remove a project's photos and choose their order, which sets the cover photo
+- A script that sends the same photo twice, for example after a dropped connection, now gets the one photo back instead of a second copy
+
 ## 2026-11-12
 
 ### Files from scripts

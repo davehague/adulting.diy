@@ -21,8 +21,25 @@ const JPEG_MAGIC = [0xff, 0xd8, 0xff];
 const isJpeg = (data: Buffer): boolean =>
   data.length >= JPEG_MAGIC.length && JPEG_MAGIC.every((byte, i) => data[i] === byte);
 
+const isPrismaCode = (error: unknown, code: string): boolean =>
+  typeof error === 'object' && error !== null && 'code' in error && error.code === code;
+
+export type PhotoRow = ProjectPhotoDto & { createdAt: Date };
+
 export class ProjectPhotoService {
   async add(householdId: string, projectId: string, userId: string, upload: PhotoUpload): Promise<ProjectPhotoDto> {
+    const photo = await this.insert(householdId, projectId, userId, upload);
+    return { id: photo.id, width: photo.width, height: photo.height, position: photo.position };
+  }
+
+  // `options.id` lets a script choose the photo id so a retry can find the photo again (see ProjectFileIngestService).
+  async insert(
+    householdId: string,
+    projectId: string,
+    userId: string,
+    upload: PhotoUpload,
+    options: { id?: string } = {},
+  ): Promise<PhotoRow> {
     const project = await prisma.project.findFirst({
       where: { id: projectId, householdId, metaStatus: 'active' },
       select: { id: true },
@@ -40,8 +57,11 @@ export class ProjectPhotoService {
       throw new HttpError('Photo is too large', 413);
     }
 
-    const id = randomUUID();
-    const base = `households/${householdId}/projects/${projectId}/${id}`;
+    const id = options.id ?? randomUUID();
+    // With a caller-chosen id the file key is fresh, not the id: two concurrent requests with the same id would otherwise
+    // write the same paths, and the loser's cleanup would delete the winner's blobs.
+    const fileKey = options.id ? randomUUID() : id;
+    const base = `households/${householdId}/projects/${projectId}/${fileKey}`;
     const fullPath = `${base}-full.jpg`;
     const thumbPath = `${base}-thumb.jpg`;
     const position = existing.reduce((max, photo) => Math.max(max, photo.position), -1) + 1;
@@ -74,7 +94,7 @@ export class ProjectPhotoService {
       throw new HttpError(`This project already has ${MAX_PROJECT_PHOTOS} photos`, 409);
     }
 
-    return { id: photo.id, width: photo.width, height: photo.height, position: photo.position };
+    return { id: photo.id, width: photo.width, height: photo.height, position: photo.position, createdAt: photo.createdAt };
   }
 
   async read(
@@ -101,6 +121,39 @@ export class ProjectPhotoService {
     const photo = await this.requirePhoto(householdId, projectId, photoId);
     await prisma.projectPhoto.delete({ where: { id: photo.id } });
     await this.cleanUp([photo.fullPath, photo.thumbPath]);
+  }
+
+  // Sets each photo's position to its index in photoIds (the first becomes the cover). photoIds must be exactly the
+  // project's photos; the read, check and writes share one transaction so a concurrent add or delete cannot slip between.
+  async reorder(householdId: string, projectId: string, photoIds: string[]): Promise<PhotoRow[]> {
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, householdId, metaStatus: 'active' },
+      select: { id: true },
+    });
+    if (!project) throw new HttpError('Project not found', 404);
+
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const current = await tx.projectPhoto.findMany({ where: { projectId }, select: { id: true, position: true } });
+        const known = new Set(current.map((photo) => photo.id));
+        const listed = new Set(photoIds);
+        if (listed.size !== photoIds.length || photoIds.length !== known.size || !photoIds.every((id) => known.has(id))) {
+          throw new HttpError('photoIds must list every photo in this project exactly once', 400);
+        }
+        const positions = new Map(current.map((photo) => [photo.id, photo.position]));
+        for (const [index, id] of photoIds.entries()) {
+          if (positions.get(id) !== index) await tx.projectPhoto.update({ where: { id }, data: { position: index } });
+        }
+        return tx.projectPhoto.findMany({
+          where: { projectId },
+          orderBy: { position: 'asc' },
+          select: { id: true, position: true, width: true, height: true, createdAt: true },
+        });
+      });
+    } catch (error) {
+      if (isPrismaCode(error, 'P2034')) throw new HttpError('Photos changed while reordering. Try again.', 409);
+      throw error;
+    }
   }
 
   // Best effort: an orphaned blob is unreachable (no row points at it), so a failure here must not fail the request.

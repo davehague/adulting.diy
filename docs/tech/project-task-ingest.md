@@ -9,6 +9,7 @@ Home projects (see [functionality doc](../functionality/projects.md)) and tasks 
 - `server/utils/project-schemas.ts` (`projectIngestItemSchema`), `server/utils/task-schemas.ts` (`taskIngestItemSchema`) - item validation
 - `ApiKeyService.requireOwnerInHousehold` - the attribution check below
 - `server/api/ingest/projects.get.ts`, `server/api/ingest/projects/[id]/documents/upload-url.post.ts`, `server/api/ingest/projects/[id]/documents.post.ts`, `server/api/ingest/projects/[id]/photos.post.ts` - project files
+- `server/api/ingest/projects/[id]/documents/[documentId].patch.ts` and `.delete.ts`, `server/api/ingest/projects/[id]/photos/[photoId].delete.ts`, `server/api/ingest/projects/[id]/photos/order.put.ts` - renaming and removing files, and the photo order
 - `server/services/ProjectFileIngestService.ts` - the ingest-only steps; every file rule stays in `ProjectDocumentService` and `ProjectPhotoService`
 - `server/api/ingest/projects/[id].get.ts`, `[id].patch.ts`, `[id].delete.ts` - project detail, update and delete; `ProjectIngestService.getDetail`, `update`, `remove`; `ingestProjectUpdateSchema` in `server/utils/project-schemas.ts`
 - `server/utils/ingest-project-dto.ts` - maps the services' step, document, photo and provider shapes to the ingest contract (`IngestProject*Dto` in `types/project.ts`)
@@ -159,7 +160,45 @@ requests.post(f"https://www.adulting.diy/api/ingest/projects/{P}/photos", header
               data={"width": w, "height": h})
 ```
 
-Returns `{ id, width, height, position }`. 409 at 25 photos, 400 for a non-JPEG or a missing part, 413 over the sizes. **Not safe to retry:** there is no caller-supplied id, so repeating a call after a lost response adds a second copy (delete it on the page).
+Returns `{ id, position, width, height, createdAt }`. 409 at 25 photos, 400 for a non-JPEG or a missing part, 413 over the sizes.
+
+**Retry safety: send a `photoId`.** Add a `photoId` form field holding a UUID you make once per photo (`str(uuid.uuid4())`) and send the same value on every retry. If a photo with that id is already on this project, the call returns it (200, same shape) and stores nothing, so a retry after a lost response never adds a second copy, and two calls racing with the same id still leave one photo. Ids are compared lowercase, so an uppercase UUID (as macOS `uuidgen` prints) works. A `photoId` that is not a UUID answers 400, an empty `photoId` field included (leave the field out instead); one already used by a photo on another project answers 409 (pick a new one). In the rare case that a same-id upload in flight was undone (it took the project past 25 photos), the retry answers 409 "Another upload with this photoId was in progress. Try again." Without a `photoId` the call is **not** safe to retry: repeating it adds a copy.
+
+```python
+import uuid
+pid = str(uuid.uuid4())   # keep this with the file; reuse it on every retry
+requests.post(..., files={...}, data={"width": w, "height": h, "photoId": pid})
+```
+
+### Renaming and removing documents
+
+```bash
+DOC_API=https://www.adulting.diy/api/ingest/projects/$P/documents/$DOC
+# Rename and/or re-note: send one or both fields
+curl -sf -X PATCH "$DOC_API" -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
+  -d '{"name": "Owens quote (superseded)", "note": null}'
+# Remove the document and its stored file
+curl -sf -X DELETE "$DOC_API" -H "Authorization: Bearer $KEY"
+```
+
+- `PATCH` takes `name` (a string, 1 to 120 characters, trimmed; blank or `null` answers 400) and `note` (a string up to 200, or `null`; blank or `null` clears it). `{}` answers 400 "Nothing to update", and any other field answers 400. Returns the document `{ id, name, note, fileName, contentType, sizeBytes, createdAt }`. Safe to retry.
+- `DELETE` removes the document and its file from storage, as the page does, and returns `{ "success": true }`. Repeating it answers 404: after a lost response, treat that 404 as done.
+- To replace a file with a revised version, upload the new one (three calls above), then delete the old one.
+- An unknown document id, or one on another project, answers 404.
+
+### Removing and reordering photos
+
+```bash
+PH_API=https://www.adulting.diy/api/ingest/projects/$P/photos
+# Remove one photo and both stored files
+curl -sf -X DELETE "$PH_API/$PHOTO" -H "Authorization: Bearer $KEY"
+# Set the order: list every photo id on the project, cover first
+curl -sf -X PUT "$PH_API/order" -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
+  -d "$(jq -n --arg a "$NEW_COVER" --arg b "$OTHER" '{photoIds: [$a, $b]}')"
+```
+
+- `DELETE` returns `{ "success": true }`; a repeat answers 404 (done on retry). Deleting the cover makes the next photo in order the cover.
+- `PUT .../photos/order` takes `{ "photoIds": [...] }` listing **every** photo on the project exactly once; the first becomes the cover (lowest `position`). A missing, extra or repeated id answers 400 "photoIds must list every photo in this project exactly once", so read the current ids first (`GET /api/ingest/projects/[id]`). Returns `{ "photos": [{ id, position, width, height, createdAt }] }` in the new order, positions 0 to n-1. Safe to retry. If a photo is added or removed at the same moment, the call may answer 400 or 409; read the ids again and retry.
 
 ## Project Detail, Update and Delete
 
